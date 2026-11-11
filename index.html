@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Beat Packs</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,400;12..96,600;12..96,800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="style.css">
+
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <h1>Beat Packs</h1>
+    <div class="wallet" id="wallet">0 crédits</div>
+  </header>
+
+  <div class="tabs" role="tablist">
+    <button class="tab" role="tab" aria-selected="true" data-view="shop">Boutique</button>
+    <button class="tab" role="tab" aria-selected="false" data-view="club">Ma collection</button>
+  </div>
+
+  <section id="shop">
+    <div class="packs" id="packs"></div>
+    <div class="stage"><div class="reveal" id="reveal"></div><p class="hint" id="hint">Choisis un pack pour l’ouvrir.</p></div>
+  </section>
+
+  <section id="club" hidden>
+    <div class="toolbar">
+      <select id="filter" aria-label="Filtrer par rareté">
+        <option value="all">Toutes les raretés</option>
+        <option value="legendaire">Légendaires</option>
+        <option value="epique">Épiques</option>
+        <option value="rare">Rares</option>
+        <option value="commun">Communes</option>
+      </select>
+      <button class="btn primary" id="sellDupes">Vendre les doublons</button>
+      <div class="progress" aria-hidden="true"><i id="bar"></i></div>
+      <span id="pct"></span>
+    </div>
+    <div class="grid" id="grid"></div>
+  </section>
+</div>
+<div class="toast" id="toast" role="status"></div>
+
+<script src="script.js"></script>
+</body>
+</html>

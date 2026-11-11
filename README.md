@@ -10,7 +10,7 @@ Ouvre `index.html` dans ton navigateur (ou utilise l'extension Live Server dans 
   - **Disques** : chaque titre reçoit un disque (Or, Platine, Diamant) selon ses streams et les seuils de certification de son pays.
   - **Note** : selon les streams (1 M → 68, 10 M → 76, 100 M → 84, 1 Md → 92), plus un bonus de disques de platine. Une Icône vaut de 85 à 99 selon le total des streams de l'artiste.
   - **Valeur** (pour vendre) : selon les disques.
-  - Raretés, au code couleur des disques : **Vinyle** (noir), **Or**, **Platine**, **Diamant**. Spéciales : **Holo** (un titre, +3) et **Icône** (un artiste).
+  - Raretés, au code couleur des disques : **Vinyle** (noir), **Or**, **Platine**, **Diamant**. Spéciales : **Icône** (la carte d'un artiste, de 85 à 99) et **Holo** (version brillante, +1, des 5 titres les plus streamés de chaque album, en plus de leur carte normale).
 - **Boutique** : 3 packs, seul le nombre de cartes change (3, 5, 10). Ouverture façon FIFA 21 : un couloir de lumières avec un indice discret au bout (une carte simple, une carte à cadre pour un Platine, une porte de lumière pour une walkout), puis walkout (pays, artiste, album) pour un Diamant, une Holo ou une Icône. S'il y en a plusieurs, toucher la carte la retourne sur une meilleure ; ensuite on voit toutes les cartes du pack.
 - **Collection** (bouton en haut) : tes artistes → tous leurs albums → toutes les cartes de l'album, y compris celles qui manquent.
 - **Défis** : défis de cartes (on donne des cartes pour gagner un pack spécial), défis du jour et primes d'album complet.

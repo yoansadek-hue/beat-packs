@@ -263,9 +263,18 @@ input::placeholder{color:var(--dim)}
 .code{width:100%;padding:12px;border-radius:12px;background:#0c0b25;border:1px dashed var(--line);font:700 13px ui-monospace,Consolas,monospace;word-break:break-all;-webkit-user-select:all;user-select:all}
 
 /* ---------- ouverture : le tunnel ---------- */
-.open{position:fixed;inset:0;z-index:50;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:calc(20px + env(safe-area-inset-top)) 18px calc(24px + env(safe-area-inset-bottom));overflow:hidden;--fl:#fff1c9;background:radial-gradient(ellipse 40% 50% at 50% 44%,#2a2540,#0b0a14 75%);animation:fade .25s both}
+.open{position:fixed;inset:0;z-index:50;touch-action:none;overscroll-behavior:none;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:calc(20px + env(safe-area-inset-top)) 18px calc(24px + env(safe-area-inset-bottom));overflow:hidden;--fl:#fff1c9;background:radial-gradient(ellipse 40% 50% at 50% 44%,#2a2540,#0b0a14 75%);animation:fade .25s both}
 @keyframes fade{from{opacity:0}}
-.tunnel{position:absolute;inset:0;pointer-events:none}
+.tunnel{position:absolute;inset:0;pointer-events:none;transition:opacity .4s}
+.open.recapmode .tunnel{opacity:0}
+.open.recapmode{background:radial-gradient(ellipse 70% 55% at 50% 40%,#2a2540,#0b0a14 80%)}
+/* la lumière prend la couleur de la carte révélée (la meilleure en cas de double walkout) */
+.open[data-fl=commune]{--fl:#c9c9d6}
+.open[data-fl=rare]{--fl:#ffcf3a}
+.open[data-fl=epique]{--fl:#eef1ff}
+.open[data-fl=legendaire]{--fl:#7af0ff}
+.open[data-fl=holo]{--fl:#ff9cf0}
+.open[data-fl=icone]{--fl:#ffd23f}
 .ring{position:absolute;left:50%;top:44%;width:56vmax;height:80vmax;margin:-40vmax 0 0 -28vmax;border:2px solid rgba(255,241,201,.28);border-radius:2%;opacity:0;animation:ring 2.4s linear infinite}
 .ring::before,.ring::after{content:"";position:absolute;top:4%;bottom:4%;width:1.2%;border-radius:9px;background:var(--fl);box-shadow:0 0 14px var(--fl);opacity:.55}
 .ring::before{left:6%} .ring::after{right:6%}
@@ -322,12 +331,13 @@ input::placeholder{color:var(--dim)}
 .burst{position:absolute;left:50%;top:44%;z-index:1;pointer-events:none}
 .burst i{position:absolute;width:8px;height:8px;border-radius:2px;background:var(--c);animation:pop 1.3s cubic-bezier(.1,.8,.3,1) both}
 @keyframes pop{from{transform:translate(0,0) rotate(0);opacity:1}to{transform:translate(var(--x),var(--y)) rotate(540deg);opacity:0}}
-.recap{width:100%;display:flex;flex-direction:column;align-items:center;gap:18px;max-height:calc(100dvh - 90px - env(safe-area-inset-top) - env(safe-area-inset-bottom));overflow:auto;padding:4px 2px 8px;-webkit-overflow-scrolling:touch}
+.recap{width:100%;display:flex;flex-direction:column;align-items:center;gap:16px;overflow:hidden}
 .recap h2{margin:0;font-size:30px;align-self:center}
-.recapgrid{width:100%;display:grid;grid-template-columns:repeat(3,1fr);gap:14px 10px}
-.recapgrid.many{grid-template-columns:repeat(4,1fr);gap:10px 8px}
+.recapgrid{display:grid;justify-content:center}
 .recapgrid .cw{cursor:pointer;animation:cardflip .6s calc(var(--i) * 90ms) cubic-bezier(.2,1.2,.35,1) both}
-.recap .btn{max-width:280px;flex:none}
+.recap .btn{max-width:300px;flex:none}
+.recap .btn.go{min-height:58px;font-size:19px;box-shadow:0 0 0 3px rgba(255,255,255,.25),0 12px 34px -6px var(--pink);animation:gopulse 1.6s ease-in-out infinite}
+@keyframes gopulse{50%{transform:scale(1.04);box-shadow:0 0 0 5px rgba(255,255,255,.12),0 16px 40px -6px var(--orange)}}
 @media (prefers-reduced-motion:reduce){*,*::before,*::after{animation-duration:.01ms!important;animation-iteration-count:1!important;transition-duration:.01ms!important}}
 
 /* ---------- toast ---------- */
@@ -370,8 +380,7 @@ html,body{-webkit-text-size-adjust:100%;text-size-adjust:100%}
   .offer p{font-size:13px}
   .odds{gap:4px}
   .odds span{font-size:11px;padding:2px 7px}
-  .grid,.recapgrid{gap:10px 8px}
-  .recapgrid.many{grid-template-columns:repeat(3,1fr)}
+  .grid{gap:10px 8px}
   .agrid{gap:14px 10px}
   .atile b{font-size:13px}
   .ahero{gap:12px}

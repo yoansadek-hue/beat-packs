@@ -26,14 +26,19 @@ const any = a => a[Math.floor(Math.random()*a.length)];
 
 const ART={},ALB={},CARD={},TRACKS=[],ICONES=[],POOL={commune:[],rare:[],epique:[],legendaire:[]};
 ARTISTS.forEach(a=>{ART[a.id]=a;a.albums=[];a.tracks=[]});
+const HOLOS=[];
 ALBUMS.forEach(al=>{
   const a=ART[al.ar];ALB[al.id]=al;a.albums.push(al);al.total=0;
   al.tr.forEach(([title,m],i)=>{
     const ovr=ovrOf(a.c,m),c={key:`t:${al.id}:${i}`,kind:"track",alb:al.id,ar:a.id,title,artist:a.n,country:a.c,streams:m,vs:m,ovr,tier:tierOf(ovr)};
     TRACKS.push(c);CARD[c.key]=c;POOL[c.tier].push(c);a.tracks.push(c);al.total+=m;
-    CARD[`h:${al.id}:${i}`]={...c,key:`h:${al.id}:${i}`,kind:"holo",ovr:Math.min(99,ovr+3)};
   });
 });
+// les Holo : une version brillante (+1) des 5 titres les plus streamés de chaque album, en plus de la carte normale
+ALBUMS.forEach(al=>al.tr.map((t,i)=>[t[1],i]).sort((x,y)=>y[0]-x[0]).slice(0,5).forEach(([,i])=>{
+  const c=CARD[`t:${al.id}:${i}`],h={...c,key:`h:${al.id}:${i}`,kind:"holo",ovr:Math.min(99,c.ovr+1)};
+  CARD[h.key]=h;HOLOS.push(h);
+}));
 // une Icône vaut au moins 85, et monte jusqu'à 99 avec le total des streams de l'artiste
 const TOT=ARTISTS.map(a=>a.tracks.reduce((s,t)=>s+t.streams,0)).filter(Boolean);
 const TLO=Math.log10(Math.min(...TOT)),THI=Math.log10(Math.max(...TOT));
@@ -44,7 +49,8 @@ ARTISTS.forEach(a=>{
   const c={key:`a:${a.id}`,kind:"icone",alb:a.cover,ar:a.id,title:a.n,artist:a.n,country:a.c,streams:Math.round(a.tracks.reduce((s,t)=>s+t.streams,0)),vs:best.streams,ovr:Math.round(85+14*(Math.log10(a.tracks.reduce((s,t)=>s+t.streams,0))-TLO)/(THI-TLO)),tier:"legendaire"};
   ICONES.push(c);CARD[c.key]=c;a.icone=c.key;
 });
-const holo = t => CARD["h"+t.key.slice(1)];
+const holo = t => CARD["h"+t.key.slice(1)]; // undefined si le titre n'a pas de version Holo
+const drawHolo = f => any(f?HOLOS.filter(f):HOLOS);
 // la valeur vient des disques : 100 pièces + 800 par disque de platine (×2,5 en Holo, ×4 en Icône)
 const value = c => Math.round((100+800*plat(c.country,c.vs))*(c.kind==="holo"?2.5:c.kind==="icone"?4:1)/10)*10;
 const quick = c => Math.round(value(c)*.6/10)*10;
@@ -135,11 +141,11 @@ function drawPack(p){
   const out=Array.from({length:p.size},()=>{
     if(!p.before&&Math.random()<.004)return drawIcone(p.country);
     const t=drawTrack(pickTier(ODDS),f);
-    return Math.random()<.03?holo(t):t;
+    return Math.random()<.03?drawHolo(f):t;
   });
   if(p.guarantee&&!out.some(c=>c.kind!=="track"||ORDER.indexOf(c.tier)>=ORDER.indexOf(p.guarantee)))out[0]=drawTrack(p.guarantee,f);
   if(p.icon&&!out.some(c=>c.kind==="icone"))out[out.length-1]=drawIcone();
-  for(let i=0,n=0;n<(p.holo||0)&&i<out.length;i++)if(out[i].kind==="track"){out[i]=holo(out[i]);n++}
+  for(let i=0,n=0;n<(p.holo||0)&&i<out.length;i++)if(out[i].kind==="track"){out[i]=drawHolo(f);n++}
   return out.sort((a,b)=>weight(b)-weight(a)); // la meilleure carte en premier
 }
 
@@ -195,12 +201,15 @@ open.addEventListener("click",e=>{
 // le tunnel : les lumières foncent vers nous, toujours de la même couleur (rien ne trahit la carte)
 // l'indice, comme sur FIFA 21 : au bout du couloir, une simple carte (Vinyle, Or), une carte à cadre (Platine)
 // ou une porte de lumière (walkout) ; discret, sans couleur
+// couleur de la lumière : celle de la carte (Icône, Holo, sinon sa rareté)
+const colorOf = c => c.kind==="track"?c.tier:c.kind;
 function tunnel(){
+  open.dataset.fl="";
   const h=run.wos.length?"board":run.best.tier==="epique"?"rare":"plain";
   scene.innerHTML=`<div class="flash"></div><div class="endcard h-${h}"></div>`;
   later(()=>scene.querySelector(".flash")?.remove(),520);
   open.classList.add("run");if(h==="board")later(()=>open.classList.add("board"),900);haptic(14);
-  later(()=>{open.classList.remove("board");if(run.wos.length){run.phase="wo";open.classList.replace("run","wo");run.step=0;step()}else{run.cur=run.best;reveal()}},1800);
+  later(()=>{open.classList.remove("board");open.dataset.fl=colorOf(run.wos.length?run.wos[run.wos.length-1]:run.best);if(run.wos.length){run.phase="wo";open.classList.replace("run","wo");run.step=0;step()}else{run.cur=run.best;reveal()}},1800);
 }
 // walkout : le pays, l'artiste, l'album, puis la carte
 function step(){
@@ -222,7 +231,7 @@ function reveal(){
   run.phase="card";open.classList.remove("run","board");open.classList.add("wo");
   scene.innerHTML=`<div class="reveal">${cw(c,{fresh:run.fresh.has(c.key)})}</div>`;
   if(walkout(c)){burst();haptic([30,40,60])}
-  hint("Touche la carte");
+  hint("");
   tilt(scene);
 }
 // plusieurs grosses cartes : quand on touche la carte, elle se retourne et laisse place à une meilleure ; ensuite le récap
@@ -246,9 +255,14 @@ function burst(){
 }
 function recap(){
   run.phase="recap";clearT();
-  open.classList.remove("run","wo");hint("");
-  const seen=new Set();
-  scene.innerHTML=`<div class="recap"><h2>Ton pack</h2><p class="note" style="margin:-10px 0 0">Touche une carte pour la voir, la vendre ou l’offrir.</p><div class="recapgrid${run.cards.length>6?" many":""}">${run.cards.map((c,i)=>{const f=run.fresh.has(c.key)&&!seen.has(c.key);seen.add(c.key);return cw(c,{fresh:f,i,tap:true})}).join("")}</div><button class="btn" id="done">Continuer</button></div>`;
+  open.classList.remove("run","wo");open.classList.add("recapmode");hint("");
+  const seen=new Set(),n=run.cards.length;
+  // la grille est calculée pour tenir dans l'écran, sans défilement
+  const gap=8,W=Math.min(innerWidth-36,520),H=innerHeight-230;
+  const size=c=>{const r=Math.ceil(n/c);return Math.floor(Math.min((W-gap*(c-1))/c,((H-gap*(r-1))/r)*.72,170))};
+  let cols=1;for(let c=2;c<=Math.min(n,5);c++)if(size(c)>size(cols))cols=c; // le nombre de colonnes qui donne les plus grandes cartes
+  const w=size(cols);
+  scene.innerHTML=`<div class="recap"><h2>Ton pack</h2><p class="note" style="margin:-10px 0 0">Touche une carte pour la voir, la vendre ou l’offrir.</p><div class="recapgrid" style="grid-template-columns:repeat(${cols},${w}px);gap:${gap}px">${run.cards.map((c,i)=>{const f=run.fresh.has(c.key)&&!seen.has(c.key);seen.add(c.key);return cw(c,{fresh:f,i,tap:true})}).join("")}</div><button class="btn go" id="done">Continuer</button></div>`;
   $("done").onclick=closePack;
 }
 function closePack(){
@@ -323,7 +337,7 @@ function addFriend(name,dir){let f=state.friends.find(x=>x.name.toLowerCase()===
 // ---------- collection : mes artistes → tous leurs albums → toutes les cartes de l'album ----------
 const club={view:"artists",ar:null,alb:null,q:""};
 const albumOwned=al=>al.tr.filter((_,i)=>has(`t:${al.id}:${i}`)||has(`h:${al.id}:${i}`)).length;
-const uniq=()=>TRACKS.filter(t=>has(t.key)||has(holo(t).key)).length;
+const uniq=()=>TRACKS.filter(t=>has(t.key)||has(holo(t)?.key)).length;
 const albumDone=al=>albumOwned(al)===al.tr.length;
 function myArtists(){
   const n={},fresh={};
@@ -341,7 +355,7 @@ function renderClub(){
       ${list.length?`<div class="agrid">${list.map(a=>`<button class="atile" data-ar="${a.id}">${fresh[a.id]?`<i class="dot"></i>`:""}${coverHTML(a.cover)}<b>${esc(a.n)}</b><small>${n[a.id]} carte${n[a.id]>1?"s":""}</small></button>`).join("")}</div>`
         :`<p class="empty">${Object.keys(state.owned).length?"Aucun artiste ne correspond.":"Ta collection est vide : ouvre un pack dans la Boutique."}</p>`}`;
   }else if(club.view==="artist"){
-    const a=ART[club.ar],own=a.tracks.filter(t=>has(t.key)||has(holo(t).key)).length,ic=CARD[a.icone];
+    const a=ART[club.ar],own=a.tracks.filter(t=>has(t.key)||has(holo(t)?.key)).length,ic=CARD[a.icone];
     html=`<button class="back" data-back="artists">‹ Mes artistes</button>
       <div class="ahero">${coverHTML(a.cover)}<div><h1>${esc(a.n)}</h1><small>${a.albums.length} albums · ${own}/${a.tracks.length} titres</small></div></div>
       <div class="alist">
@@ -355,7 +369,7 @@ function renderClub(){
       html=`<button class="back" data-back="artist">‹ ${esc(a.n)}</button><h1>Carte Icône</h1><div class="grid">${has(ic.key)?cw(ic,{qty:state.owned[ic.key],tap:true,fresh:isNew(ic.key)}):`<div class="cw"><div class="card ghost"><b>★</b><span>${esc(a.n)}</span></div></div>`}</div>`;
     }else{
       const cards=al.tr.map((tr,i)=>{const t=CARD[`t:${al.id}:${i}`];return has(t.key)?cw(t,{qty:state.owned[t.key],tap:true,fresh:isNew(t.key)}):`<div class="cw"><div class="card ghost"><b>#${i+1}</b><span>${esc(tr[0])}</span></div></div>`}).join("");
-      const holos=al.tr.map((_,i)=>CARD[`h:${al.id}:${i}`]).filter(h=>has(h.key)).map(h=>cw(h,{qty:state.owned[h.key],tap:true,fresh:isNew(h.key)})).join("");
+      const holos=al.tr.map((_,i)=>CARD[`h:${al.id}:${i}`]).filter(h=>h&&has(h.key)).map(h=>cw(h,{qty:state.owned[h.key],tap:true,fresh:isNew(h.key)})).join("");
       html=`<button class="back" data-back="artist">‹ ${esc(a.n)}</button>
         <div class="ahero alb">${coverHTML(al.id)}<div><h1 style="font-size:26px">${esc(al.t)}</h1><small>${esc(a.n)} · ${al.y} · ${albumOwned(al)}/${al.tr.length} titres</small></div></div>
         <div class="grid">${cards}${holos}</div>`;
@@ -382,7 +396,7 @@ let mkt="buy";
 function market(){if(!state.market||Date.now()-state.market.at>REFRESH)newOffers();return state.market}
 function newOffers(){
   state.market={at:Date.now(),offers:Array.from({length:10},()=>{
-    let c;if(Math.random()<.04)c=drawIcone();else{const t=drawTrack(pickTier({commune:.3,rare:.35,epique:.25,legendaire:.1}));c=Math.random()<.06?holo(t):t}
+    let c;if(Math.random()<.04)c=drawIcone();else{const t=drawTrack(pickTier({commune:.3,rare:.35,epique:.25,legendaire:.1}));c=Math.random()<.06?drawHolo():t}
     return {id:rid(),k:c.key,price:Math.round(value(c)*(.9+Math.random()*.45)/10)*10,seller:any(SELLERS)};
   }).sort((a,b)=>b.price-a.price)};
   save();

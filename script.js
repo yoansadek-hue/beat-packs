@@ -1,59 +1,84 @@
-// ---------- catalogue : une carte par titre, plus les spéciales (Diamant pour un titre, Icône pour un artiste) ----------
-const RNAME = {commun:"Bronze",rare:"Argent",epique:"Or",legendaire:"Platine"};
-const RCOLOR = {commun:"#d08a52",rare:"#d5dce6",epique:"#f6cb3a",legendaire:"#c9c2ff"};
-const COUNTRY = {US:"USA",UK:"Royaume-Uni",FR:"France"};
-const ORDER = ["commun","rare","epique","legendaire"];
-const ovrOf = m => Math.min(99,Math.round(55+12*Math.log10(m))); // la note vient des streams : 10 M → 67, 100 M → 79, 1 Md → 91
-const rarityOf = o => o>=90?"legendaire":o>=84?"epique":o>=76?"rare":"commun";
+// ---------- catalogue : une carte par titre (toute la discographie), plus les spéciales Holo (un titre) et Icône (un artiste) ----------
+const TIER = {commune:"Commune",rare:"Rare",epique:"Épique",legendaire:"Légendaire"};
+const TCOLOR = {commune:"#9b88d6",rare:"#5ca8ff",epique:"#ff5aa8",legendaire:"#ffd23f"};
+const ORDER = ["commune","rare","epique","legendaire"];
+// les disques : seuils de certification d'un single dans chaque pays, en millions de streams
+const CERT = {US:{or:75,pl:150,dia:1500},UK:{ar:20,or:40,pl:60},FR:{or:15,pl:30,dia:50}};
+function disc(country,m){
+  const t=CERT[country];
+  if(t.dia&&m>=t.dia){const n=Math.floor(m/t.dia);return {lvl:"Diamant",label:n>1?`${n}× Diamant`:"Diamant"}}
+  if(m>=t.pl){const n=Math.floor(m/t.pl);return {lvl:"Platine",label:n>1?`${n}× Platine`:"Platine"}}
+  if(m>=t.or)return {lvl:"Or",label:"Or"};
+  if(t.ar&&m>=t.ar)return {lvl:"Argent",label:"Argent"};
+  return {lvl:"",label:"Aucun"};
+}
+const plat = (country,m) => m/CERT[country].pl; // nombre de disques de platine
+// la note mélange les streams et les disques : 1 M → ~57, 100 M → ~75, 1 Md → ~86, 3 Md → ~94
+const ovrOf = (country,m) => Math.max(40,Math.min(99,Math.round(.5*(50+13*Math.log10(Math.max(.1,m)))+.5*(55+20*Math.log10(1+plat(country,m)))+5)));
+const tierOf = o => o>=88?"legendaire":o>=80?"epique":o>=70?"rare":"commune";
 const slug = s => s.normalize("NFD").replace(/[̀-ͯ]/g,"").toLowerCase().replace(/[^a-z0-9]+/g,"-").replace(/^-|-$/g,"");
 const hue = s => {let h=0;for(const c of s)h=(h*31+c.charCodeAt(0))%360;return h};
 const initials = s => s.replace(/[^\p{L}\p{N} ]/gu,"").split(/\s+/).filter(Boolean).slice(0,2).map(w=>w[0]).join("").toUpperCase()||"♪";
 const esc = s => String(s).replace(/[&<>"]/g,ch=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[ch]));
 const rid = () => Math.random().toString(36).slice(2,10);
+const any = a => a[Math.floor(Math.random()*a.length)];
 
-const ALB={},CARD={},TRACKS=[],ICONES=[];
-ALBUMS.forEach(a=>{ALB[a.id]=a;a.tr.forEach(([title,streams],i)=>{
-  const ovr=ovrOf(streams),c={key:`t:${a.id}:${i}`,kind:"track",alb:a.id,title,artist:a.a,country:a.c,streams,ovr,rarity:rarityOf(ovr)};
-  TRACKS.push(c);CARD[c.key]=c;
-  CARD[`d:${a.id}:${i}`]={...c,key:`d:${a.id}:${i}`,kind:"diamant",ovr:Math.min(99,ovr+4)};
-})});
-{
-  const by={};TRACKS.forEach(t=>(by[t.artist]??=[]).push(t));
-  for(const [artist,ts] of Object.entries(by)){
-    const best=ts.reduce((a,b)=>b.streams>a.streams?b:a);
-    const c={key:`a:${slug(artist)}`,kind:"icone",artist,title:artist,country:best.country,alb:best.alb,streams:ts.reduce((s,t)=>s+t.streams,0),ovr:Math.min(99,best.ovr+3),rarity:"legendaire",n:ts.length};
-    ICONES.push(c);CARD[c.key]=c;
-  }
-}
-const dia = t => CARD["d"+t.key.slice(1)];
-const value = c => Math.round(120*Math.pow(1.11,c.ovr-60)*(c.kind==="diamant"?2.5:c.kind==="icone"?4:1)/10)*10;
+const ART={},ALB={},CARD={},TRACKS=[],ICONES=[],POOL={commune:[],rare:[],epique:[],legendaire:[]};
+ARTISTS.forEach(a=>{ART[a.id]=a;a.albums=[];a.tracks=[]});
+ALBUMS.forEach(al=>{
+  const a=ART[al.ar];ALB[al.id]=al;a.albums.push(al);al.total=0;
+  al.tr.forEach(([title,m],i)=>{
+    const ovr=ovrOf(a.c,m),c={key:`t:${al.id}:${i}`,kind:"track",alb:al.id,ar:a.id,title,artist:a.n,country:a.c,streams:m,vs:m,ovr,tier:tierOf(ovr)};
+    TRACKS.push(c);CARD[c.key]=c;POOL[c.tier].push(c);a.tracks.push(c);al.total+=m;
+    CARD[`h:${al.id}:${i}`]={...c,key:`h:${al.id}:${i}`,kind:"holo",ovr:Math.min(99,ovr+3)};
+  });
+});
+ARTISTS.forEach(a=>{
+  if(!a.tracks.length)return;
+  const best=a.tracks.reduce((x,y)=>y.streams>x.streams?y:x);
+  a.cover=a.albums.reduce((x,y)=>y.total>x.total?y:x).id;
+  const c={key:`a:${a.id}`,kind:"icone",alb:a.cover,ar:a.id,title:a.n,artist:a.n,country:a.c,streams:Math.round(a.tracks.reduce((s,t)=>s+t.streams,0)),vs:best.streams,ovr:Math.min(99,best.ovr+2),tier:"legendaire"};
+  ICONES.push(c);CARD[c.key]=c;a.icone=c.key;
+});
+const holo = t => CARD["h"+t.key.slice(1)];
+// la valeur vient des disques : 100 pièces + 800 par disque de platine (×2,5 en Holo, ×4 en Icône)
+const value = c => Math.round((100+800*plat(c.country,c.vs))*(c.kind==="holo"?2.5:c.kind==="icone"?4:1)/10)*10;
 const quick = c => Math.round(value(c)*.6/10)*10;
-const weight = c => c.ovr+(c.kind==="icone"?20:c.kind==="diamant"?10:0);
-const walkout = c => c.kind!=="track"||c.rarity==="legendaire"; // Platine, Diamant et Icône ont droit à la walkout
-const flOf = c => c.kind==="track"?c.rarity:c.kind;
-const labelOf = c => c.kind==="icone"?"Icône":c.kind==="diamant"?"Diamant":RNAME[c.rarity];
+const weight = c => c.ovr+(c.kind==="icone"?20:c.kind==="holo"?10:0);
+const walkout = c => c.kind!=="track"||c.tier==="legendaire"; // Légendaire, Holo et Icône ont droit à la walkout
+const flOf = c => c.kind==="track"?c.tier:c.kind;
+const labelOf = c => c.kind==="icone"?"Icône":c.kind==="holo"?"Holo":TIER[c.tier];
 
-const PACKS = [
-  {key:"bronze",group:"Packs classiques",label:"Bronze",desc:"3 cartes",price:1000,size:3,odds:{commun:.75,rare:.2,epique:.045,legendaire:.005},dia:.03,ico:.002},
-  {key:"silver",label:"Argent",desc:"4 cartes · 1 Argent minimum",price:3000,size:4,guarantee:"rare",odds:{commun:.55,rare:.32,epique:.11,legendaire:.02},dia:.04,ico:.005},
-  {key:"gold",label:"Or",desc:"5 cartes · 1 Or minimum",price:7500,size:5,guarantee:"epique",odds:{commun:.3,rare:.4,epique:.22,legendaire:.08},dia:.06,ico:.01},
-  {key:"us",group:"Packs pays",label:"Rap US",country:"US",desc:"4 cartes US · 1 Argent minimum",price:4000,size:4,guarantee:"rare",odds:{commun:.45,rare:.35,epique:.15,legendaire:.05},dia:.05,ico:.006},
-  {key:"uk",label:"Rap UK",country:"UK",desc:"4 cartes UK · 1 Argent minimum",price:4000,size:4,guarantee:"rare",odds:{commun:.45,rare:.35,epique:.15,legendaire:.05},dia:.05,ico:.006},
-  {key:"fr",label:"Rap FR",country:"FR",desc:"4 cartes FR · 1 Argent minimum",price:4000,size:4,guarantee:"rare",odds:{commun:.45,rare:.35,epique:.15,legendaire:.05},dia:.05,ico:.006},
-  {key:"icon",group:"Spécial",label:"Icône",desc:"5 cartes · 1 Icône garantie",price:25000,size:5,guarantee:"epique",odds:{commun:.2,rare:.4,epique:.3,legendaire:.1},dia:.1,ico:0,icon:true}
+const ODDS={commune:.62,rare:.27,epique:.09,legendaire:.02};
+const PACKS=[
+  {key:"3",label:"Pack 3 cartes",size:3,price:2000},
+  {key:"5",label:"Pack 5 cartes",size:5,price:3500},
+  {key:"10",label:"Pack 10 cartes",size:10,price:6500}
 ];
+// packs spéciaux : on ne les gagne qu'avec les défis de cartes
+const SPECIAL={
+  sp3:{key:"sp",label:"Pack Spécial",desc:"3 cartes · 1 Rare minimum",size:3,guarantee:"rare"},
+  fr:{key:"sp",label:"Pack Rap FR",desc:"5 cartes FR · 1 Épique minimum",size:5,country:"FR",guarantee:"epique"},
+  us:{key:"sp",label:"Pack Rap US",desc:"5 cartes US · 1 Épique minimum",size:5,country:"US",guarantee:"epique"},
+  uk:{key:"sp",label:"Pack Rap UK",desc:"5 cartes UK · 1 Épique minimum",size:5,country:"UK",guarantee:"epique"},
+  legend:{key:"sp",label:"Pack Légende",desc:"5 cartes · 1 Légendaire garantie",size:5,guarantee:"legendaire"},
+  icone:{key:"sp",label:"Pack Icône",desc:"5 cartes · 1 Icône garantie",size:5,guarantee:"epique",icon:true},
+  holo:{key:"sp",label:"Pack Holo",desc:"5 cartes · 2 Holo garanties",size:5,holo:2},
+  old:{key:"sp",label:"Pack Old School",desc:"5 cartes d’avant 2005 · 1 Épique minimum",size:5,before:2005,guarantee:"epique"}
+};
 
 // ---------- sauvegarde ----------
 const today = () => new Date().toLocaleDateString("sv");
-const START = () => ({coins:20000,owned:{},vibrate:true,skipWO:false,pseudo:"Joueur"+Math.floor(1000+Math.random()*9000),listings:[],market:null,daily:null,claimed:[],friends:[],usedGifts:[],tick:Date.now()});
+const START = () => ({coins:100000,owned:{},seen:{},vibrate:true,skipWO:false,pseudo:"Joueur"+Math.floor(1000+Math.random()*9000),listings:[],market:null,daily:null,claimed:[],friends:[],usedGifts:[],tick:Date.now()});
 let state=START();
-try{const s=JSON.parse(localStorage.getItem("beatpacks2"));if(s&&typeof s.coins==="number")state={...state,...s}}catch(e){}
+try{const s=JSON.parse(localStorage.getItem("beatpacks3"));if(s&&typeof s.coins==="number")state={...state,...s}}catch(e){}
 for(const k in state.owned)if(!CARD[k])delete state.owned[k]; // un titre retiré du catalogue
-function save(){try{localStorage.setItem("beatpacks2",JSON.stringify(state))}catch(e){}}
-function daily(){if(!state.daily||state.daily.date!==today())state.daily={date:today(),packs:0,sold:0,bought:0,hi:0,claimed:[]};return state.daily}
+function save(){try{localStorage.setItem("beatpacks3",JSON.stringify(state))}catch(e){}}
+function daily(){if(!state.daily||state.daily.date!==today())state.daily={date:today(),packs:0,sold:0,bought:0,hi:0,sbc:0,claimed:[]};return state.daily}
 const has = k => (state.owned[k]||0)>0;
 const give = k => state.owned[k]=(state.owned[k]||0)+1;
 const take = k => {state.owned[k]--;if(state.owned[k]<=0)delete state.owned[k]};
+const isNew = k => has(k)&&!state.seen[k];
 
 const $=id=>document.getElementById(id);
 const fmt=n=>n.toLocaleString("fr-FR");
@@ -62,110 +87,77 @@ function haptic(p=8){if(state.vibrate&&navigator.vibrate)navigator.vibrate(p)}
 function wallet(){$("wallet").textContent=fmt(state.coins);if(!$("s-shop").hidden)renderPacks()}
 function earn(n,why){state.coins+=n;save();wallet();toast(`${why?why+" · ":""}+${fmt(n)} pièces`);haptic([10,30,10])}
 
-// ---------- pochettes : recherche iTunes, gardées sur l'appareil ----------
-// les pochettes du catalogue sont déjà dans covers.js ; seuls les albums ajoutés ensuite sont cherchés en ligne
-let COVERS={};try{COVERS=JSON.parse(localStorage.getItem("bp-covers"))||{}}catch(e){}
-Object.assign(COVERS,typeof COVER_ART==="object"?COVER_ART:{});
-const coverQ=[];let coverBusy=false;
-function wantCover(id,urgent){
-  if(COVERS[id]!==undefined)return;
-  const i=coverQ.indexOf(id);
-  if(i>=0){if(urgent){coverQ.splice(i,1);coverQ.unshift(id)}return}
-  urgent?coverQ.unshift(id):coverQ.push(id);pumpCovers();
-}
-// garde un résultat seulement si l'artiste et l'album correspondent (jamais la pochette d'un autre disque)
-function bestCover(rs,a){
-  const A=slug(a.a.split(" & ")[0]),T=slug(a.t);let top=null,ts=0;
-  for(const x of rs){
-    const xa=slug(x.artistName||""),xt=slug(x.collectionName||"");
-    const sa=xa===A?2:xa.includes(A)?1:0,st=xt===T?3:xt.startsWith(T+"-")?2:xt.includes(T)?1:0;
-    if(sa&&st&&(sa===2||st===3)&&sa+st>ts){ts=sa+st;top=x} // artiste approché → titre exact obligatoire
-  }
-  return top;
-}
-function pumpCovers(){
-  if(coverBusy||!coverQ.length)return;coverBusy=true;
-  const id=coverQ.shift(),a=ALB[id];
-  const url=`https://itunes.apple.com/search?term=${encodeURIComponent(a.a.replace(" & "," ")+" "+a.t)}&entity=album&limit=25&country=${a.c==="FR"?"fr":a.c==="UK"?"gb":"us"}`;
-  const ctl=new AbortController(),to=setTimeout(()=>ctl.abort(),15000);
-  fetch(url,{signal:ctl.signal}).then(r=>{if(!r.ok)throw 0;return r.json()}).then(d=>{
-    const r=bestCover(d.results||[],a);
-    COVERS[id]=r&&r.artworkUrl100?r.artworkUrl100.replace("100x100bb","600x600bb"):"";
-    try{localStorage.setItem("bp-covers",JSON.stringify(COVERS))}catch(e){}
-    paintCover(id);return 3500;
-  },()=>15000).then(wait=>{clearTimeout(to);setTimeout(()=>{coverBusy=false;pumpCovers()},wait)}); // iTunes limite à une vingtaine de recherches par minute
-}
-const img = u => `<img src="${u}" alt="" onload="this.classList.add('ok')">`;
-function coverHTML(id,cls=""){
-  const a=ALB[id],u=COVERS[id];if(u===undefined)wantCover(id);
-  return `<span class="cov ${cls}" data-alb="${id}" style="--h:${hue(a.t)}">${esc(initials(a.t))}${u?img(u):""}</span>`;
-}
-function paintCover(id){const u=COVERS[id];if(u)document.querySelectorAll(`.cov[data-alb="${id}"]`).forEach(el=>{if(!el.querySelector("img"))el.insertAdjacentHTML("beforeend",img(u))})}
-
 // ---------- cartes ----------
+function coverHTML(id,cls=""){
+  const a=ALB[id];
+  return `<span class="cov ${cls}" style="--h:${hue(a.t)}">${esc(initials(a.t))}${a.cv?`<img src="${a.cv}" alt="" loading="lazy" onerror="this.remove()">`:""}</span>`;
+}
 const PLAY='<svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M8 5v14l11-7z"/></svg>';
-const fmtStreams=m=>m>=1000?(m/1000).toLocaleString("fr-FR",{maximumFractionDigits:1})+" Md":fmt(m)+" M";
-function cardHTML(c){
-  return `<div class="card ${c.kind==="track"?"r-"+c.rarity:"k-"+c.kind}">
-    <div class="head"><div class="lft"><span class="ovr">${c.ovr}</span><span class="pos">${c.country}</span><i class="flag f-${c.country.toLowerCase()}"></i>${c.kind!=="track"?`<span class="kind">${labelOf(c).toUpperCase()}</span>`:""}</div>${coverHTML(c.alb,"art")}</div>
-    <div class="nm">${esc(c.title)}</div>
-    <div class="ar">${esc(c.kind==="icone"?c.n+" titres":c.artist)}</div>
-    <div class="sm">${PLAY}${fmtStreams(c.streams)}</div>
-    <div class="rar">${labelOf(c)}</div>
+const fmtStreams=m=>m>=1000?(m/1000).toLocaleString("fr-FR",{maximumFractionDigits:1})+" Md":m>=1?fmt(Math.round(m))+" M":fmt(Math.round(m*1000))+" k";
+function cardHTML(c,fresh){
+  return `<div class="card ${c.kind==="track"?"t-"+c.tier:"k-"+c.kind}">
+    <span class="ovr">${c.ovr}</span>${fresh?`<span class="new">NEW</span>`:""}
+    ${c.kind!=="track"?`<span class="kind">${labelOf(c).toUpperCase()}</span>`:""}
+    ${coverHTML(c.alb,"art")}
+    <div class="nm">${esc(c.kind==="icone"?"Icône":c.title)}</div>
+    <div class="ar">${esc(c.artist)}</div>
+    <span class="stm">${PLAY}${fmtStreams(c.streams)}</span>
     <div class="glare"></div>
   </div>`;
 }
-const cw=(c,{isNew=false,qty=0,tap=false,i}={})=>`<div class="cw"${tap?` data-k="${c.key}"`:""}${i!=null?` style="--i:${i}"`:""}>${cardHTML(c)}${isNew?`<span class="badge">NOUVEAU</span>`:""}${qty>1?`<span class="qty">×${qty}</span>`:""}</div>`;
-const packHTML=p=>`<div class="pack k-${p.key}"><div class="foil"></div><div class="stripe"></div><div class="logo"><small>BEAT PACKS</small><b>${p.size}</b><small>${p.country||"CARTES"}</small></div><div class="shine"></div></div>`;
-function pickRarity(odds){let x=Math.random(),acc=0;for(const r of ORDER){acc+=odds[r];if(x<acc)return r}return "commun"}
-const any = a => a[Math.floor(Math.random()*a.length)];
-function drawTrack(r,country){for(let i=ORDER.indexOf(r);i>=0;i--){const p=TRACKS.filter(t=>t.rarity===ORDER[i]&&(!country||t.country===country));if(p.length)return any(p)}return any(TRACKS)}
+const cw=(c,{fresh=false,qty=0,tap=false,i}={})=>`<div class="cw"${tap?` data-k="${c.key}"`:""}${i!=null?` style="--i:${i}"`:""}>${cardHTML(c,fresh)}${qty>1?`<span class="qty">×${qty}</span>`:""}</div>`;
+const packHTML=p=>`<div class="pack k-${p.key}"><div class="foil"></div><div class="stripe"></div><div class="logo"><small>BEAT PACKS</small><b>${p.size}</b><small>CARTES</small></div><div class="shine"></div></div>`;
+function pickTier(odds){let x=Math.random(),acc=0;for(const r of ORDER){acc+=odds[r];if(x<acc)return r}return "commune"}
+function drawTrack(t,f){
+  for(let i=ORDER.indexOf(t);i>=0;i--){const p=f?POOL[ORDER[i]].filter(f):POOL[ORDER[i]];if(p.length)return any(p)}
+  return any(f?TRACKS.filter(f):TRACKS);
+}
 const drawIcone = country => any(ICONES.filter(c=>!country||c.country===country));
 function drawPack(p){
+  const f=p.country||p.before?c=>(!p.country||c.country===p.country)&&(!p.before||ALB[c.alb].y<p.before):null;
   const out=Array.from({length:p.size},()=>{
-    if(Math.random()<p.ico)return drawIcone(p.country);
-    const t=drawTrack(pickRarity(p.odds),p.country);
-    return Math.random()<p.dia?dia(t):t;
+    if(!p.before&&Math.random()<.004)return drawIcone(p.country);
+    const t=drawTrack(pickTier(ODDS),f);
+    return Math.random()<.03?holo(t):t;
   });
-  if(p.guarantee&&!out.some(c=>c.kind!=="track"||ORDER.indexOf(c.rarity)>=ORDER.indexOf(p.guarantee)))out[0]=drawTrack(p.guarantee,p.country);
+  if(p.guarantee&&!out.some(c=>c.kind!=="track"||ORDER.indexOf(c.tier)>=ORDER.indexOf(p.guarantee)))out[0]=drawTrack(p.guarantee,f);
   if(p.icon&&!out.some(c=>c.kind==="icone"))out[out.length-1]=drawIcone();
+  for(let i=0,n=0;n<(p.holo||0)&&i<out.length;i++)if(out[i].kind==="track"){out[i]=holo(out[i]);n++}
   return out.sort((a,b)=>weight(b)-weight(a)); // la meilleure carte en premier
 }
 
-// ---------- boutique ----------
+// ---------- boutique : 3 packs, seul le nombre de cartes change ----------
 function renderPacks(){
-  $("packs").innerHTML=PACKS.map(p=>`${p.group?`<h2>${p.group}</h2>`:""}<div class="offer p-${p.key}">
+  $("packs").innerHTML=PACKS.map(p=>`<div class="offer p-${p.key}">
     ${packHTML(p)}
     <div class="info">
-      <h3>Pack ${p.label}</h3><p>${p.desc}</p>
-      <div class="odds">${ORDER.slice().reverse().map(r=>`<span><i style="background:${RCOLOR[r]}"></i>${pct(p.odds[r])}</span>`).join("")}</div>
+      <h3>${p.label}</h3><p>${p.size} cartes tirées dans toutes les discographies</p>
+      <div class="odds">${ORDER.slice().reverse().map(r=>`<span><i style="background:${TCOLOR[r]}"></i>${TIER[r]} ${Math.round(ODDS[r]*100)}%</span>`).join("")}</div>
       <button class="btn light" data-k="${p.key}" ${state.coins<p.price?"disabled":""}><i class="coin"></i>${fmt(p.price)}</button>
     </div>
-  </div>`).join("");
-  document.querySelectorAll(".offer .btn").forEach(b=>b.onclick=()=>openPack(b.dataset.k));
+  </div>`).join("")+`<p class="note">Les packs spéciaux se gagnent dans les défis de cartes (onglet Défis).</p>`;
+  document.querySelectorAll(".offer .btn").forEach(b=>b.onclick=()=>buyPack(b.dataset.k));
 }
-const pct=x=>x>=.1?Math.round(x*100)+"%":(+(x*100).toFixed(1))+"%";
+function buyPack(k){const p=PACKS.find(x=>x.key===k);if(state.coins<p.price)return;state.coins-=p.price;openPack(p)}
 
-// ---------- ouverture façon FIFA 21 : le pack, le tunnel, la walkout si grosse carte, le récap ----------
+// ---------- ouverture façon FIFA 21 : le pack, le tunnel, la walkout si grosse carte, la carte, puis les autres ----------
 let run=null;
 const open=$("open"),scene=$("scene");
 const hint=t=>$("skipHint").textContent=t;
 const later=(f,ms)=>run.timers.push(setTimeout(f,ms));
 const clearT=()=>{run.timers.forEach(clearTimeout);run.timers=[]};
-function openPack(k){
-  const p=PACKS.find(x=>x.key===k); if(state.coins<p.price)return;
-  state.coins-=p.price;
+function openPack(p){
   const cards=drawPack(p),fresh=new Set();
-  cards.forEach(c=>{if(!has(c.key))fresh.add(c.key);give(c.key);wantCover(c.alb,true)});
+  cards.forEach(c=>{if(!has(c.key))fresh.add(c.key);give(c.key)});
   const d=daily();d.packs++;if(cards.some(walkout))d.hi++;
   save();wallet();badge();
   run={cards,fresh,best:cards[0],phase:"pack",timers:[],step:0};
   open.className="open";open.dataset.fl="";$("burst").innerHTML="";
-  scene.innerHTML=`<div class="bigpack">${packHTML(p)}</div>`;
+  scene.innerHTML=`<div class="bigpack">${packHTML(p)}</div><b style="font:900 24px var(--font)">${esc(p.label)}</b>`;
   hint("Touche le pack pour l’ouvrir");
   open.hidden=false;
 }
-function advance(){
+function advance(e){
   if(!run)return;
   if(run.phase==="pack"){
     run.phase="busy";hint("");
@@ -173,27 +165,27 @@ function advance(){
     later(()=>bp.classList.replace("shake","go"),500);
     later(tunnel,1000);
   }else if(run.phase==="wo"){clearT();step()}
-  else if(run.phase==="card"){clearT();recap()}
+  else if(run.phase==="card"&&e.target.closest(".reveal")){clearT();recap()} // il faut toucher la carte pour voir les autres
 }
-open.addEventListener("click",e=>{if(!e.target.closest("button"))advance()});
+open.addEventListener("click",e=>{if(!e.target.closest("button"))advance(e)});
 // le tunnel : les lumières foncent vers nous, les fusées prennent la couleur de la meilleure carte
 function tunnel(){
   scene.innerHTML=`<div class="flash"></div>`;
   later(()=>scene.querySelector(".flash")?.remove(),520);
   open.dataset.fl=flOf(run.best);open.classList.add("run");
-  haptic(walkout(run.best)?[40,60,40,60,80]:run.best.rarity==="epique"?[30,50,30]:12);
+  haptic(walkout(run.best)?[40,60,40,60,80]:run.best.tier==="epique"?[30,50,30]:12);
   const wo=walkout(run.best)&&!state.skipWO;
-  later(()=>{if(wo){run.phase="wo";open.classList.replace("run","wo");run.step=0;step()}else recap()},1800);
+  later(()=>{if(wo){run.phase="wo";open.classList.replace("run","wo");run.step=0;step()}else reveal()},1800);
 }
-// walkout : le pays, la pochette, l'artiste, puis la carte
+// walkout : le pays, l'artiste, l'album, puis la carte
 function step(){
   const c=run.best,a=ALB[c.alb];
   const steps=[
-    `<div class="wstep"><small>Pays</small><i class="flag f-${c.country.toLowerCase()}"></i><strong>${COUNTRY[c.country]}</strong></div>`,
+    `<div class="wstep"><small>Pays</small><strong>${c.country}</strong></div>`,
+    `<div class="wstep"><small>Artiste</small><strong>${esc(c.artist)}</strong></div>`,
     c.kind==="icone"
-      ?`<div class="wstep"><small>Carte spéciale</small><strong>Icône</strong></div>`
-      :`<div class="wstep"><small>Album · ${a.y}</small>${coverHTML(a.id)}<strong style="font-size:min(9vw,46px)">${esc(a.t)}</strong></div>`,
-    `<div class="wstep"><small>Artiste</small><strong>${esc(c.artist)}</strong></div>`
+      ?`<div class="wstep"><small>Carte spéciale</small>${coverHTML(a.id,"round")}<strong>Icône</strong></div>`
+      :`<div class="wstep"><small>Album · ${a.y}</small>${coverHTML(a.id)}<strong style="font-size:min(9vw,46px)">${esc(a.t)}</strong></div>`
   ];
   if(run.step>=steps.length){reveal();return}
   scene.innerHTML=steps[run.step++];
@@ -201,10 +193,10 @@ function step(){
   later(step,1600);
 }
 function reveal(){
-  run.phase="card";
-  scene.innerHTML=`<div class="reveal">${cw(run.best,{isNew:run.fresh.has(run.best.key)})}</div>`;
-  burst();haptic([30,40,60]);
-  hint("Touche pour voir tout le pack");
+  run.phase="card";open.classList.remove("run");open.classList.add("wo");
+  scene.innerHTML=`<div class="reveal">${cw(run.best,{fresh:run.fresh.has(run.best.key)})}</div>`;
+  if(walkout(run.best)){burst();haptic([30,40,60])}
+  hint("Touche la carte pour voir les autres");
   tilt(scene);
 }
 function burst(){
@@ -217,12 +209,13 @@ function burst(){
 function recap(){
   run.phase="recap";clearT();
   open.classList.remove("run","wo");hint("");
-  scene.innerHTML=`<div class="recap"><h2>Ton pack</h2><div class="recapgrid">${run.cards.map((c,i)=>cw(c,{isNew:run.fresh.has(c.key)&&run.cards.findIndex(x=>x.key===c.key)===i,i})).join("")}</div><button class="btn" id="done">Continuer</button></div>`;
+  const seen=new Set();
+  scene.innerHTML=`<div class="recap"><h2>Ton pack</h2><div class="recapgrid${run.cards.length>6?" many":""}">${run.cards.map((c,i)=>{const f=run.fresh.has(c.key)&&!seen.has(c.key);seen.add(c.key);return cw(c,{fresh:f,i})}).join("")}</div><button class="btn" id="done">Continuer</button></div>`;
   $("done").onclick=closePack;
 }
 function closePack(){
   open.hidden=true;run=null;scene.innerHTML="";
-  if(!$("s-club").hidden)renderClub();
+  renderClub();
   if(state.coins<PACKS[0].price)toast("Plus de pièces ? Vends des cartes ou fais tes défis");
 }
 
@@ -240,20 +233,24 @@ function tilt(box){
   box.addEventListener("pointerleave",()=>box.querySelectorAll(".card").forEach(c=>{c.style.transition="";["--rx","--ry","--mx","--my"].forEach(v=>c.style.removeProperty(v))}));
 }
 
-// ---------- fiche d'une carte : vendre, mettre au marché, offrir ----------
-function sheet(html){$("sheetIn").innerHTML=html;$("sheet").hidden=false;tilt($("sheetIn"))}
+// ---------- feuille du bas : fiche d'une carte (vendre, mettre au marché, offrir) ----------
+function sheet(html){$("sheetIn").innerHTML=html;$("sheet").hidden=false;$("sheetIn").scrollTop=0}
 const closeSheet=()=>{$("sheet").hidden=true};
 $("sheet").onclick=e=>{if(e.target.id==="sheet")closeSheet()};
+tilt($("sheetIn"));
 function facts(c){
   const a=ALB[c.alb];
   return `<div class="facts">
-    ${c.kind==="icone"?`<div><small>Artiste</small><b>${esc(c.artist)}</b></div><div><small>Titres</small><b>${c.n}</b></div>`:`<div><small>Album</small><b>${esc(a.t)}</b></div><div><small>Année</small><b>${a.y}</b></div>`}
+    ${c.kind==="icone"?`<div><small>Artiste</small><b>${esc(c.artist)}</b></div><div><small>Titres</small><b>${ART[c.ar].tracks.length}</b></div>`:`<div><small>Album</small><b>${esc(a.t)}</b></div><div><small>Année</small><b>${a.y}</b></div>`}
     <div><small>Streams</small><b>${fmtStreams(c.streams)}</b></div>
+    <div><small>Disque</small><b>${disc(c.country,c.vs).label}</b></div>
+    <div><small>Rareté</small><b>${labelOf(c)}</b></div>
     <div><small>Valeur</small><b><i class="coin"></i>${fmt(value(c))}</b></div>
   </div>`;
 }
 function cardSheet(k){
   const c=CARD[k],q=state.owned[k]||0;
+  state.seen[k]=1;save();
   sheet(`${cw(c)}${facts(c)}<div class="acts" id="acts">
     <div class="two"><button class="btn ghost" id="shQuick">Vente rapide · +${fmt(quick(c))}</button><button class="btn cyan" id="shList">Au marché</button></div>
     <button class="btn ghost" id="shGift">Offrir à un ami</button>
@@ -279,48 +276,75 @@ function giftSheet(k){
   $("gfGo").onclick=()=>{
     const to=$("gfTo").value.trim()||"Un ami",code=enc({k,f:state.pseudo,n:rid()});
     take(k);addFriend(to,"sent");save();renderClub();
-    $("acts").innerHTML=`<div class="code" id="gfCode">${code}</div><button class="btn" id="gfCopy">Copier le code</button>`;
+    $("acts").innerHTML=`<div class="code">${code}</div><button class="btn" id="gfCopy">Copier le code</button>`;
     $("gfCopy").onclick=()=>{navigator.clipboard?.writeText(code).then(()=>toast("Code copié"),()=>{});};
   };
 }
 function addFriend(name,dir){let f=state.friends.find(x=>x.name.toLowerCase()===name.toLowerCase());if(!f){f={name,sent:0,recv:0};state.friends.push(f)}f[dir]++}
 
-// ---------- collection : regroupée par album ----------
-let filter="all";
-const uniq=()=>TRACKS.filter(t=>has(t.key)||has(dia(t).key)).length;
-const albumDone=a=>a.tr.every((_,i)=>has(`t:${a.id}:${i}`)||has(`d:${a.id}:${i}`));
+// ---------- collection : mes artistes → tous leurs albums → toutes les cartes de l'album ----------
+const club={view:"artists",ar:null,alb:null,q:""};
+const albumOwned=al=>al.tr.filter((_,i)=>has(`t:${al.id}:${i}`)||has(`h:${al.id}:${i}`)).length;
+const uniq=()=>TRACKS.filter(t=>has(t.key)||has(holo(t).key)).length;
+const albumDone=al=>albumOwned(al)===al.tr.length;
+function myArtists(){
+  const n={},fresh={};
+  for(const k in state.owned){const c=CARD[k];n[c.ar]=(n[c.ar]||0)+1;if(!state.seen[k])fresh[c.ar]=1}
+  return {n,fresh};
+}
 function renderClub(){
   if($("s-club").hidden)return;
-  const q=slug($("search").value||"");
-  const match=a=>!q||slug(a.a+" "+a.t+" "+a.tr.map(t=>t[0]).join(" ")).includes(q);
-  const albs=ALBUMS.filter(a=>(filter==="all"||filter==="own"||a.c===filter)&&(filter!=="own"||a.tr.some((_,i)=>has(`t:${a.id}:${i}`)||has(`d:${a.id}:${i}`)))&&match(a));
-  const icons=ICONES.filter(c=>(filter==="all"||c.country===filter||(filter==="own"&&has(c.key)))&&(!q||slug(c.artist).includes(q)));
-  const ownedIcons=icons.filter(c=>has(c.key)).length;
-  let html="";
-  const iconHTML=!icons.length?"":`<div class="album"><div class="ahead"><span class="cov" style="--h:320">★</span><div class="at"><b>Icônes</b><small>Cartes spéciales des artistes</small></div><span class="ap">${ownedIcons}/${icons.length}</span></div>
-    <div class="grid">${icons.map(c=>has(c.key)?cw(c,{qty:state.owned[c.key],tap:true}):`<div class="cw"><div class="card ghost"><b>★</b><span>${esc(c.artist)}</span></div></div>`).join("")}</div></div>`;
-  // les Icônes passent après les albums
-  html+=albs.map(a=>{
-    const n=a.tr.filter((_,i)=>has(`t:${a.id}:${i}`)||has(`d:${a.id}:${i}`)).length,done=n===a.tr.length;
-    const cards=a.tr.map((tr,i)=>{const t=CARD[`t:${a.id}:${i}`];return has(t.key)?cw(t,{qty:state.owned[t.key],tap:true}):`<div class="cw"><div class="card ghost"><b>#${i+1}</b><span>${esc(tr[0])}</span></div></div>`}).join("");
-    const dias=a.tr.map((_,i)=>CARD[`d:${a.id}:${i}`]).filter(d=>has(d.key)).map(d=>cw(d,{qty:state.owned[d.key],tap:true})).join("");
-    return `<div class="album${done?" done":""}"><div class="ahead">${coverHTML(a.id)}<div class="at"><b>${esc(a.t)}</b><small><i class="flag f-${a.c.toLowerCase()}"></i>${esc(a.a)} · ${a.y}</small></div><span class="ap">${done?"✓ ":""}${n}/${a.tr.length}</span></div><div class="grid">${cards}${dias}</div></div>`;
-  }).join("")+iconHTML;
-  $("albums").innerHTML=html||`<p class="empty">Aucun album ne correspond.</p>`;
-  const u=uniq();$("pbar").style.width=(u/TRACKS.length*100)+"%";$("pct").innerHTML=`<b>${u}</b> / ${TRACKS.length}`;
+  const el=$("club");let html="";
+  if(club.view==="artists"){
+    const {n,fresh}=myArtists(),q=slug(club.q);
+    const list=ARTISTS.filter(a=>n[a.id]&&(!q||slug(a.n).includes(q))).sort((a,b)=>n[b.id]-n[a.id]);
+    html=`<div class="titlerow"><h1>Collection</h1><span class="count-big"><b>${uniq()}</b> / ${fmt(TRACKS.length)}</span></div>
+      <input type="search" id="search" class="search" placeholder="Rechercher un artiste" value="${esc(club.q)}" autocomplete="off">
+      ${list.length?`<div class="agrid">${list.map(a=>`<button class="atile" data-ar="${a.id}">${fresh[a.id]?`<i class="dot"></i>`:""}${coverHTML(a.cover)}<b>${esc(a.n)}</b><small>${n[a.id]} carte${n[a.id]>1?"s":""}</small></button>`).join("")}</div>`
+        :`<p class="empty">${Object.keys(state.owned).length?"Aucun artiste ne correspond.":"Ta collection est vide : ouvre un pack dans la Boutique."}</p>`}`;
+  }else if(club.view==="artist"){
+    const a=ART[club.ar],own=a.tracks.filter(t=>has(t.key)||has(holo(t).key)).length,ic=CARD[a.icone];
+    html=`<button class="back" data-back="artists">‹ Mes artistes</button>
+      <div class="ahero">${coverHTML(a.cover)}<div><h1>${esc(a.n)}</h1><small>${a.albums.length} albums · ${own}/${a.tracks.length} titres</small></div></div>
+      <div class="alist">
+        <button class="arow${has(ic.key)?" done":""}" data-icone="1">${coverHTML(a.cover)}<div class="at"><b>Carte Icône</b><small>${has(ic.key)?"Obtenue":"Pas encore obtenue"}</small></div></button>
+        ${a.albums.map(al=>{const o=albumOwned(al);return `<button class="arow${o===al.tr.length?" done":""}" data-alb="${al.id}">${coverHTML(al.id)}<div class="at"><b>${esc(al.t)}</b><small>${al.y} · ${o}/${al.tr.length} titres</small><div class="bar"><i style="width:${o/al.tr.length*100}%"></i></div></div></button>`}).join("")}
+      </div>`;
+  }else{
+    const a=ART[club.ar],al=ALB[club.alb];
+    if(club.alb==="icone"){
+      const ic=CARD[a.icone];
+      html=`<button class="back" data-back="artist">‹ ${esc(a.n)}</button><h1>Carte Icône</h1><div class="grid">${has(ic.key)?cw(ic,{qty:state.owned[ic.key],tap:true,fresh:isNew(ic.key)}):`<div class="cw"><div class="card ghost"><b>★</b><span>${esc(a.n)}</span></div></div>`}</div>`;
+    }else{
+      const cards=al.tr.map((tr,i)=>{const t=CARD[`t:${al.id}:${i}`];return has(t.key)?cw(t,{qty:state.owned[t.key],tap:true,fresh:isNew(t.key)}):`<div class="cw"><div class="card ghost"><b>#${i+1}</b><span>${esc(tr[0])}</span></div></div>`}).join("");
+      const holos=al.tr.map((_,i)=>CARD[`h:${al.id}:${i}`]).filter(h=>has(h.key)).map(h=>cw(h,{qty:state.owned[h.key],tap:true,fresh:isNew(h.key)})).join("");
+      html=`<button class="back" data-back="artist">‹ ${esc(a.n)}</button>
+        <div class="ahero alb">${coverHTML(al.id)}<div><h1 style="font-size:26px">${esc(al.t)}</h1><small>${esc(a.n)} · ${al.y} · ${albumOwned(al)}/${al.tr.length} titres</small></div></div>
+        <div class="grid">${cards}${holos}</div>`;
+    }
+  }
+  el.innerHTML=html;
+  if($("search"))$("search").oninput=e=>{club.q=e.target.value;const p=e.target.selectionStart;renderClub();$("search").focus();$("search").setSelectionRange(p,p)};
 }
-$("filter").onclick=e=>{const b=e.target.closest("button");if(!b)return;filter=b.dataset.f;$("filter").querySelectorAll("button").forEach(x=>x.setAttribute("aria-pressed",x===b));renderClub()};
-$("search").oninput=renderClub;
-$("albums").onclick=e=>{const el=e.target.closest(".cw[data-k]");if(el){cardSheet(el.dataset.k);haptic()}};
+$("club").onclick=e=>{
+  const t=e.target;
+  const b=t.closest("[data-back]");if(b){club.view=b.dataset.back;renderClub();scrollTo(0,0);return}
+  const ar=t.closest("[data-ar]");if(ar){club.view="artist";club.ar=ar.dataset.ar;renderClub();scrollTo(0,0);haptic();return}
+  const al=t.closest("[data-alb]");if(al){club.view="album";club.alb=al.dataset.alb;renderClub();markSeen();scrollTo(0,0);haptic();return}
+  if(t.closest("[data-icone]")){club.view="album";club.alb="icone";renderClub();markSeen();scrollTo(0,0);return}
+  const c=t.closest(".cw[data-k]");if(c){cardSheet(c.dataset.k);haptic()}
+};
+// les cartes d'un album perdent leur NEW une fois l'album ouvert
+function markSeen(){$("club").querySelectorAll(".cw[data-k]").forEach(el=>state.seen[el.dataset.k]=1);save()}
 
 // ---------- marché : acheter les offres des autres joueurs, vendre les siennes ----------
 const SELLERS=["Lyricist","BeatHunter","NightDrive","Mixtape93","DripKing","LDN_Flow","Vinyl_Joe","Bassline","ParisFlow","Trap_Lord","GrimeTime","Studio_B"];
-const REFRESH=10*60e3,REFRESH_COST=250;
+const REFRESH=10*60e3,REFRESH_COST=1000;
 let mkt="buy";
 function market(){if(!state.market||Date.now()-state.market.at>REFRESH)newOffers();return state.market}
 function newOffers(){
-  state.market={at:Date.now(),offers:Array.from({length:8},()=>{
-    let c;if(Math.random()<.04)c=drawIcone();else{const t=drawTrack(pickRarity({commun:.35,rare:.35,epique:.22,legendaire:.08}));c=Math.random()<.06?dia(t):t}
+  state.market={at:Date.now(),offers:Array.from({length:10},()=>{
+    let c;if(Math.random()<.04)c=drawIcone();else{const t=drawTrack(pickTier({commune:.3,rare:.35,epique:.25,legendaire:.1}));c=Math.random()<.06?holo(t):t}
     return {id:rid(),k:c.key,price:Math.round(value(c)*(.9+Math.random()*.45)/10)*10,seller:any(SELLERS)};
   }).sort((a,b)=>b.price-a.price)};
   save();
@@ -330,9 +354,9 @@ function renderMarket(){
   $("mktBuy").hidden=mkt!=="buy";$("mktSell").hidden=mkt!=="sell";
   $("mktSeg").querySelectorAll("button").forEach(b=>{b.setAttribute("aria-pressed",b.dataset.m===mkt);if(b.dataset.m==="sell")b.textContent=`Mes ventes (${state.listings.length})`});
   const m=market();
-  $("mktRefresh").innerHTML=`Actualiser · <i class="coin"></i>${REFRESH_COST}`;$("mktRefresh").disabled=state.coins<REFRESH_COST;
-  $("mktOffers").innerHTML=m.offers.length?m.offers.map(o=>{const c=CARD[o.k];return `<div class="mrow">${cw(c,{tap:true})}<div class="mi"><b>${esc(c.title)}</b><small>${esc(c.kind==="icone"?"Icône":c.artist)} · ${labelOf(c)} ${c.ovr}</small><small>Vendu par ${o.seller}</small></div><button class="btn sm" data-buy="${o.id}" ${state.coins<o.price?"disabled":""}><i class="coin"></i>${fmt(o.price)}</button></div>`}).join(""):`<p class="empty">Tout est parti ! Reviens dans quelques minutes.</p>`;
-  $("mktListings").innerHTML=state.listings.length?state.listings.map(l=>{const c=CARD[l.k];return `<div class="mrow">${cw(c,{tap:true})}<div class="mi"><b>${esc(c.title)}</b><small>En vente · <i class="coin" style="width:12px;height:12px;vertical-align:-1px"></i> ${fmt(l.price)}</small><small>Valeur ${fmt(value(c))}</small></div><button class="btn sm ghost" data-cancel="${l.id}">Retirer</button></div>`}).join(""):`<p class="empty">Aucune carte en vente.</p>`;
+  $("mktRefresh").innerHTML=`Actualiser · <i class="coin"></i>${fmt(REFRESH_COST)}`;$("mktRefresh").disabled=state.coins<REFRESH_COST;
+  $("mktOffers").innerHTML=m.offers.length?m.offers.map(o=>{const c=CARD[o.k];return `<div class="mrow">${cw(c,{tap:true})}<div class="mi"><b>${esc(c.kind==="icone"?"Icône "+c.artist:c.title)}</b><small>${esc(c.artist)} · ${labelOf(c)} ${c.ovr}</small><small>${disc(c.country,c.vs).label!=="Aucun"?"Disque "+disc(c.country,c.vs).label+" · ":""}Vendu par ${o.seller}</small></div><button class="btn sm" data-buy="${o.id}" ${state.coins<o.price?"disabled":""}><i class="coin"></i>${fmt(o.price)}</button></div>`}).join(""):`<p class="empty">Tout est parti ! Reviens dans quelques minutes.</p>`;
+  $("mktListings").innerHTML=state.listings.length?state.listings.map(l=>{const c=CARD[l.k];return `<div class="mrow">${cw(c,{tap:true})}<div class="mi"><b>${esc(c.title)}</b><small>En vente · ${fmt(l.price)} pièces</small><small>Valeur ${fmt(value(c))}</small></div><button class="btn sm ghost" data-cancel="${l.id}">Retirer</button></div>`}).join(""):`<p class="empty">Aucune carte en vente.</p>`;
   mktTimer();
 }
 function mktTimer(){if(!state.market)return;const s=Math.max(0,Math.ceil((state.market.at+REFRESH-Date.now())/1000));$("mktTimer").textContent=`Nouvelles offres dans ${Math.floor(s/60)}:${String(s%60).padStart(2,"0")}`;if(s===0)renderMarket()}
@@ -363,42 +387,81 @@ function tickListings(){
   }else save();
 }
 
-// ---------- défis : ils rapportent des pièces ----------
+// ---------- défis de cartes : on donne des cartes, on gagne un pack spécial ----------
+const avg=cs=>cs.reduce((s,c)=>s+c.ovr,0)/cs.length;
+const SBC=[
+  {id:"swap",t:"Échange",d:"3 cartes au choix",n:3,ok:()=>true,rw:"sp3",c1:"#22e0ff",c2:"#4361ee"},
+  {id:"fr",t:"Rap FR",d:"5 cartes d’artistes français",n:5,ok:c=>c.country==="FR",rw:"fr",c1:"#2f6bff",c2:"#ff4d6d"},
+  {id:"us",t:"Rap US",d:"5 cartes d’artistes américains",n:5,ok:c=>c.country==="US",rw:"us",c1:"#ff4d6d",c2:"#3a3b8f"},
+  {id:"uk",t:"Rap UK",d:"5 cartes d’artistes anglais",n:5,ok:c=>c.country==="UK",rw:"uk",c1:"#3a7bff",c2:"#c8102e"},
+  {id:"same",t:"Même artiste",d:"4 cartes du même artiste",n:4,ok:()=>true,check:cs=>new Set(cs.map(c=>c.ar)).size===1,rule:"Toutes du même artiste",rw:"icone",c1:"#ff3d8b",c2:"#7b2ff7"},
+  {id:"avg",t:"Note 80",d:"5 cartes, note moyenne de 80 ou plus",n:5,ok:()=>true,check:cs=>avg(cs)>=80,rule:"Note moyenne ≥ 80",rw:"legend",c1:"#ffd23f",c2:"#e8590c"},
+  {id:"dia",t:"Disques de diamant",d:"3 titres certifiés Diamant",n:3,ok:c=>disc(c.country,c.vs).lvl==="Diamant",rw:"holo",c1:"#7af0ff",c2:"#8a5cff"},
+  {id:"old",t:"Old School",d:"4 cartes d’albums sortis avant 2005",n:4,ok:c=>ALB[c.alb].y<2005,rw:"old",c1:"#b6ff3b",c2:"#0b5e4a"}
+];
+let sbcSel=[];
+function sbcSheet(id){sbcSel=[];drawSbc(id)}
+function eligible(s){return Object.keys(state.owned).map(k=>CARD[k]).filter(s.ok).sort((a,b)=>value(a)-value(b))}
+function drawSbc(id){
+  const s=SBC.find(x=>x.id===id),cs=sbcSel.map(k=>CARD[k]),full=cs.length===s.n,ok=full&&(!s.check||s.check(cs));
+  const reqs=[[`${s.n} cartes (${cs.length}/${s.n})`,full],s.check?[s.rule,cs.length>0&&s.check(cs)]:[s.d,full]];
+  const el=eligible(s),cnt={};sbcSel.forEach(k=>cnt[k]=(cnt[k]||0)+1);
+  sheet(`<h2>${esc(s.t)}</h2><p class="note" style="align-self:flex-start;margin:-6px 0 0">Récompense : <b style="color:#fff">${SPECIAL[s.rw].label}</b> (${SPECIAL[s.rw].desc}). Les cartes données quittent ta collection.</p>
+    <div class="reqs">${reqs.map(([t,v])=>`<div class="req${v?" ok":""}"><i>${v?"✓":""}</i>${esc(t)}</div>`).join("")}</div>
+    <div class="slots">${Array.from({length:s.n},(_,i)=>sbcSel[i]?`<div data-un="${i}">${cw(CARD[sbcSel[i]])}</div>`:`<div class="slot">${i+1}</div>`).join("")}</div>
+    <div class="acts"><div class="two"><button class="btn ghost" id="sbAuto">Remplir auto</button><button class="btn" id="sbGo" ${ok?"":"disabled"}>Valider</button></div></div>
+    <h2 style="font-size:17px">Tes cartes éligibles (${el.length})</h2>
+    ${el.length?`<div class="picker">${el.map(c=>`<div class="cw${cnt[c.key]?" sel":""}${!cnt[c.key]&&full?" off":""}" data-pick="${c.key}">${cardHTML(c)}${cnt[c.key]?`<span class="qty">${cnt[c.key]}/${state.owned[c.key]}</span>`:state.owned[c.key]>1?`<span class="qty">×${state.owned[c.key]}</span>`:""}</div>`).join("")}</div>`:`<p class="empty" style="width:100%">Aucune carte éligible pour l’instant.</p>`}`);
+  $("sheetIn").onclick=e=>{
+    const p=e.target.closest("[data-pick]"),u=e.target.closest("[data-un]");
+    if(p){const k=p.dataset.pick,c=cnt[k]||0;if(c<state.owned[k]&&sbcSel.length<s.n)sbcSel.push(k);else if(c)sbcSel.splice(sbcSel.lastIndexOf(k),1);haptic(6);drawSbc(id);return}
+    if(u){sbcSel.splice(+u.dataset.un,1);drawSbc(id);return}
+    if(e.target.closest("#sbAuto")){sbcSel=autoFill(s);if(sbcSel.length<s.n)toast("Pas assez de cartes éligibles");drawSbc(id);return}
+    if(e.target.closest("#sbGo")&&ok){
+      sbcSel.forEach(take);daily().sbc++;save();closeSheet();$("sheetIn").onclick=null;sbcSel=[];
+      renderQuests();badge();toast(`Défi réussi : ${SPECIAL[s.rw].label} !`);openPack(SPECIAL[s.rw]);
+    }
+  };
+}
+// remplit le défi avec les cartes les moins chères qui le valident
+function autoFill(s){
+  const copies=[];eligible(s).forEach(c=>{for(let i=0;i<state.owned[c.key];i++)copies.push(c)});
+  let pick=[];
+  if(s.id==="same"){const by={};copies.forEach(c=>(by[c.ar]??=[]).push(c));const g=Object.values(by).filter(x=>x.length>=s.n).map(x=>x.slice(0,s.n)).sort((a,b)=>a.reduce((t,c)=>t+value(c),0)-b.reduce((t,c)=>t+value(c),0))[0];pick=g||[]}
+  else if(s.id==="avg")pick=copies.filter(c=>c.ovr>=80).slice(0,s.n);
+  else pick=copies.slice(0,s.n);
+  return pick.map(c=>c.key);
+}
+
+// ---------- défis du jour et albums : ils rapportent des pièces ----------
 const DAILY=[
-  {id:"login",t:"Connexion du jour",goal:1,get:()=>1,r:1000},
-  {id:"packs",t:"Ouvre 3 packs",goal:3,get:d=>d.packs,r:2000},
-  {id:"sold",t:"Vends 3 cartes",goal:3,get:d=>d.sold,r:1500},
-  {id:"bought",t:"Achète une carte au marché",goal:1,get:d=>d.bought,r:1500},
-  {id:"hi",t:"Obtiens une Platine, un Diamant ou une Icône",goal:1,get:d=>d.hi,r:3000}
+  {id:"login",t:"Connexion du jour",goal:1,get:()=>1,r:10000},
+  {id:"packs",t:"Ouvre 3 packs",goal:3,get:d=>d.packs,r:15000},
+  {id:"sold",t:"Vends 3 cartes",goal:3,get:d=>d.sold,r:10000},
+  {id:"bought",t:"Achète une carte au marché",goal:1,get:d=>d.bought,r:10000},
+  {id:"sbc",t:"Termine un défi de cartes",goal:1,get:d=>d.sbc,r:20000},
+  {id:"hi",t:"Obtiens une Légendaire, une Holo ou une Icône",goal:1,get:d=>d.hi,r:15000}
 ];
-const GOALS=[
-  {id:"g25",t:"Possède 25 titres différents",goal:25,get:uniq,r:5000},
-  {id:"g50",t:"Possède 50 titres différents",goal:50,get:uniq,r:10000},
-  {id:"g100",t:"Possède 100 titres différents",goal:100,get:uniq,r:25000},
-  {id:"gall",t:`Possède les ${TRACKS.length} titres`,goal:TRACKS.length,get:uniq,r:100000},
-  {id:"galb5",t:"Complète 5 albums",goal:5,get:()=>ALBUMS.filter(albumDone).length,r:15000},
-  {id:"gico",t:"Obtiens une carte Icône",goal:1,get:()=>ICONES.filter(c=>has(c.key)).length,r:5000},
-  {id:"gdia",t:"Obtiens une carte Diamant",goal:1,get:()=>Object.keys(state.owned).filter(k=>k[0]==="d").length,r:3000}
-];
-const albumReward=a=>1000+500*a.tr.length;
+const albumReward=al=>5000+1000*al.tr.length;
 function quests(){
   const d=daily(),list=[];
   DAILY.forEach(q=>list.push({sec:"day",id:q.id,t:q.t,goal:q.goal,v:Math.min(q.goal,q.get(d)),r:q.r,got:d.claimed.includes(q.id)}));
-  ALBUMS.forEach(a=>{const v=a.tr.filter((_,i)=>has(`t:${a.id}:${i}`)||has(`d:${a.id}:${i}`)).length;if(v)list.push({sec:"alb",id:"alb:"+a.id,a,t:`Complète ${a.t}`,goal:a.tr.length,v,r:albumReward(a),got:state.claimed.includes("alb:"+a.id)})});
-  GOALS.forEach(q=>list.push({sec:"goal",id:q.id,t:q.t,goal:q.goal,v:Math.min(q.goal,q.get()),r:q.r,got:state.claimed.includes(q.id)}));
+  ALBUMS.forEach(al=>{const v=albumOwned(al);if(v)list.push({sec:"alb",id:"alb:"+al.id,al,t:`Complète ${al.t}`,goal:al.tr.length,v,r:albumReward(al),got:state.claimed.includes("alb:"+al.id)})});
   return list;
 }
 const ready=q=>!q.got&&q.v>=q.goal;
 function badge(){$("questBadge").hidden=!quests().some(ready)}
 function renderQuests(){
   if($("s-quests").hidden)return;
-  const all=quests(),row=q=>`<div class="quest${q.got?" got":""}">${q.a?coverHTML(q.a.id):""}<div class="qi"><b>${esc(q.t)}</b><div class="bar"><i style="width:${q.v/q.goal*100}%"></i></div><small>${q.v}/${q.goal} · <i class="coin"></i>${fmt(q.r)}</small></div>${q.got?`<span class="note" style="margin:0">Reçu ✓</span>`:`<button class="btn sm" data-claim="${q.id}" ${ready(q)?"":"disabled"}>Récupérer</button>`}</div>`;
-  const albs=all.filter(q=>q.sec==="alb").sort((a,b)=>ready(b)-ready(a)||a.got-b.got||b.v/b.goal-a.v/a.goal);
-  $("quests").innerHTML=`<h2 style="margin-top:4px">Défis du jour</h2><p class="note">Ils reviennent chaque jour à minuit.</p>${all.filter(q=>q.sec==="day").map(row).join("")}
-    <h2>Albums</h2><p class="note">Complète un album pour toucher sa prime.</p>${albs.length?albs.map(row).join(""):`<p class="empty">Ouvre des packs pour commencer tes albums.</p>`}
-    <h2>Objectifs</h2>${all.filter(q=>q.sec==="goal").map(row).join("")}`;
+  const all=quests(),row=q=>`<div class="quest${q.got?" got":""}">${q.al?coverHTML(q.al.id):""}<div class="qi"><b>${esc(q.t)}</b><div class="bar"><i style="width:${q.v/q.goal*100}%"></i></div><small>${q.v}/${q.goal} · <i class="coin"></i>${fmt(q.r)}</small></div>${q.got?`<span class="note" style="margin:0">Reçu ✓</span>`:`<button class="btn sm" data-claim="${q.id}" ${ready(q)?"":"disabled"}>Récupérer</button>`}</div>`;
+  const albs=all.filter(q=>q.sec==="alb").sort((a,b)=>ready(b)-ready(a)||a.got-b.got||b.v/b.goal-a.v/a.goal).slice(0,30);
+  $("quests").innerHTML=`<h2 style="margin-top:4px">Défis de cartes</h2><p class="note">Donne des cartes de ta collection pour gagner un pack spécial. Tu peux les refaire autant que tu veux.</p>
+    <div class="sbcs">${SBC.map(s=>`<button class="sbc" data-sbc="${s.id}" style="--c1:${s.c1};--c2:${s.c2}"><b>${esc(s.t)}</b><small>${esc(s.d)}</small><span class="rw">${SPECIAL[s.rw].label}</span></button>`).join("")}</div>
+    <h2>Défis du jour</h2><p class="note">Ils reviennent chaque jour à minuit.</p>${all.filter(q=>q.sec==="day").map(row).join("")}
+    <h2>Albums</h2><p class="note">Complète un album pour toucher sa prime.</p>${albs.length?albs.map(row).join(""):`<p class="empty">Ouvre des packs pour commencer tes albums.</p>`}`;
 }
 $("quests").onclick=e=>{
+  const s=e.target.closest("[data-sbc]");if(s){sbcSheet(s.dataset.sbc);haptic();return}
   const b=e.target.closest("[data-claim]");if(!b)return;
   const q=quests().find(x=>x.id===b.dataset.claim);if(!q||!ready(q))return;
   (q.sec==="day"?daily().claimed:state.claimed).push(q.id);
@@ -419,7 +482,7 @@ $("giftGo").onclick=()=>{
   if(state.usedGifts.includes(g.n))return toast("Ce code a déjà été utilisé");
   state.usedGifts.push(g.n);give(g.k);addFriend(String(g.f||"Un ami").slice(0,16),"recv");save();
   $("giftIn").value="";renderFriends();badge();haptic([20,40,20]);
-  sheet(`<h2 style="margin:0">Cadeau de ${esc(g.f||"un ami")}</h2>${cw(CARD[g.k])}<button class="btn" onclick="closeSheet()">Super</button>`);
+  sheet(`<h2>Cadeau de ${esc(g.f||"un ami")}</h2>${cw(CARD[g.k],{fresh:true})}<button class="btn" onclick="closeSheet()">Super</button>`);
 };
 
 // ---------- paramètres ----------
@@ -430,9 +493,10 @@ $("optVibrate").onchange=e=>{state.vibrate=e.target.checked;save()};
 $("optSkip").checked=state.skipWO;
 $("optSkip").onchange=e=>{state.skipWO=e.target.checked;save()};
 $("reset").onclick=()=>{
-  if(!confirm("Effacer ta collection et repartir avec 20 000 pièces ?"))return;
+  if(!confirm("Effacer ta collection et repartir avec 100 000 pièces ?"))return;
   state={...START(),vibrate:state.vibrate,skipWO:state.skipWO,pseudo:state.pseudo};save();wallet();badge();toast("Nouvelle partie");
 };
+$("foot").textContent=`${ARTISTS.length} artistes · ${fmt(ALBUMS.length)} albums · ${fmt(TRACKS.length)} titres · pochettes Apple Music`;
 
 // ---------- écrans ----------
 const SCREENS=["s-market","s-friends","s-shop","s-quests","s-settings","s-club"];
@@ -443,7 +507,7 @@ function show(id){
   ({"s-shop":renderPacks,"s-club":renderClub,"s-market":renderMarket,"s-quests":renderQuests,"s-friends":renderFriends})[id]?.();
   scrollTo(0,0);
 }
-$("btnClub").onclick=()=>{haptic();show("s-club")};
+$("btnClub").onclick=()=>{haptic();club.view="artists";show("s-club")};
 
 // ---------- barre d'onglets du bas : la bulle de verre s'étire en glissant d'un onglet à l'autre,
 // grossit comme une loupe sous le doigt et suit le doigt quand on la fait glisser ----------

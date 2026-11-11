@@ -7,7 +7,7 @@
 <title>Beat Packs</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@600;800&family=Barlow:wght@500;600;700&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="style.css">
 </head>
 <body>
@@ -65,25 +65,15 @@
       <label class="row"><span>Passer les walkouts</span><input type="checkbox" class="switch" id="optSkip"></label>
       <div class="row"><span>Recommencer à zéro</span><button class="btn danger sm" id="reset">Réinitialiser</button></div>
     </div>
-    <p class="foot">Pochettes : iTunes · Notes calculées d’après les streams (ordre de grandeur)</p>
+    <p class="foot" id="foot"></p>
   </section>
 
   <section id="s-club" class="screen" hidden>
-    <div class="titlerow"><h1>Collection</h1><span class="count-big" id="pct"></span></div>
-    <div class="meter" aria-hidden="true"><i id="pbar"></i></div>
-    <div class="chips" id="filter" role="group" aria-label="Filtrer par pays">
-      <button aria-pressed="true" data-f="all">Tous</button>
-      <button aria-pressed="false" data-f="US"><i class="flag f-us"></i>US</button>
-      <button aria-pressed="false" data-f="UK"><i class="flag f-uk"></i>UK</button>
-      <button aria-pressed="false" data-f="FR"><i class="flag f-fr"></i>FR</button>
-      <button aria-pressed="false" data-f="own">Mes cartes</button>
-    </div>
-    <input type="search" id="search" class="search" placeholder="Rechercher un titre, un artiste, un album" autocomplete="off">
-    <div id="albums"></div>
+    <div id="club"></div>
   </section>
 </main>
 
-<!-- ouverture d'un pack, façon FIFA 21 : le pack, le tunnel, la walkout (si grosse carte), le récap -->
+<!-- ouverture d'un pack, façon FIFA 21 : le pack, le tunnel, la walkout (si grosse carte), la carte, puis les autres -->
 <div class="open" id="open" hidden>
   <div class="tunnel" aria-hidden="true">
     <i class="ring"></i><i class="ring"></i><i class="ring"></i><i class="ring"></i><i class="ring"></i><i class="ring"></i><i class="ring"></i><i class="ring"></i>
@@ -94,7 +84,7 @@
   <p class="skip" id="skipHint"></p>
 </div>
 
-<!-- fiche d'une carte : en grand, avec vendre / mettre au marché / offrir -->
+<!-- feuille du bas : fiche d'une carte, défi de cartes… -->
 <div class="sheet" id="sheet" hidden><div class="sheetin" id="sheetIn"></div></div>
 
 <!-- barre d'onglets en bas -->
@@ -109,7 +99,6 @@
 <div class="toast" id="toast" role="status"></div>
 
 <script src="data.js"></script>
-<script src="covers.js"></script>
 <script src="script.js"></script>
 </body>
 </html>

@@ -1,105 +1,68 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
   <defs>
-    <radialGradient id="bg" cx="50%" cy="42%" r="70%">
-      <stop offset="0" stop-color="#3a2470"/>
-      <stop offset=".55" stop-color="#140c33"/>
-      <stop offset="1" stop-color="#05040f"/>
+    <radialGradient id="bg" cx="50%" cy="38%" r="75%">
+      <stop offset="0" stop-color="#4a2496"/>
+      <stop offset=".5" stop-color="#1a0f45"/>
+      <stop offset="1" stop-color="#07051a"/>
     </radialGradient>
-    <linearGradient id="gold" x1="0" y1="0" x2=".7" y2="1">
-      <stop offset="0" stop-color="#fff6c4"/>
-      <stop offset=".28" stop-color="#ffd84a"/>
-      <stop offset=".7" stop-color="#f0a800"/>
-      <stop offset="1" stop-color="#a86400"/>
+    <linearGradient id="beam" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#fff6d8" stop-opacity=".55"/>
+      <stop offset="1" stop-color="#fff6d8" stop-opacity="0"/>
     </linearGradient>
-    <linearGradient id="goldEdge" x1="0" y1="0" x2="1" y2="1">
-      <stop offset="0" stop-color="#fffbe6"/>
-      <stop offset="1" stop-color="#ffd55a"/>
+    <linearGradient id="gold" x1="0" y1="0" x2=".6" y2="1">
+      <stop offset="0" stop-color="#fff4b8"/>
+      <stop offset=".4" stop-color="#ffcf3a"/>
+      <stop offset="1" stop-color="#c47f00"/>
     </linearGradient>
-    <linearGradient id="sheen" x1="0" y1="0" x2="1" y2="1">
-      <stop offset=".35" stop-color="#fff" stop-opacity="0"/>
-      <stop offset=".5" stop-color="#fff" stop-opacity=".38"/>
-      <stop offset=".62" stop-color="#fff" stop-opacity="0"/>
+    <linearGradient id="plat" x1="0" y1="0" x2=".6" y2="1">
+      <stop offset="0" stop-color="#ffffff"/>
+      <stop offset=".5" stop-color="#cfd3df"/>
+      <stop offset="1" stop-color="#7e8398"/>
     </linearGradient>
-    <radialGradient id="label" cx=".35" cy=".3" r=".85">
-      <stop offset="0" stop-color="#ffc2dc"/>
-      <stop offset=".45" stop-color="#ff3d8b"/>
+    <linearGradient id="dia" x1="0" y1="0" x2=".6" y2="1">
+      <stop offset="0" stop-color="#f2fdff"/>
+      <stop offset=".45" stop-color="#7fe6fb"/>
+      <stop offset="1" stop-color="#2a7fd0"/>
+    </linearGradient>
+    <radialGradient id="label" cx=".38" cy=".32" r=".8">
+      <stop offset="0" stop-color="#ffb3d1"/>
+      <stop offset=".5" stop-color="#ff3d8b"/>
       <stop offset="1" stop-color="#ff7a1f"/>
     </radialGradient>
-    <linearGradient id="vinylShine" x1="0" y1="0" x2="1" y2="1">
-      <stop offset=".25" stop-color="#fff" stop-opacity="0"/>
-      <stop offset=".45" stop-color="#fff" stop-opacity=".18"/>
-      <stop offset=".55" stop-color="#fff" stop-opacity="0"/>
-      <stop offset=".75" stop-color="#fff" stop-opacity=".1"/>
-      <stop offset=".85" stop-color="#fff" stop-opacity="0"/>
+    <linearGradient id="vshine" x1="0" y1="0" x2="1" y2="1">
+      <stop offset=".3" stop-color="#fff" stop-opacity="0"/>
+      <stop offset=".5" stop-color="#fff" stop-opacity=".22"/>
+      <stop offset=".7" stop-color="#fff" stop-opacity="0"/>
     </linearGradient>
-    <radialGradient id="glow" cx="50%" cy="50%" r="50%">
-      <stop offset="0" stop-color="#ffd84a" stop-opacity=".95"/>
-      <stop offset="1" stop-color="#ffd84a" stop-opacity="0"/>
-    </radialGradient>
-    <linearGradient id="floor" x1="0" y1="0" x2="0" y2="1">
-      <stop offset="0" stop-color="#fff1c9" stop-opacity="0"/>
-      <stop offset="1" stop-color="#ffcf6a" stop-opacity=".3"/>
-    </linearGradient>
-    <filter id="blur8"><feGaussianBlur stdDeviation="8"/></filter>
-    <filter id="drop" x="-30%" y="-30%" width="160%" height="160%">
-      <feDropShadow dx="0" dy="18" stdDeviation="18" flood-color="#000" flood-opacity=".6"/>
+    <filter id="sh" x="-30%" y="-30%" width="160%" height="160%">
+      <feDropShadow dx="0" dy="14" stdDeviation="16" flood-color="#000" flood-opacity=".55"/>
     </filter>
-    <clipPath id="cardClip"><rect x="146" y="92" width="220" height="306" rx="28"/></clipPath>
   </defs>
-
   <rect width="512" height="512" fill="url(#bg)"/>
-
-  <!-- le couloir de lumières du tunnel -->
-  <g fill="none" stroke="#fff1c9">
-    <rect x="34" y="40" width="444" height="432" rx="18" stroke-opacity=".16" stroke-width="3"/>
-    <rect x="86" y="78" width="340" height="356" rx="14" stroke-opacity=".22" stroke-width="3"/>
-    <rect x="130" y="112" width="252" height="290" rx="10" stroke-opacity=".3" stroke-width="2.5"/>
+  <!-- le faisceau de lumière du tunnel -->
+  <polygon points="206,0 306,0 470,512 42,512" fill="url(#beam)" opacity=".35"/>
+  <!-- deux cartes en éventail derrière -->
+  <g filter="url(#sh)">
+    <rect x="146" y="140" width="210" height="290" rx="24" fill="url(#plat)" transform="rotate(-17 251 400)"/>
+    <rect x="156" y="140" width="210" height="290" rx="24" fill="url(#dia)" transform="rotate(17 261 400)"/>
   </g>
-  <g fill="#fff1c9">
-    <rect x="58" y="70" width="7" height="372" rx="3.5" opacity=".5"/>
-    <rect x="447" y="70" width="7" height="372" rx="3.5" opacity=".5"/>
-    <rect x="104" y="104" width="6" height="304" rx="3" opacity=".42"/>
-    <rect x="402" y="104" width="6" height="304" rx="3" opacity=".42"/>
-  </g>
-  <g fill="#fff1c9" filter="url(#blur8)" opacity=".55">
-    <rect x="56" y="70" width="11" height="372" rx="5"/>
-    <rect x="445" y="70" width="11" height="372" rx="5"/>
-  </g>
-  <rect x="0" y="380" width="512" height="132" fill="url(#floor)"/>
-
-  <!-- halo doré derrière la carte -->
-  <ellipse cx="256" cy="246" rx="165" ry="200" fill="url(#glow)" filter="url(#blur8)" opacity=".8"/>
-
-  <!-- la carte -->
-  <g filter="url(#drop)">
-    <rect x="146" y="92" width="220" height="306" rx="28" fill="url(#gold)"/>
-    <g clip-path="url(#cardClip)">
-      <rect x="146" y="92" width="220" height="306" fill="url(#sheen)"/>
+  <!-- la carte Or devant, avec un vinyle à la place de la pochette -->
+  <g filter="url(#sh)">
+    <rect x="141" y="106" width="230" height="318" rx="26" fill="url(#gold)"/>
+    <rect x="153" y="118" width="206" height="294" rx="18" fill="none" stroke="#fff" stroke-opacity=".7" stroke-width="4"/>
+    <circle cx="256" cy="236" r="84" fill="#111114"/>
+    <g fill="none" stroke="#2e2e36" stroke-width="2.5">
+      <circle cx="256" cy="236" r="74"/><circle cx="256" cy="236" r="64"/><circle cx="256" cy="236" r="54"/><circle cx="256" cy="236" r="44"/>
     </g>
-    <rect x="146" y="92" width="220" height="306" rx="28" fill="none" stroke="url(#goldEdge)" stroke-width="6"/>
-    <rect x="160" y="106" width="192" height="278" rx="18" fill="none" stroke="#fff" stroke-opacity=".55" stroke-width="2.5"/>
-
-    <!-- la note -->
-    <text x="172" y="160" font-family="Arial Black, Arial, sans-serif" font-weight="900" font-size="50" fill="#3a2200" letter-spacing="-2">99</text>
-
-    <!-- le vinyle à la place de la pochette -->
-    <circle cx="268" cy="236" r="70" fill="#0e0e12"/>
-    <g fill="none" stroke="#2b2b34" stroke-width="2.2">
-      <circle cx="268" cy="236" r="62"/><circle cx="268" cy="236" r="54"/><circle cx="268" cy="236" r="46"/><circle cx="268" cy="236" r="38"/>
-    </g>
-    <circle cx="268" cy="236" r="70" fill="url(#vinylShine)"/>
-    <circle cx="268" cy="236" r="25" fill="url(#label)"/>
-    <circle cx="268" cy="236" r="4.5" fill="#0e0e12"/>
-
-    <!-- titre et artiste -->
-    <rect x="178" y="330" width="120" height="13" rx="6.5" fill="#3a2200" opacity=".85"/>
-    <rect x="178" y="352" width="82" height="10" rx="5" fill="#3a2200" opacity=".45"/>
-
+    <circle cx="256" cy="236" r="84" fill="url(#vshine)"/>
+    <circle cx="256" cy="236" r="30" fill="url(#label)"/>
+    <circle cx="256" cy="236" r="5" fill="#111114"/>
+    <text x="256" y="382" text-anchor="middle" font-family="Arial Black, Arial, sans-serif" font-weight="900" font-size="66" fill="#2a1a00" letter-spacing="-2">BP</text>
   </g>
-
   <!-- éclats -->
   <g fill="#fff">
-    <path d="M396 92 l6 17 17 6 -17 6 -6 17 -6 -17 -17 -6 17 -6z"/>
-    <path d="M120 300 l3.5 10 10 3.5 -10 3.5 -3.5 10 -3.5 -10 -10 -3.5 10 -3.5z" opacity=".7"/>
+    <path d="M404 112 l7 20 20 7 -20 7 -7 20 -7 -20 -20 -7 20 -7z" opacity=".95"/>
+    <path d="M100 168 l4 12 12 4 -12 4 -4 12 -4 -12 -12 -4 12 -4z" opacity=".75"/>
+    <path d="M420 300 l3 9 9 3 -9 3 -3 9 -3 -9 -9 -3 9 -3z" opacity=".6"/>
   </g>
 </svg>

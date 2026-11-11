@@ -55,7 +55,7 @@ const drawHolo = f => any(f?HOLOS.filter(f):HOLOS);
 const value = c => Math.round((100+800*plat(c.country,c.vs))*(c.kind==="holo"?2.5:c.kind==="icone"?4:1)/10)*10;
 const quick = c => Math.round(value(c)*.6/10)*10;
 const weight = c => c.ovr+(c.kind==="icone"?20:c.kind==="holo"?10:0);
-const walkout = c => c.kind!=="track"||c.tier==="legendaire"; // Diamant, Holo et Icône ont droit à la walkout
+const walkout = c => c.kind==="icone"||(c.kind==="holo"?c.ovr>=83:c.ovr>=86); // walkout : 86+ (Holo 83+), et toujours pour une Icône
 const labelOf = c => c.kind==="icone"?"Icône":c.kind==="holo"?"Holo":TIER[c.tier];
 
 const ODDS={commune:.62,rare:.27,epique:.09,legendaire:.02};
@@ -493,13 +493,11 @@ const DAILY=[
   {id:"sold",t:"Vends 3 cartes",goal:3,get:d=>d.sold,r:30000},
   {id:"bought",t:"Achète une carte au marché",goal:1,get:d=>d.bought,r:30000},
   {id:"sbc",t:"Termine un défi de cartes",goal:1,get:d=>d.sbc,r:60000},
-  {id:"hi",t:"Obtiens un Diamant, une Holo ou une Icône",goal:1,get:d=>d.hi,r:45000}
+  {id:"hi",t:"Obtiens une walkout (carte 86+, Holo 83+ ou Icône)",goal:1,get:d=>d.hi,r:45000}
 ];
-const albumReward=al=>15000+3000*al.tr.length;
 function quests(){
   const d=daily(),list=[];
   DAILY.forEach(q=>list.push({sec:"day",id:q.id,t:q.t,goal:q.goal,v:Math.min(q.goal,q.get(d)),r:q.r,got:d.claimed.includes(q.id)}));
-  ALBUMS.forEach(al=>{const v=albumOwned(al);if(v)list.push({sec:"alb",id:"alb:"+al.id,al,t:`Complète ${al.t}`,goal:al.tr.length,v,r:albumReward(al),got:state.claimed.includes("alb:"+al.id)})});
   return list;
 }
 const ready=q=>!q.got&&q.v>=q.goal;
@@ -507,12 +505,11 @@ function badge(){$("questBadge").hidden=!quests().some(ready)}
 function renderQuests(){
   if($("s-quests").hidden)return;
   const all=quests(),row=q=>`<div class="quest${q.got?" got":""}">${q.al?coverHTML(q.al.id):""}<div class="qi"><b>${esc(q.t)}</b><div class="bar"><i style="width:${q.v/q.goal*100}%"></i></div><small>${q.v}/${q.goal} · <i class="coin"></i>${fmt(q.r)}</small></div>${q.got?`<span class="note" style="margin:0">Reçu ✓</span>`:`<button class="btn sm" data-claim="${q.id}" ${ready(q)?"":"disabled"}>Récupérer</button>`}</div>`;
-  const albs=all.filter(q=>q.sec==="alb").sort((a,b)=>ready(b)-ready(a)||a.got-b.got||b.v/b.goal-a.v/a.goal).slice(0,30);
   $("quests").innerHTML=`<h2 style="margin-top:4px">Défis de cartes</h2><p class="note">Donne des cartes de ta collection pour gagner un pack spécial. Tu peux les refaire autant que tu veux.</p>
     <div class="sbcs">${SBC.map(s=>`<button class="sbc" data-sbc="${s.id}" style="--c1:${s.c1};--c2:${s.c2}"><b>${esc(s.t)}</b><small>${esc(s.d)}</small><span class="rw">${SPECIAL[s.rw].label}</span></button>`).join("")}</div>
     ${all.some(ready)?`<button class="btn" id="claimAll" style="margin-top:22px">Tout récupérer · <i class="coin"></i>${fmt(all.filter(ready).reduce((t,q)=>t+q.r,0))}</button>`:""}
     <h2>Défis du jour</h2><p class="note">Ils reviennent chaque jour à minuit.</p>${all.filter(q=>q.sec==="day").map(row).join("")}
-    <h2>Albums</h2><p class="note">Complète un album pour toucher sa prime.</p>${albs.length?albs.map(row).join(""):`<p class="empty">Ouvre des packs pour commencer tes albums.</p>`}`;
+`;
 }
 $("quests").onclick=e=>{
   const s=e.target.closest("[data-sbc]");if(s){sbcSheet(s.dataset.sbc);haptic();return}

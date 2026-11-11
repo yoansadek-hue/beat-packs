@@ -50,7 +50,7 @@ button{font:inherit;color:inherit;touch-action:manipulation}
 .mark{font:900 21px var(--font);letter-spacing:.02em}
 .mark b{font-weight:900;background:var(--grad);-webkit-background-clip:text;background-clip:text;color:transparent}
 .barR{display:flex;align-items:center;gap:8px}
-.iconbtn{display:inline-flex;align-items:center;gap:6px;min-height:40px;padding:6px 12px;border:1px solid var(--line);border-radius:999px;background:var(--surface);cursor:pointer;font:700 14px var(--font)}
+.iconbtn{display:inline-flex;align-items:center;gap:6px;min-height:40px;padding:6px 12px;border:0;border-radius:999px;background:var(--grad);color:#fff;cursor:pointer;font:800 14px var(--font);box-shadow:0 6px 16px -6px var(--pink)}
 .iconbtn.on{background:#fff;color:#14122e}
 .credits{display:inline-flex;align-items:center;gap:8px;min-height:40px;padding:6px 14px 6px 8px;border-radius:999px;background:var(--surface);border:1px solid var(--line);font:800 16px var(--font)}
 /* la pièce est un disque vinyle : sillons noirs, étiquette dorée, reflet */
@@ -373,7 +373,6 @@ html,body{-webkit-text-size-adjust:100%;text-size-adjust:100%}
   #bar{padding:10px 14px 0}
   .mark{font-size:18px}
   .iconbtn{padding:6px 10px}
-  .iconbtn span{display:none} /* le bouton Collection devient une simple icône */
   .credits{font-size:15px;padding:6px 12px 6px 7px}
   h1{font-size:32px;margin:10px 0 14px}
   h2{font-size:19px}
@@ -407,3 +406,7 @@ html,body{-webkit-text-size-adjust:100%;text-size-adjust:100%}
   .offer .odds{display:none}
   .credits b{font-size:14px}
 }
+
+/* aucune barre de défilement visible (on fait toujours défiler au doigt) */
+html,body,.sheetin,.recap,.chips,.packs{scrollbar-width:none;-ms-overflow-style:none}
+html::-webkit-scrollbar,body::-webkit-scrollbar,.sheetin::-webkit-scrollbar,.recap::-webkit-scrollbar{display:none;width:0;height:0}

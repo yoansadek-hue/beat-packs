@@ -274,7 +274,7 @@ input::placeholder{color:var(--dim)}
 .open[data-fl=epique]{--fl:#eef1ff}
 .open[data-fl=legendaire]{--fl:#7af0ff}
 .open[data-fl=holo]{--fl:#ff9cf0}
-.open[data-fl=icone]{--fl:#ffd23f}
+.open[data-fl=icone]{--fl:#ff4fd8} /* les Icônes ont leur propre lumière, rose violet */
 .ring{position:absolute;left:50%;top:44%;width:56vmax;height:80vmax;margin:-40vmax 0 0 -28vmax;border:2px solid rgba(255,241,201,.28);border-radius:2%;opacity:0;animation:ring 2.4s linear infinite}
 .ring::before,.ring::after{content:"";position:absolute;top:4%;bottom:4%;width:1.2%;border-radius:9px;background:var(--fl);box-shadow:0 0 14px var(--fl);opacity:.55}
 .ring::before{left:6%} .ring::after{right:6%}

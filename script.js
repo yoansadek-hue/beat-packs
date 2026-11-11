@@ -174,8 +174,8 @@ function openPack(p){
   cards.forEach(c=>{if(!has(c.key))fresh.add(c.key);give(c.key)});
   const d=daily();d.packs++;if(cards.some(walkout))d.hi++;
   save();wallet();badge();
-  // toutes les grosses cartes du pack ont leur walkout (2 ou 3 d'affilée, comme les doubles animations de FIFA)
-  const wos=state.skipWO?[]:cards.filter(walkout).slice(0,3).reverse();
+  // les deux meilleures cartes du pack ont leur walkout (double animation, comme sur FIFA)
+  const wos=state.skipWO?[]:cards.filter(walkout).slice(0,2).reverse(); // 2 walkouts au plus, même en cas d'égalité
   run={cards,fresh,best:cards[0],wos,wi:0,phase:"pack",timers:[],step:0};
   open.className="open";$("burst").innerHTML="";
   scene.innerHTML=`<div class="bigpack">${packHTML(p)}</div><b style="font:900 24px var(--font)">${esc(p.label)}</b>`;

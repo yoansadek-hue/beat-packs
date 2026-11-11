@@ -107,9 +107,13 @@ function cardHTML(c,fresh){
   </div>`;
 }
 const cw=(c,{fresh=false,qty=0,tap=false,i}={})=>`<div class="cw"${tap?` data-k="${c.key}"`:""}${i!=null?` style="--i:${i}"`:""}>${cardHTML(c,fresh)}${qty>1?`<span class="qty">×${qty}</span>`:""}</div>`;
-// chaque pack montre trois pochettes, tirées parmi les albums les plus écoutés (du pays du pack s'il en a un)
+// les pochettes des packs : les albums de rap les plus streamés au monde, trois par pack
+const WORLD=[["Views","beerbongs & bentleys","The Eminem Show"],["ASTROWORLD","Goodbye & Good Riddance","DAMN."],["Curtain Call","Hollywood's Bleeding","2014 Forest Hills Drive"]]
+  .map(g=>g.map(t=>ALBUMS.find(a=>a.t.toLowerCase().startsWith(t.toLowerCase()))).filter(Boolean));
 const TOPALB=ALBUMS.filter(a=>a.cv&&a.cv.includes("mzstatic")).sort((a,b)=>b.total-a.total);
 const COVS={};
+PACKS.forEach((p,i)=>{if(WORLD[i]&&WORLD[i].length===3)COVS[p.label]=WORLD[i]});
+// packs spéciaux : les plus gros albums du catalogue (du pays du pack s'il en a un)
 function packCovers(p){
   const id=p.label;if(COVS[id])return COVS[id];
   const pool=TOPALB.filter(a=>!p.country||ART[a.ar].c===p.country).filter(a=>!p.before||a.y<p.before).slice(0,90),out=[];

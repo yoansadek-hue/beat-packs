@@ -1,0 +1,17 @@
+{
+  "name": "Beat Packs",
+  "short_name": "Beat Packs",
+  "description": "Ouvre des packs de cartes de rap US, UK et FR.",
+  "lang": "fr",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#0c0b25",
+  "theme_color": "#0c0b25",
+  "icons": [
+    {"src": "icons/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any"},
+    {"src": "icons/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any"},
+    {"src": "icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any"}
+  ]
+}

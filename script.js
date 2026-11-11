@@ -1,6 +1,7 @@
 // ---------- catalogue : une carte par titre (toute la discographie), plus les spéciales Holo (un titre) et Icône (un artiste) ----------
-const TIER = {commune:"Commune",rare:"Rare",epique:"Épique",legendaire:"Légendaire"};
-const TCOLOR = {commune:"#9b88d6",rare:"#5ca8ff",epique:"#ff5aa8",legendaire:"#ffd23f"};
+// la rareté suit le code couleur des disques : Vinyle (noir), Or, Platine, Diamant
+const TIER = {commune:"Vinyle",rare:"Or",epique:"Platine",legendaire:"Diamant"};
+const TCOLOR = {commune:"#55555f",rare:"#ffcf3a",epique:"#e3e6ef",legendaire:"#7af0ff"};
 const ORDER = ["commune","rare","epique","legendaire"];
 // les disques : seuils de certification d'un single dans chaque pays, en millions de streams
 const CERT = {US:{or:75,pl:150,dia:1500},UK:{ar:20,or:40,pl:60},FR:{or:15,pl:30,dia:50}};
@@ -45,8 +46,7 @@ const holo = t => CARD["h"+t.key.slice(1)];
 const value = c => Math.round((100+800*plat(c.country,c.vs))*(c.kind==="holo"?2.5:c.kind==="icone"?4:1)/10)*10;
 const quick = c => Math.round(value(c)*.6/10)*10;
 const weight = c => c.ovr+(c.kind==="icone"?20:c.kind==="holo"?10:0);
-const walkout = c => c.kind!=="track"||c.tier==="legendaire"; // Légendaire, Holo et Icône ont droit à la walkout
-const flOf = c => c.kind==="track"?c.tier:c.kind;
+const walkout = c => c.kind!=="track"||c.tier==="legendaire"; // Diamant, Holo et Icône ont droit à la walkout
 const labelOf = c => c.kind==="icone"?"Icône":c.kind==="holo"?"Holo":TIER[c.tier];
 
 const ODDS={commune:.62,rare:.27,epique:.09,legendaire:.02};
@@ -57,14 +57,14 @@ const PACKS=[
 ];
 // packs spéciaux : on ne les gagne qu'avec les défis de cartes
 const SPECIAL={
-  sp3:{key:"sp",label:"Pack Spécial",desc:"3 cartes · 1 Rare minimum",size:3,guarantee:"rare"},
-  fr:{key:"sp",label:"Pack Rap FR",desc:"5 cartes FR · 1 Épique minimum",size:5,country:"FR",guarantee:"epique"},
-  us:{key:"sp",label:"Pack Rap US",desc:"5 cartes US · 1 Épique minimum",size:5,country:"US",guarantee:"epique"},
-  uk:{key:"sp",label:"Pack Rap UK",desc:"5 cartes UK · 1 Épique minimum",size:5,country:"UK",guarantee:"epique"},
-  legend:{key:"sp",label:"Pack Légende",desc:"5 cartes · 1 Légendaire garantie",size:5,guarantee:"legendaire"},
+  sp3:{key:"sp",label:"Pack Spécial",desc:"3 cartes · 1 Or minimum",size:3,guarantee:"rare"},
+  fr:{key:"sp",label:"Pack Rap FR",desc:"5 cartes FR · 1 Platine minimum",size:5,country:"FR",guarantee:"epique"},
+  us:{key:"sp",label:"Pack Rap US",desc:"5 cartes US · 1 Platine minimum",size:5,country:"US",guarantee:"epique"},
+  uk:{key:"sp",label:"Pack Rap UK",desc:"5 cartes UK · 1 Platine minimum",size:5,country:"UK",guarantee:"epique"},
+  legend:{key:"sp",label:"Pack Diamant",desc:"5 cartes · 1 Diamant garanti",size:5,guarantee:"legendaire"},
   icone:{key:"sp",label:"Pack Icône",desc:"5 cartes · 1 Icône garantie",size:5,guarantee:"epique",icon:true},
   holo:{key:"sp",label:"Pack Holo",desc:"5 cartes · 2 Holo garanties",size:5,holo:2},
-  old:{key:"sp",label:"Pack Old School",desc:"5 cartes d’avant 2005 · 1 Épique minimum",size:5,before:2005,guarantee:"epique"}
+  old:{key:"sp",label:"Pack Old School",desc:"5 cartes d’avant 2005 · 1 Platine minimum",size:5,before:2005,guarantee:"epique"}
 };
 
 // ---------- sauvegarde ----------
@@ -166,9 +166,9 @@ function openPack(p){
   const d=daily();d.packs++;if(cards.some(walkout))d.hi++;
   save();wallet();badge();
   // toutes les grosses cartes du pack ont leur walkout (2 ou 3 d'affilée, comme les doubles animations de FIFA)
-  const wos=state.skipWO?[]:cards.filter(walkout).slice(0,3);
+  const wos=state.skipWO?[]:cards.filter(walkout).slice(0,3).reverse();
   run={cards,fresh,best:cards[0],wos,wi:0,phase:"pack",timers:[],step:0};
-  open.className="open";open.dataset.fl="";$("burst").innerHTML="";
+  open.className="open";$("burst").innerHTML="";
   scene.innerHTML=`<div class="bigpack">${packHTML(p)}</div><b style="font:900 24px var(--font)">${esc(p.label)}</b>`;
   hint("Touche le pack pour l’ouvrir");
   open.hidden=false;
@@ -189,23 +189,16 @@ open.addEventListener("click",e=>{
   if(c){cardSheet(c.dataset.k);haptic();return} // dans le récap, on touche une carte pour la voir, comme sur FIFA
   advance(e);
 });
-// le signe du tunnel : un disque qui annonce la meilleure carte (et ×2 / ×3 quand il y a plusieurs walkouts)
-function sign(){
-  const n=run.wos.length,c=run.best;
-  const txt=n>1?`${n}× WALKOUT`:n?"WALKOUT":labelOf(c);
-  return `<div class="sign s-${flOf(c)}${n?" big":""}"><i class="coin"></i><b>${txt}</b></div>`;
-}
-// le tunnel : les lumières foncent vers nous, les fusées prennent la couleur de la meilleure carte
+// le tunnel : les lumières foncent vers nous, toujours de la même couleur (rien ne trahit la carte)
 function tunnel(){
-  scene.innerHTML=`<div class="flash"></div>${sign()}`;
+  scene.innerHTML=`<div class="flash"></div>`;
   later(()=>scene.querySelector(".flash")?.remove(),520);
-  open.dataset.fl=flOf(run.best);open.classList.add("run");
-  haptic(run.wos.length>1?[40,60,40,60,40,60,120]:run.wos.length?[40,60,40,60,80]:run.best.tier==="epique"?[30,50,30]:12);
-  later(()=>{if(run.wos.length){run.phase="wo";open.classList.replace("run","wo");run.step=0;step()}else{run.cur=run.best;reveal()}},run.wos.length>1?2400:1800);
+  open.classList.add("run");haptic(14);
+  later(()=>{if(run.wos.length){run.phase="wo";open.classList.replace("run","wo");run.step=0;step()}else{run.cur=run.best;reveal()}},1800);
 }
 // walkout : le pays, l'artiste, l'album, puis la carte
 function step(){
-  const c=run.wos[run.wi],a=ALB[c.alb];run.cur=c;
+  const c=run.wos[0],a=ALB[c.alb];run.cur=c;
   const steps=[
     `<div class="wstep"><small>Pays</small><strong>${c.country}</strong></div>`,
     `<div class="wstep"><small>Artiste</small><strong>${esc(c.artist)}</strong></div>`,
@@ -215,7 +208,7 @@ function step(){
   ];
   if(run.step>=steps.length){reveal();return}
   scene.innerHTML=steps[run.step++];
-  hint(run.wos.length>1?`Walkout ${run.wi+1} sur ${run.wos.length} · touche pour passer`:"Touche pour passer");haptic(10);
+  hint("Touche pour passer");haptic(10);
   later(step,1600);
 }
 function reveal(){
@@ -223,18 +216,19 @@ function reveal(){
   run.phase="card";open.classList.remove("run");open.classList.add("wo");
   scene.innerHTML=`<div class="reveal">${cw(c,{fresh:run.fresh.has(c.key)})}</div>`;
   if(walkout(c)){burst();haptic([30,40,60])}
-  hint(run.wi<run.wos.length-1?"Touche la carte pour la walkout suivante":"Touche la carte pour voir les autres");
+  hint("Touche la carte");
   tilt(scene);
 }
-// après une walkout : la suivante (nouveau passage dans le tunnel), sinon le récap
+// plusieurs grosses cartes : quand on touche la carte, elle se retourne et laisse place à une meilleure ; ensuite le récap
 function nextWalkout(){
   if(run.wi<run.wos.length-1){
-    run.wi++;run.step=0;run.phase="busy";$("burst").innerHTML="";
-    const c=run.wos[run.wi];open.dataset.fl=flOf(c);open.classList.replace("wo","run");
-    scene.innerHTML=`<div class="flash"></div><div class="sign s-${flOf(c)} big"><i class="coin"></i><b>ENCORE UNE !</b></div>`;hint("");
-    later(()=>scene.querySelector(".flash")?.remove(),520);
-    haptic([40,60,40,60,80]);
-    later(()=>{run.phase="wo";open.classList.replace("run","wo");step()},1500);
+    run.wi++;run.phase="busy";const c=run.wos[run.wi],box=scene.querySelector(".reveal");
+    box.classList.remove("flipin");box.classList.add("flipout");haptic([20,30,20]);
+    later(()=>{
+      run.cur=c;box.innerHTML=cw(c,{fresh:run.fresh.has(c.key)});
+      box.classList.replace("flipout","flipin");$("burst").innerHTML="";burst();haptic([30,40,60]);
+      later(()=>{run.phase="card"},450);
+    },320);
   }else recap();
 }
 function burst(){
@@ -281,7 +275,7 @@ function facts(c){
   return `<div class="facts">
     ${c.kind==="icone"?`<div><small>Artiste</small><b>${esc(c.artist)}</b></div><div><small>Titres</small><b>${ART[c.ar].tracks.length}</b></div>`:`<div><small>Album</small><b>${esc(a.t)}</b></div><div><small>Année</small><b>${a.y}</b></div>`}
     <div><small>Streams</small><b>${fmtStreams(c.streams)}</b></div>
-    <div><small>Disque</small><b>${disc(c.country,c.vs).label}</b></div>
+    <div><small>Certif. du pays</small><b>${disc(c.country,c.vs).label}</b></div>
     <div><small>Rareté</small><b>${labelOf(c)}</b></div>
     <div><small>Valeur</small><b><i class="coin"></i>${fmt(value(c))}</b></div>
   </div>`;
@@ -478,7 +472,7 @@ const DAILY=[
   {id:"sold",t:"Vends 3 cartes",goal:3,get:d=>d.sold,r:30000},
   {id:"bought",t:"Achète une carte au marché",goal:1,get:d=>d.bought,r:30000},
   {id:"sbc",t:"Termine un défi de cartes",goal:1,get:d=>d.sbc,r:60000},
-  {id:"hi",t:"Obtiens une Légendaire, une Holo ou une Icône",goal:1,get:d=>d.hi,r:45000}
+  {id:"hi",t:"Obtiens un Diamant, une Holo ou une Icône",goal:1,get:d=>d.hi,r:45000}
 ];
 const albumReward=al=>15000+3000*al.tr.length;
 function quests(){

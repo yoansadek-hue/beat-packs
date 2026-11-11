@@ -10,8 +10,8 @@ Ouvre `index.html` dans ton navigateur (ou utilise l'extension Live Server dans 
   - **Disques** : chaque titre reçoit un disque (Or, Platine, Diamant) selon ses streams et les seuils de certification de son pays.
   - **Note** : mélange des streams et des disques.
   - **Valeur** (pour vendre) : selon les disques.
-  - Raretés : Commune, Rare, Épique, Légendaire. Spéciales : **Holo** (un titre, +3) et **Icône** (un artiste).
-- **Boutique** : 3 packs, seul le nombre de cartes change (3, 5, 10). Ouverture façon FIFA 21 : tunnel, puis walkout (pays, artiste, album) pour une Légendaire, une Holo ou une Icône. On touche la carte pour voir les autres.
+  - Raretés, au code couleur des disques : **Vinyle** (noir), **Or**, **Platine**, **Diamant**. Spéciales : **Holo** (un titre, +3) et **Icône** (un artiste).
+- **Boutique** : 3 packs, seul le nombre de cartes change (3, 5, 10). Ouverture façon FIFA 21 : tunnel (toujours de la même couleur, rien ne trahit la carte), puis walkout (pays, artiste, album) pour un Diamant, une Holo ou une Icône. S'il y en a plusieurs, toucher la carte la retourne sur une meilleure ; ensuite on voit toutes les cartes du pack.
 - **Collection** (bouton en haut) : tes artistes → tous leurs albums → toutes les cartes de l'album, y compris celles qui manquent.
 - **Défis** : défis de cartes (on donne des cartes pour gagner un pack spécial), défis du jour et primes d'album complet.
 - **Marché** : acheter les offres des autres joueurs, mettre ses cartes en vente (5 % de taxe).

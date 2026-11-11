@@ -314,7 +314,7 @@ function tunnel(){
   const two=run.wos.length>1; // double walkout : deux portes de lumière côte à côte
   scene.innerHTML=`<div class="flash"></div>${two?`<div class="endcard h-board twin l"></div><div class="endcard h-board twin r"></div>`:`<div class="endcard h-${h}"></div>`}`;
   later(()=>scene.querySelector(".flash")?.remove(),520);
-  open.classList.add("run");SFX.tunnel();if(h==="board")later(()=>{open.dataset.fl=colorOf(run.wos[run.wos.length-1]);open.classList.add("board");SFX.board();if(run.wos.length>1)later(SFX.reveal,450)},900);haptic(14);
+  open.classList.add("run");SFX.tunnel();if(h==="board")later(()=>{open.dataset.fl=colorOf(run.wos[run.wos.length-1]);open.classList.add("board");SFX.board();if(run.wos.length>1){later(SFX.reveal,450);later(()=>{scene.querySelectorAll(".twin").forEach(x=>x.classList.add("gone"));scene.insertAdjacentHTML("beforeend",`<div class="endcard h-board solo"></div>`)},500)}},900); // l'indice double : deux portes pendant 0,5 s, qui se fondent en unehaptic(14);
   later(()=>{open.classList.remove("board");open.dataset.fl=colorOf(run.wos.length?run.wos[run.wos.length-1]:run.best);if(run.wos.length){run.phase="wo";open.classList.replace("run","wo");run.step=0;step()}else{run.cur=run.best;reveal()}},1800);
 }
 // walkout : le pays, l'artiste, l'album, puis la carte
@@ -341,7 +341,7 @@ function reveal(){
   if(walkout(c)){burst();haptic([30,40,60]);SFX.bigReveal()}else SFX.reveal();
   hint("");playFor(c);
   tilt(scene);
-  if(run.wi<run.wos.length-1)later(nextWalkout,1300); // double animation : la carte reste 0,5 s (après son entrée), puis se retourne seule sur la meilleure
+  if(run.wi<run.wos.length-1)later(nextWalkout,3800); // double animation : la carte reste 3 s (après son entrée), puis se retourne seule sur la meilleure
 }
 // plusieurs grosses cartes : quand on touche la carte, elle se retourne et laisse place à une meilleure ; ensuite le récap
 function nextWalkout(){

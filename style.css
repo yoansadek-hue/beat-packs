@@ -295,6 +295,8 @@ input::placeholder{color:var(--dim)}
 .endcard.h-rare{border-color:rgba(255,241,201,.75);outline:2px solid rgba(255,241,201,.4);outline-offset:4px;box-shadow:0 0 30px rgba(255,241,201,.3)}
 .endcard.h-board{width:min(24vw,100px);margin:calc(min(24vw,100px) / -1.44) 0 0 calc(min(24vw,100px) / -2);border-radius:3px;background:#fffdf3;border:0;box-shadow:0 0 40px 14px rgba(255,248,225,.75),0 0 120px 40px rgba(255,241,201,.35)}
 .endcard.twin{width:min(12vw,50px);margin:calc(min(12vw,50px) / -1.44) 0 0 calc(min(12vw,50px) / -2);box-shadow:0 0 22px 6px rgba(255,248,225,.55),0 0 60px 20px rgba(255,241,201,.2)}
+.endcard.twin.gone{opacity:0;transition:opacity .15s}
+.endcard.solo{animation:none;transform:scale(1.05)}
 .endcard.twin.l{animation-name:approachL}
 .endcard.twin.r{animation-name:approachR;animation-delay:.12s}
 @keyframes approachL{from{transform:translateX(-58%) scale(.35);opacity:0}25%{opacity:1}to{transform:translateX(-58%) scale(1.15);opacity:1}}

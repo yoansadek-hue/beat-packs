@@ -288,6 +288,11 @@ input::placeholder{color:var(--dim)}
 .endcard{position:absolute;left:50%;top:44%;z-index:1;width:min(19vw,80px);aspect-ratio:.72;margin:calc(min(19vw,80px) / -1.44) 0 0 calc(min(19vw,80px) / -2);border-radius:7px;background:linear-gradient(160deg,#3a3550,#1a1726);border:2px solid rgba(255,241,201,.35);box-shadow:0 0 24px rgba(255,241,201,.18);animation:approach 1.9s cubic-bezier(.4,0,.8,.6) both}
 .endcard.h-rare{border-color:rgba(255,241,201,.75);outline:2px solid rgba(255,241,201,.4);outline-offset:4px;box-shadow:0 0 30px rgba(255,241,201,.3)}
 .endcard.h-board{width:min(24vw,100px);margin:calc(min(24vw,100px) / -1.44) 0 0 calc(min(24vw,100px) / -2);border-radius:3px;background:#fffdf3;border:0;box-shadow:0 0 40px 14px rgba(255,248,225,.75),0 0 120px 40px rgba(255,241,201,.35)}
+.endcard.twin{width:min(17vw,72px);margin:calc(min(17vw,72px) / -1.44) 0 0 calc(min(17vw,72px) / -2)}
+.endcard.twin.l{animation-name:approachL}
+.endcard.twin.r{animation-name:approachR;animation-delay:.12s}
+@keyframes approachL{from{transform:translateX(-62%) scale(.35);opacity:0}25%{opacity:1}to{transform:translateX(-62%) scale(1.15);opacity:1}}
+@keyframes approachR{from{transform:translateX(62%) scale(.35);opacity:0}25%{opacity:1}to{transform:translateX(62%) scale(1.15);opacity:1}}
 @keyframes approach{from{transform:scale(.35);opacity:0}25%{opacity:1}to{transform:scale(1.15);opacity:1}}
 .flare{position:absolute;bottom:-10vh;width:26vw;max-width:180px;height:130vh;background:linear-gradient(to top,var(--fl),transparent 70%);filter:blur(16px);opacity:0;transform-origin:bottom center;transition:background .4s}
 .flare.l{left:8%;transform:rotate(-22deg)} .flare.r{right:8%;transform:rotate(22deg)}

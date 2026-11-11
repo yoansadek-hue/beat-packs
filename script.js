@@ -61,8 +61,8 @@ const labelOf = c => c.kind==="icone"?"Icône":c.kind==="holo"?"Holo":TIER[c.tie
 const ODDS={commune:.62,rare:.27,epique:.09,legendaire:.02};
 const PACKS=[
   {key:"3",label:"Pack 3 cartes",size:3,price:10000},
-  {key:"5",label:"Pack 5 cartes",size:5,price:18000},
-  {key:"10",label:"Pack 10 cartes",size:10,price:35000}
+  {key:"5",label:"Pack 6 cartes",size:6,price:20000},
+  {key:"10",label:"Pack 12 cartes",size:12,price:38000}
 ];
 // packs spéciaux : on ne les gagne qu'avec les défis de cartes
 const SPECIAL={
@@ -299,9 +299,10 @@ const colorOf = c => c.kind==="track"?c.tier:c.kind;
 function tunnel(){
   open.dataset.fl="";
   const h=run.wos.length?"board":run.best.tier==="epique"?"rare":"plain";
-  scene.innerHTML=`<div class="flash"></div><div class="endcard h-${h}"></div>`;
+  const two=run.wos.length>1; // double walkout : deux portes de lumière côte à côte
+  scene.innerHTML=`<div class="flash"></div>${two?`<div class="endcard h-board twin l"></div><div class="endcard h-board twin r"></div>`:`<div class="endcard h-${h}"></div>`}`;
   later(()=>scene.querySelector(".flash")?.remove(),520);
-  open.classList.add("run");SFX.tunnel();if(h==="board")later(()=>{open.dataset.fl=colorOf(run.wos[run.wos.length-1]);open.classList.add("board");SFX.board()},900);haptic(14);
+  open.classList.add("run");SFX.tunnel();if(h==="board")later(()=>{open.dataset.fl=colorOf(run.wos[run.wos.length-1]);open.classList.add("board");SFX.board();if(run.wos.length>1){later(SFX.board,450);later(()=>{open.classList.remove("board");void open.offsetWidth;open.classList.add("board")},450)}},900);haptic(14);
   later(()=>{open.classList.remove("board");open.dataset.fl=colorOf(run.wos.length?run.wos[run.wos.length-1]:run.best);if(run.wos.length){run.phase="wo";open.classList.replace("run","wo");run.step=0;step()}else{run.cur=run.best;reveal()}},1800);
 }
 // walkout : le pays, l'artiste, l'album, puis la carte

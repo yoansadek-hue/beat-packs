@@ -208,7 +208,7 @@ function tunnel(){
   const h=run.wos.length?"board":run.best.tier==="epique"?"rare":"plain";
   scene.innerHTML=`<div class="flash"></div><div class="endcard h-${h}"></div>`;
   later(()=>scene.querySelector(".flash")?.remove(),520);
-  open.classList.add("run");if(h==="board")later(()=>open.classList.add("board"),900);haptic(14);
+  open.classList.add("run");if(h==="board")later(()=>{open.dataset.fl=colorOf(run.wos[run.wos.length-1]);open.classList.add("board")},900);haptic(14);
   later(()=>{open.classList.remove("board");open.dataset.fl=colorOf(run.wos.length?run.wos[run.wos.length-1]:run.best);if(run.wos.length){run.phase="wo";open.classList.replace("run","wo");run.step=0;step()}else{run.cur=run.best;reveal()}},1800);
 }
 // walkout : le pays, l'artiste, l'album, puis la carte
@@ -219,11 +219,11 @@ function step(){
     `<div class="wstep"><small>Artiste</small><strong>${esc(c.artist)}</strong></div>`,
     c.kind==="icone"
       ?`<div class="wstep"><small>Carte spéciale</small>${coverHTML(a.id,"round")}<strong>Icône</strong></div>`
-      :`<div class="wstep"><small>Album · ${a.y}</small>${coverHTML(a.id)}<strong style="font-size:min(9vw,46px)">${esc(a.t)}</strong></div>`
+      :`<div class="wstep"><small>Album · ${a.y}</small><strong style="font-size:min(12vw,64px)">${esc(a.t)}</strong></div>`
   ];
   if(run.step>=steps.length){reveal();return}
   scene.innerHTML=steps[run.step++];
-  hint("Touche pour passer");haptic(10);
+  hint("");haptic(10);
   later(step,1600);
 }
 function reveal(){
@@ -258,11 +258,11 @@ function recap(){
   open.classList.remove("run","wo");open.classList.add("recapmode");hint("");
   const seen=new Set(),n=run.cards.length;
   // la grille est calculée pour tenir dans l'écran, sans défilement
-  const gap=8,W=Math.min(innerWidth-36,520),H=innerHeight-230;
+  const gap=8,W=Math.min(innerWidth-36,520),H=(visualViewport?.height||innerHeight)-290;
   const size=c=>{const r=Math.ceil(n/c);return Math.floor(Math.min((W-gap*(c-1))/c,((H-gap*(r-1))/r)*.72,170))};
   let cols=1;for(let c=2;c<=Math.min(n,5);c++)if(size(c)>size(cols))cols=c; // le nombre de colonnes qui donne les plus grandes cartes
   const w=size(cols);
-  scene.innerHTML=`<div class="recap"><h2>Ton pack</h2><p class="note" style="margin:-10px 0 0">Touche une carte pour la voir, la vendre ou l’offrir.</p><div class="recapgrid" style="grid-template-columns:repeat(${cols},${w}px);gap:${gap}px">${run.cards.map((c,i)=>{const f=run.fresh.has(c.key)&&!seen.has(c.key);seen.add(c.key);return cw(c,{fresh:f,i,tap:true})}).join("")}</div><button class="btn go" id="done">Continuer</button></div>`;
+  scene.innerHTML=`<div class="recap"><h2>Ton pack</h2><p class="note" style="margin:-10px 0 0">Touche une carte pour la voir, la vendre ou l’offrir.</p><div class="recapgrid" style="grid-template-columns:repeat(${cols},${w}px);gap:${gap}px">${run.cards.map((c,i)=>{const f=run.fresh.has(c.key)&&!seen.has(c.key);seen.add(c.key);return cw(c,{fresh:f,i,tap:true})}).join("")}</div></div><div class="recapbar"><button class="btn go" id="done">Continuer</button></div>`;
   $("done").onclick=closePack;
 }
 function closePack(){
@@ -368,11 +368,12 @@ function renderClub(){
       const ic=CARD[a.icone];
       html=`<button class="back" data-back="artist">‹ ${esc(a.n)}</button><h1>Carte Icône</h1><div class="grid">${has(ic.key)?cw(ic,{qty:state.owned[ic.key],tap:true,fresh:isNew(ic.key)}):`<div class="cw"><div class="card ghost"><b>★</b><span>${esc(a.n)}</span></div></div>`}</div>`;
     }else{
-      const cards=al.tr.map((tr,i)=>{const t=CARD[`t:${al.id}:${i}`];return has(t.key)?cw(t,{qty:state.owned[t.key],tap:true,fresh:isNew(t.key)}):`<div class="cw"><div class="card ghost"><b>#${i+1}</b><span>${esc(tr[0])}</span></div></div>`}).join("");
+      const mine=[],miss=[];
+      al.tr.forEach((tr,i)=>{const t=CARD[`t:${al.id}:${i}`];if(has(t.key))mine.push(cw(t,{qty:state.owned[t.key],tap:true,fresh:isNew(t.key)}));else miss.push(`<div class="cw"><div class="card ghost"><b>#${i+1}</b><span>${esc(tr[0])}</span></div></div>`)});
       const holos=al.tr.map((_,i)=>CARD[`h:${al.id}:${i}`]).filter(h=>h&&has(h.key)).map(h=>cw(h,{qty:state.owned[h.key],tap:true,fresh:isNew(h.key)})).join("");
       html=`<button class="back" data-back="artist">‹ ${esc(a.n)}</button>
         <div class="ahero alb">${coverHTML(al.id)}<div><h1 style="font-size:26px">${esc(al.t)}</h1><small>${esc(a.n)} · ${al.y} · ${albumOwned(al)}/${al.tr.length} titres</small></div></div>
-        <div class="grid">${cards}${holos}</div>`;
+        <div class="grid">${mine.join("")}${holos}${miss.join("")}</div>`;
     }
   }
   el.innerHTML=html;

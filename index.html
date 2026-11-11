@@ -13,37 +13,73 @@
 <body>
 <header id="bar">
   <span class="mark">BEAT<b>PACKS</b></span>
-  <span class="credits" aria-label="Crédits"><i class="coin"></i><b id="wallet">0</b></span>
+  <div class="barR">
+    <button class="iconbtn" id="btnClub" aria-label="Ma collection"><svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true"><path fill="currentColor" d="M4 6H2v14a2 2 0 0 0 2 2h14v-2H4V6zm16-4H8a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V4a2 2 0 0 0-2-2zm-6 3a3.5 3.5 0 1 1 0 7 3.5 3.5 0 0 1 0-7zm5 10H9v-.6c0-1.7 3.3-2.6 5-2.6s5 .9 5 2.6v.6z"/></svg><span>Collection</span></button>
+    <span class="credits" aria-label="Pièces"><i class="coin"></i><b id="wallet">0</b></span>
+  </div>
 </header>
 
 <main id="main">
+  <section id="s-market" class="screen" hidden>
+    <h1>Marché</h1>
+    <div class="seg" id="mktSeg" role="group" aria-label="Marché">
+      <button aria-pressed="true" data-m="buy">Acheter</button>
+      <button aria-pressed="false" data-m="sell">Mes ventes</button>
+    </div>
+    <div id="mktBuy">
+      <div class="mkthead"><span id="mktTimer"></span><button class="btn sm ghost" id="mktRefresh"></button></div>
+      <div class="mlist" id="mktOffers"></div>
+    </div>
+    <div id="mktSell" hidden>
+      <p class="note">Pour vendre, touche une carte dans ta collection. 5 % de taxe sont prélevés sur chaque vente.</p>
+      <div class="mlist" id="mktListings"></div>
+    </div>
+  </section>
+
+  <section id="s-friends" class="screen" hidden>
+    <h1>Amis</h1>
+    <div class="profile" id="profile"></div>
+    <h2>Recevoir une carte</h2>
+    <p class="note">Un ami t’a offert une carte ? Colle son code ici.</p>
+    <div class="inrow"><input type="text" id="giftIn" placeholder="BP-…" autocomplete="off" spellcheck="false"><button class="btn sm" id="giftGo">Recevoir</button></div>
+    <h2>Mes amis</h2>
+    <div class="flist" id="friends"></div>
+    <p class="note">Pour offrir une carte, touche-la dans ta collection puis « Offrir ».</p>
+  </section>
+
   <section id="s-shop" class="screen">
     <h1>Boutique</h1>
     <div class="packs" id="packs"></div>
   </section>
 
-  <section id="s-club" class="screen" hidden>
-    <div class="titlerow"><h1>Collection</h1><span class="count-big" id="pct"></span></div>
-    <div class="meter" aria-hidden="true"><i id="pbar"></i></div>
-    <div class="chips" id="filter" role="group" aria-label="Filtrer par rareté">
-      <button aria-pressed="true" data-f="all">Toutes</button>
-      <button aria-pressed="false" data-f="legendaire" class="c-legendaire">Légendaires</button>
-      <button aria-pressed="false" data-f="epique" class="c-epique">Or</button>
-      <button aria-pressed="false" data-f="rare" class="c-rare">Argent</button>
-      <button aria-pressed="false" data-f="commun" class="c-commun">Bronze</button>
-    </div>
-    <div class="grid" id="grid"></div>
-    <button class="btn" id="sellDupes"></button>
+  <section id="s-quests" class="screen" hidden>
+    <h1>Défis</h1>
+    <div id="quests"></div>
   </section>
 
   <section id="s-settings" class="screen" hidden>
-    <h1>Réglages</h1>
+    <h1>Paramètres</h1>
     <div class="list">
+      <label class="row"><span>Pseudo</span><input type="text" id="optPseudo" maxlength="16" autocomplete="off"></label>
       <label class="row"><span>Vibrations</span><input type="checkbox" class="switch" id="optVibrate" checked></label>
       <label class="row"><span>Passer les walkouts</span><input type="checkbox" class="switch" id="optSkip"></label>
       <div class="row"><span>Recommencer à zéro</span><button class="btn danger sm" id="reset">Réinitialiser</button></div>
     </div>
-    <p class="foot">Beat Packs · 28 artistes à collectionner</p>
+    <p class="foot">Pochettes : iTunes · Notes calculées d’après les streams (ordre de grandeur)</p>
+  </section>
+
+  <section id="s-club" class="screen" hidden>
+    <div class="titlerow"><h1>Collection</h1><span class="count-big" id="pct"></span></div>
+    <div class="meter" aria-hidden="true"><i id="pbar"></i></div>
+    <div class="chips" id="filter" role="group" aria-label="Filtrer par pays">
+      <button aria-pressed="true" data-f="all">Tous</button>
+      <button aria-pressed="false" data-f="US"><i class="flag f-us"></i>US</button>
+      <button aria-pressed="false" data-f="UK"><i class="flag f-uk"></i>UK</button>
+      <button aria-pressed="false" data-f="FR"><i class="flag f-fr"></i>FR</button>
+      <button aria-pressed="false" data-f="own">Mes cartes</button>
+    </div>
+    <input type="search" id="search" class="search" placeholder="Rechercher un titre, un artiste, un album" autocomplete="off">
+    <div id="albums"></div>
   </section>
 </main>
 
@@ -55,21 +91,25 @@
   </div>
   <div class="burst" id="burst" aria-hidden="true"></div>
   <div class="scene" id="scene"></div>
-  <p class="skip" id="skipHint">Touche pour continuer</p>
+  <p class="skip" id="skipHint"></p>
 </div>
 
-<!-- une carte en grand, qu'on incline au doigt -->
-<div class="view" id="view" hidden><div class="viewcard" id="viewCard"></div><p class="skip">Touche pour fermer</p></div>
+<!-- fiche d'une carte : en grand, avec vendre / mettre au marché / offrir -->
+<div class="sheet" id="sheet" hidden><div class="sheetin" id="sheetIn"></div></div>
 
 <!-- barre d'onglets en bas -->
 <nav class="tabbar" id="tabbar">
   <span class="tabpill" id="tabPill" aria-hidden="true"><i></i></span>
+  <button class="tab" data-go="s-market"><svg viewBox="0 0 24 24" width="24" height="24" aria-hidden="true"><path fill="currentColor" d="M21.41 11.58l-9-9A2 2 0 0 0 11 2H4a2 2 0 0 0-2 2v7c0 .55.22 1.05.59 1.42l9 9c.36.36.86.58 1.41.58s1.05-.22 1.41-.59l7-7c.37-.36.59-.86.59-1.41s-.23-1.06-.59-1.42zM5.5 7A1.5 1.5 0 1 1 7 5.5 1.5 1.5 0 0 1 5.5 7z"/></svg><span>Marché</span></button>
+  <button class="tab" data-go="s-friends"><svg viewBox="0 0 24 24" width="24" height="24" aria-hidden="true"><path fill="currentColor" d="M9 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8zm0 2c-3.3 0-7 1.7-7 4.5V20h14v-2.5C16 14.7 12.3 13 9 13zm8-2a3.5 3.5 0 1 0-2.1-6.3 5.9 5.9 0 0 1 0 5.6A3.5 3.5 0 0 0 17 11zm1.2 2.1c1.6 1 2.8 2.5 2.8 4.4V20h3v-2.5c0-2.1-2.6-3.8-5.8-4.4z"/></svg><span>Amis</span></button>
   <button class="tab on" data-go="s-shop"><svg viewBox="0 0 24 24" width="24" height="24" aria-hidden="true"><path fill="currentColor" d="M7 7V6a5 5 0 0 1 10 0v1h3l-1.2 13.2A2 2 0 0 1 16.8 22H7.2a2 2 0 0 1-2-1.8L4 7h3zm2 0h6V6a3 3 0 0 0-6 0v1zm-1 4a1 1 0 1 0 2 0 1 1 0 0 0-2 0zm6 0a1 1 0 1 0 2 0 1 1 0 0 0-2 0z"/></svg><span>Boutique</span></button>
-  <button class="tab" data-go="s-club"><svg viewBox="0 0 24 24" width="24" height="24" aria-hidden="true"><path fill="currentColor" d="M4 6H2v14a2 2 0 0 0 2 2h14v-2H4V6zm16-4H8a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V4a2 2 0 0 0-2-2zm-6 3a3.5 3.5 0 1 1 0 7 3.5 3.5 0 0 1 0-7zm5 10H9v-.6c0-1.7 3.3-2.6 5-2.6s5 .9 5 2.6v.6z"/></svg><span>Collection</span></button>
-  <button class="tab" data-go="s-settings"><svg viewBox="0 0 24 24" width="24" height="24" aria-hidden="true"><path fill="currentColor" d="M19.14 12.94c.04-.3.06-.61.06-.94s-.02-.64-.07-.94l2.03-1.58a.49.49 0 0 0 .12-.61l-1.92-3.32a.49.49 0 0 0-.59-.22l-2.39.96a7.03 7.03 0 0 0-1.62-.94l-.36-2.54a.48.48 0 0 0-.48-.41h-3.84a.47.47 0 0 0-.47.41l-.36 2.54c-.59.24-1.13.57-1.62.94l-2.39-.96a.49.49 0 0 0-.59.22L2.74 8.87a.47.47 0 0 0 .12.61l2.03 1.58c-.05.3-.09.63-.09.94s.02.64.07.94l-2.03 1.58a.49.49 0 0 0-.12.61l1.92 3.32c.12.22.37.29.59.22l2.39-.96c.5.38 1.03.7 1.62.94l.36 2.54c.05.24.24.41.48.41h3.84c.24 0 .44-.17.47-.41l.36-2.54c.59-.24 1.13-.56 1.62-.94l2.39.96c.22.08.47 0 .59-.22l1.92-3.32a.48.48 0 0 0-.12-.61l-2.01-1.58zM12 15.6a3.6 3.6 0 1 1 0-7.2 3.6 3.6 0 0 1 0 7.2z"/></svg><span>Réglages</span></button>
+  <button class="tab" data-go="s-quests"><svg viewBox="0 0 24 24" width="24" height="24" aria-hidden="true"><path fill="currentColor" d="M7 3h10v2h3v3a5 5 0 0 1-4.3 4.95A5 5 0 0 1 13 15.9V18h3v3H8v-3h3v-2.1a5 5 0 0 1-2.7-2.95A5 5 0 0 1 4 8V5h3V3zm0 4H6v1a3 3 0 0 0 1.4 2.53A5 5 0 0 1 7 9V7zm10 0v2c0 .53-.08 1.04-.24 1.53A3 3 0 0 0 18 8V7h-1z"/></svg><span>Défis</span><span class="nbadge" id="questBadge" hidden></span></button>
+  <button class="tab" data-go="s-settings"><svg viewBox="0 0 24 24" width="24" height="24" aria-hidden="true"><path fill="currentColor" d="M19.14 12.94c.04-.3.06-.61.06-.94s-.02-.64-.07-.94l2.03-1.58a.49.49 0 0 0 .12-.61l-1.92-3.32a.49.49 0 0 0-.59-.22l-2.39.96a7.03 7.03 0 0 0-1.62-.94l-.36-2.54a.48.48 0 0 0-.48-.41h-3.84a.47.47 0 0 0-.47.41l-.36 2.54c-.59.24-1.13.57-1.62.94l-2.39-.96a.49.49 0 0 0-.59.22L2.74 8.87a.47.47 0 0 0 .12.61l2.03 1.58c-.05.3-.09.63-.09.94s.02.64.07.94l-2.03 1.58a.49.49 0 0 0-.12.61l1.92 3.32c.12.22.37.29.59.22l2.39-.96c.5.38 1.03.7 1.62.94l.36 2.54c.05.24.24.41.48.41h3.84c.24 0 .44-.17.47-.41l.36-2.54c.59-.24 1.13-.56 1.62-.94l2.39.96c.22.08.47 0 .59-.22l1.92-3.32a.48.48 0 0 0-.12-.61l-2.01-1.58zM12 15.6a3.6 3.6 0 1 1 0-7.2 3.6 3.6 0 0 1 0 7.2z"/></svg><span>Paramètres</span></button>
 </nav>
 <div class="toast" id="toast" role="status"></div>
 
+<script src="data.js"></script>
+<script src="covers.js"></script>
 <script src="script.js"></script>
 </body>
 </html>

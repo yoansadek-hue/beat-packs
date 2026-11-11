@@ -25,6 +25,6 @@ Ouvre `index.html` dans ton navigateur (ou utilise l'extension Live Server dans 
 
 ## À savoir
 - Discographies et extraits audio : Deezer. Pochettes : Apple Music (sinon Deezer pour ~8 % des albums).
-- Streams : ordres de grandeur pour environ 200 titres phares ; pour les autres, estimation d'après leur popularité sur Deezer, calée sur les titres phares de l'artiste, plafonnée à la moitié de son plus gros tube et réduite pour les albums de moins de 3 ans (la popularité actuelle les surestime). Les disques sont calculés à partir de ces streams, ce ne sont pas les certifications officielles.
+- Streams : nombre d'écoutes **Spotify** relevé sur kworb.net (environ 82 % des titres) ; les titres introuvables sont estimés d'après les chiffres Spotify de l'artiste. Les disques sont calculés à partir de ces streams, ce ne sont pas les certifications officielles.
 - Le marché et ses vendeurs sont simulés sur ton appareil (pas de serveur).
 - Les codes cadeau marchent entre deux appareils, mais rien n'empêche de tricher : c'est un jeu entre amis.

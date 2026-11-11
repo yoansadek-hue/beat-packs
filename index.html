@@ -3,75 +3,68 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
-<meta name="theme-color" content="#0d0d0f">
+<meta name="theme-color" content="#0c0b25">
 <title>Beat Packs</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Inter+Tight:wght@500;600;800&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@600;800&family=Barlow:wght@500;600;700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="style.css">
 </head>
 <body>
 <header id="bar">
-  <span class="mark">beat<b>packs</b></span>
-  <span class="credits" aria-label="Crédits"><i class="dot"></i><b id="wallet">0</b></span>
+  <span class="mark">BEAT<b>PACKS</b></span>
+  <span class="credits" aria-label="Crédits"><i class="coin"></i><b id="wallet">0</b></span>
 </header>
 
 <main id="main">
   <section id="s-shop" class="screen">
-    <h1>Packs</h1>
+    <h1>Boutique</h1>
     <div class="packs" id="packs"></div>
   </section>
 
   <section id="s-club" class="screen" hidden>
     <div class="titlerow"><h1>Collection</h1><span class="count-big" id="pct"></span></div>
     <div class="meter" aria-hidden="true"><i id="pbar"></i></div>
-    <div class="seg" id="filter" role="group" aria-label="Filtrer par rareté">
-      <button aria-pressed="true" data-f="all">Tout</button>
-      <button aria-pressed="false" data-f="legendaire">★</button>
-      <button aria-pressed="false" data-f="epique">◆◆◆</button>
-      <button aria-pressed="false" data-f="rare">◆◆</button>
-      <button aria-pressed="false" data-f="commun">◆</button>
+    <div class="chips" id="filter" role="group" aria-label="Filtrer par rareté">
+      <button aria-pressed="true" data-f="all">Toutes</button>
+      <button aria-pressed="false" data-f="legendaire" class="c-legendaire">Légendaires</button>
+      <button aria-pressed="false" data-f="epique" class="c-epique">Or</button>
+      <button aria-pressed="false" data-f="rare" class="c-rare">Argent</button>
+      <button aria-pressed="false" data-f="commun" class="c-commun">Bronze</button>
     </div>
     <div class="grid" id="grid"></div>
-    <button class="btn ghost" id="sellDupes"></button>
+    <button class="btn" id="sellDupes"></button>
   </section>
 
   <section id="s-settings" class="screen" hidden>
     <h1>Réglages</h1>
     <div class="list">
       <label class="row"><span>Vibrations</span><input type="checkbox" class="switch" id="optVibrate" checked></label>
+      <label class="row"><span>Passer les walkouts</span><input type="checkbox" class="switch" id="optSkip"></label>
       <div class="row"><span>Recommencer à zéro</span><button class="btn danger sm" id="reset">Réinitialiser</button></div>
     </div>
     <p class="foot">Beat Packs · 28 artistes à collectionner</p>
   </section>
 </main>
 
-<!-- ouverture d'un pack : déchirer, puis les cartes une par une, puis le récap -->
+<!-- ouverture d'un pack, façon FIFA 21 : le pack, le tunnel, la walkout (si grosse carte), le récap -->
 <div class="open" id="open" hidden>
-  <div class="stage tear" id="stTear">
-    <p class="cue">Glisse le long du trait pour ouvrir</p>
-    <div class="bigpack" id="bigpack"></div>
-    <button class="link" id="tearBtn">Ouvrir sans glisser</button>
+  <div class="tunnel" aria-hidden="true">
+    <i class="ring"></i><i class="ring"></i><i class="ring"></i><i class="ring"></i><i class="ring"></i><i class="ring"></i><i class="ring"></i><i class="ring"></i>
+    <i class="flare l"></i><i class="flare r"></i><i class="floor"></i>
   </div>
-  <div class="stage deck" id="stDeck" hidden>
-    <p class="cue" id="deckCount"></p>
-    <div class="pile" id="pile"></div>
-    <p class="cue dim">Touche pour continuer</p>
-  </div>
-  <div class="stage recap" id="stRecap" hidden>
-    <h2>Ton pack</h2>
-    <div class="recapgrid" id="recapGrid"></div>
-    <button class="btn" id="done">Terminer</button>
-  </div>
+  <div class="burst" id="burst" aria-hidden="true"></div>
+  <div class="scene" id="scene"></div>
+  <p class="skip" id="skipHint">Touche pour continuer</p>
 </div>
 
 <!-- une carte en grand, qu'on incline au doigt -->
-<div class="view" id="view" hidden><div class="viewcard" id="viewCard"></div><p class="cue dim">Touche pour fermer</p></div>
+<div class="view" id="view" hidden><div class="viewcard" id="viewCard"></div><p class="skip">Touche pour fermer</p></div>
 
 <!-- barre d'onglets en bas -->
 <nav class="tabbar" id="tabbar">
   <span class="tabpill" id="tabPill" aria-hidden="true"><i></i></span>
-  <button class="tab on" data-go="s-shop"><svg viewBox="0 0 24 24" width="24" height="24" aria-hidden="true"><path fill="currentColor" d="M7 7V6a5 5 0 0 1 10 0v1h3l-1.2 13.2A2 2 0 0 1 16.8 22H7.2a2 2 0 0 1-2-1.8L4 7h3zm2 0h6V6a3 3 0 0 0-6 0v1zm-1 4a1 1 0 1 0 2 0 1 1 0 0 0-2 0zm6 0a1 1 0 1 0 2 0 1 1 0 0 0-2 0z"/></svg><span>Packs</span></button>
+  <button class="tab on" data-go="s-shop"><svg viewBox="0 0 24 24" width="24" height="24" aria-hidden="true"><path fill="currentColor" d="M7 7V6a5 5 0 0 1 10 0v1h3l-1.2 13.2A2 2 0 0 1 16.8 22H7.2a2 2 0 0 1-2-1.8L4 7h3zm2 0h6V6a3 3 0 0 0-6 0v1zm-1 4a1 1 0 1 0 2 0 1 1 0 0 0-2 0zm6 0a1 1 0 1 0 2 0 1 1 0 0 0-2 0z"/></svg><span>Boutique</span></button>
   <button class="tab" data-go="s-club"><svg viewBox="0 0 24 24" width="24" height="24" aria-hidden="true"><path fill="currentColor" d="M4 6H2v14a2 2 0 0 0 2 2h14v-2H4V6zm16-4H8a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V4a2 2 0 0 0-2-2zm-6 3a3.5 3.5 0 1 1 0 7 3.5 3.5 0 0 1 0-7zm5 10H9v-.6c0-1.7 3.3-2.6 5-2.6s5 .9 5 2.6v.6z"/></svg><span>Collection</span></button>
   <button class="tab" data-go="s-settings"><svg viewBox="0 0 24 24" width="24" height="24" aria-hidden="true"><path fill="currentColor" d="M19.14 12.94c.04-.3.06-.61.06-.94s-.02-.64-.07-.94l2.03-1.58a.49.49 0 0 0 .12-.61l-1.92-3.32a.49.49 0 0 0-.59-.22l-2.39.96a7.03 7.03 0 0 0-1.62-.94l-.36-2.54a.48.48 0 0 0-.48-.41h-3.84a.47.47 0 0 0-.47.41l-.36 2.54c-.59.24-1.13.57-1.62.94l-2.39-.96a.49.49 0 0 0-.59.22L2.74 8.87a.47.47 0 0 0 .12.61l2.03 1.58c-.05.3-.09.63-.09.94s.02.64.07.94l-2.03 1.58a.49.49 0 0 0-.12.61l1.92 3.32c.12.22.37.29.59.22l2.39-.96c.5.38 1.03.7 1.62.94l.36 2.54c.05.24.24.41.48.41h3.84c.24 0 .44-.17.47-.41l.36-2.54c.59-.24 1.13-.56 1.62-.94l2.39.96c.22.08.47 0 .59-.22l1.92-3.32a.48.48 0 0 0-.12-.61l-2.01-1.58zM12 15.6a3.6 3.6 0 1 1 0-7.2 3.6 3.6 0 0 1 0 7.2z"/></svg><span>Réglages</span></button>
 </nav>

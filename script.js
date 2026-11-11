@@ -5,10 +5,12 @@ const ARTISTS = [
   ["Petit Gravier","Rap","commun"],["Mila Sol","Pop","commun"],["Ronron","Rock","commun"],["Basse Cour","Électro","commun"],["Jojo Swing","Jazz","commun"],["Sunny K","Afro","commun"],["Lola Drift","R&B","commun"],["Gaston Beat","Rap","commun"],["Clara Vinyle","Pop","commun"],["Les Fusibles","Rock","commun"],["Noor","R&B","commun"],["Tempo Libre","Jazz","commun"]
 ];
 const RANGE = {commun:[60,72],rare:[73,81],epique:[82,88],legendaire:[89,96]};
-const RAR = {commun:"◆",rare:"◆◆",epique:"◆◆◆",legendaire:"★"};
-const GLOW = {commun:"transparent",rare:"#2f7bff",epique:"#ff3dbb",legendaire:"#f0c040"};
+const RNAME = {commun:"Bronze",rare:"Argent",epique:"Or",legendaire:"Légende"};
+const RCOLOR = {commun:"#d08a52",rare:"#d5dce6",epique:"#f6cb3a",legendaire:"#c45cff"};
 const GENRE = {"Pop":"pop","Rap":"rap","Électro":"electro","R&B":"rnb","Rock":"rock","Afro":"afro","Jazz":"jazz"};
+const POS = {"Pop":"POP","Rap":"RAP","Électro":"ÉLE","R&B":"RNB","Rock":"ROC","Afro":"AFR","Jazz":"JAZ"};
 const SELL = {commun:50,rare:200,epique:600,legendaire:2000};
+const WALKOUT = 86; // à partir de cette note, la meilleure carte du pack a droit à sa walkout
 function seeded(s){let h=0;for(const c of s)h=(h*31+c.charCodeAt(0))>>>0;return()=>{h=(h*1103515245+12345)>>>0;return h/4294967296}}
 const CARDS = ARTISTS.map(([name,genre,rarity],id)=>{
   const r=seeded(name),[lo,hi]=RANGE[rarity],ovr=Math.round(lo+r()*(hi-lo));
@@ -17,11 +19,11 @@ const CARDS = ARTISTS.map(([name,genre,rarity],id)=>{
 });
 const PACKS = [
   {key:"bronze",label:"Bronze",desc:"3 cartes",price:500,size:3,odds:{commun:.8,rare:.17,epique:.028,legendaire:.002}},
-  {key:"silver",label:"Argent",desc:"4 cartes · 1 ◆◆ minimum",price:1500,size:4,guarantee:"rare",odds:{commun:.6,rare:.3,epique:.09,legendaire:.01}},
-  {key:"gold",label:"Or",desc:"5 cartes · 1 ◆◆◆ minimum",price:4000,size:5,guarantee:"epique",odds:{commun:.4,rare:.38,epique:.18,legendaire:.04}}
+  {key:"silver",label:"Argent",desc:"4 cartes · 1 Argent minimum",price:1500,size:4,guarantee:"rare",odds:{commun:.6,rare:.3,epique:.09,legendaire:.01}},
+  {key:"gold",label:"Or",desc:"5 cartes · 1 Or minimum",price:4000,size:5,guarantee:"epique",odds:{commun:.4,rare:.38,epique:.18,legendaire:.04}}
 ];
 const ORDER=["commun","rare","epique","legendaire"];
-const START={coins:5000,owned:{},vibrate:true};
+const START={coins:5000,owned:{},vibrate:true,skipWO:false};
 
 let state={...START,owned:{}};
 try{const s=JSON.parse(localStorage.getItem("beatpacks"));if(s&&typeof s.coins==="number")state={...state,...s}}catch(e){}
@@ -33,109 +35,126 @@ function toast(t){const el=$("toast");el.textContent=t;el.classList.add("show");
 function haptic(p=8){if(state.vibrate&&navigator.vibrate)navigator.vibrate(p)}
 function wallet(){$("wallet").textContent=fmt(state.coins);renderPacks()}
 
-function cardHTML(c,isNew=false){
+// silhouette de l'artiste (tête, épaules, micro)
+const SIL_D="M60 12a16 16 0 1 1 0 32a16 16 0 0 1 0-32zM26 92c0-26 15-40 34-40s34 14 34 40zM21 43a6 6 0 1 1 12 0a6 6 0 0 1-12 0zM26 48l4-1 9 19-4 2z";
+const sil=(cls)=>`<svg class="${cls}" viewBox="0 0 100 92" preserveAspectRatio="xMaxYMax meet" aria-hidden="true"><path d="${SIL_D}"/><path class="rim" d="${SIL_D}"/></svg>`;
+function cardHTML(c){
   return `<div class="card r-${c.rarity} g-${GENRE[c.genre]}">
-    ${isNew?`<span class="new">NOUVEAU</span>`:""}
-    <div class="top"><span class="ovr">${c.ovr}</span><span class="gen">${c.genre}</span></div>
-    <span class="rar">${RAR[c.rarity]}</span>
-    <div class="art"><i></i></div>
+    <div class="head"><div class="lft"><span class="ovr">${c.ovr}</span><span class="pos">${POS[c.genre]}</span><hr><span class="gico"><i></i></span></div>${sil("sil")}</div>
     <div class="nm">${c.name}</div>
-    <div class="st">${Object.entries(c.stats).map(([k,v])=>`<span><b>${k.slice(0,3).toUpperCase()}</b>${v}</span>`).join("")}</div>
+    <div class="st">${Object.entries(c.stats).map(([k,v])=>`<span><b>${v}</b>${k.slice(0,3).toUpperCase()}</span>`).join("")}</div>
+    <div class="rar">${RNAME[c.rarity]}</div>
     <div class="glare"></div>
   </div>`;
 }
-function packHTML(p){
-  return `<div class="pack p-${p.key}"><div class="rec"></div><div class="shine"></div>
-    <div class="face"><small>Beat Packs</small><div><strong>${p.label}</strong><span>${p.desc}</span></div></div></div>`;
-}
+const cw=(c,{isNew=false,qty=0,id=false,i}={})=>`<div class="cw"${id?` data-id="${c.id}"`:""}${i!=null?` style="--i:${i}"`:""}>${cardHTML(c)}${isNew?`<span class="badge">NOUVEAU</span>`:""}${qty>1?`<span class="qty">×${qty}</span>`:""}</div>`;
+const packHTML=p=>`<div class="pack k-${p.key}"><div class="foil"></div><div class="stripe"></div><div class="logo"><small>BEAT PACKS</small><b>${p.size}</b><small>CARTES</small></div><div class="shine"></div></div>`;
 function pickRarity(odds){let x=Math.random(),acc=0;for(const r of ORDER){acc+=odds[r];if(x<acc)return r}return "commun"}
 function draw(r){const pool=CARDS.filter(c=>c.rarity===r);return pool[Math.floor(Math.random()*pool.length)]}
 const pct=x=>x>=.1?Math.round(x*100)+"%":(+(x*100).toFixed(1))+"%";
 
 // ---------- boutique ----------
 function renderPacks(){
-  $("packs").innerHTML=PACKS.map(p=>`<div class="offer">
+  $("packs").innerHTML=PACKS.map(p=>`<div class="offer p-${p.key}">
     ${packHTML(p)}
-    <div class="meta"><b>Pack ${p.label}</b><span>${p.size} cartes</span></div>
-    <div class="odds">${ORDER.slice().reverse().map(r=>`<span>${RAR[r]} <em>${pct(p.odds[r])}</em></span>`).join("")}</div>
-    <button class="btn" data-k="${p.key}" ${state.coins<p.price?"disabled":""}><i class="dot" style="background:#111"></i>${fmt(p.price)}</button>
+    <div class="info">
+      <h3>Pack ${p.label}</h3><p>${p.desc}</p>
+      <div class="odds">${ORDER.slice().reverse().map(r=>`<span><i style="background:${RCOLOR[r]}"></i>${pct(p.odds[r])}</span>`).join("")}</div>
+      <button class="btn light" data-k="${p.key}" ${state.coins<p.price?"disabled":""}><i class="coin"></i>${fmt(p.price)}</button>
+    </div>
   </div>`).join("");
   document.querySelectorAll(".offer .btn").forEach(b=>b.onclick=()=>openPack(b.dataset.k));
 }
 
-// ---------- ouverture : déchirer, puis les cartes une par une, puis le récap ----------
+// ---------- ouverture façon FIFA 21 : le pack, le tunnel, la walkout si grosse carte, le récap ----------
 let run=null;
-function stage(id){["stTear","stDeck","stRecap"].forEach(s=>$(s).hidden=s!==id)}
+const open=$("open"),scene=$("scene");
+const hint=t=>$("skipHint").textContent=t;
+const later=(f,ms)=>run.timers.push(setTimeout(f,ms));
+const clearT=()=>{run.timers.forEach(clearTimeout);run.timers=[]};
 function openPack(k){
   const p=PACKS.find(x=>x.key===k); if(state.coins<p.price)return;
   state.coins-=p.price;
   let rs=Array.from({length:p.size},()=>pickRarity(p.odds));
   if(p.guarantee&&!rs.some(r=>ORDER.indexOf(r)>=ORDER.indexOf(p.guarantee)))rs[0]=p.guarantee;
-  const cards=rs.map(draw).sort((a,b)=>a.ovr-b.ovr); // la meilleure carte arrive en dernier
+  const cards=rs.map(draw).sort((a,b)=>b.ovr-a.ovr); // la meilleure carte en premier
   const fresh=new Set();
-  cards.forEach(c=>{if(!state.owned[c.id]&&!fresh.has(c.id))fresh.add(c.id);state.owned[c.id]=(state.owned[c.id]||0)+1});
+  cards.forEach(c=>{if(!state.owned[c.id])fresh.add(c.id);state.owned[c.id]=(state.owned[c.id]||0)+1});
   save();wallet();
-  run={cards,fresh,shownNew:new Set(),i:-1,busy:false,cut:0};
-  $("open").style.setProperty("--glow","transparent");
-  $("bigpack").className="bigpack";
-  $("bigpack").innerHTML=`<div class="body">${packHTML(p)}</div><div class="cap">${packHTML(p)}</div><div class="cut"><i></i></div>`;
-  $("bigpack").style.setProperty("--cut",0);
-  stage("stTear");$("open").hidden=false;
+  run={cards,fresh,best:cards[0],phase:"pack",timers:[],step:0};
+  open.className="open";open.dataset.fl="";$("burst").innerHTML="";
+  scene.innerHTML=`<div class="bigpack">${packHTML(p)}</div>`;
+  hint("Touche le pack pour l’ouvrir");
+  open.hidden=false;
 }
-// on glisse le doigt le long du trait pointillé ; aux trois quarts, le pack s'ouvre
-(()=>{
-  const bp=$("bigpack");let g=null;
-  bp.addEventListener("pointerdown",e=>{if(!run||bp.classList.contains("torn"))return;g={x0:e.clientX,w:bp.offsetWidth,step:0};try{bp.setPointerCapture(e.pointerId)}catch(err){}});
-  bp.addEventListener("pointermove",e=>{
-    if(!g)return;
-    run.cut=Math.max(run.cut,Math.min(1,Math.abs(e.clientX-g.x0)/(g.w*.9)));
-    bp.style.setProperty("--cut",run.cut);
-    const s=Math.floor(run.cut*8);if(s>g.step){g.step=s;haptic(4)}
-    if(run.cut>=.75){g=null;tear()}
-  });
-  const up=()=>{if(!g)return;g=null;if(run&&run.cut<.75){run.cut=0;bp.style.setProperty("--cut",0)}};
-  bp.addEventListener("pointerup",up);bp.addEventListener("pointercancel",up);
-})();
-$("tearBtn").onclick=()=>tear();
-function tear(){
-  const bp=$("bigpack");if(!run||bp.classList.contains("torn"))return;
-  bp.style.setProperty("--cut",1);bp.classList.add("torn");haptic([10,30,18]);
-  setTimeout(()=>{$("pile").innerHTML="";stage("stDeck");next()},850);
+function advance(){
+  if(!run)return;
+  if(run.phase==="pack"){
+    run.phase="busy";hint("");
+    const bp=scene.querySelector(".bigpack");bp.classList.add("shake");haptic([15,40,15,40,15]);
+    later(()=>bp.classList.replace("shake","go"),500);
+    later(tunnel,1000);
+  }else if(run.phase==="wo"){clearT();step()}
+  else if(run.phase==="card"){clearT();recap()}
 }
-function next(){
-  if(!run||run.busy)return;
-  const pile=$("pile"),cur=pile.querySelector(".cw:not(.out)");
-  if(run.i>=run.cards.length-1){recap();return}
-  run.busy=true;
-  if(cur){cur.classList.add("out");setTimeout(()=>cur.remove(),360)}
-  const c=run.cards[++run.i],isNew=run.fresh.has(c.id)&&!run.shownNew.has(c.id);
-  if(isNew)run.shownNew.add(c.id);
-  const el=document.createElement("div");
-  el.className="cw in"+(ORDER.indexOf(c.rarity)>=2?" hot":"");
-  el.innerHTML=cardHTML(c,isNew);
-  pile.append(el);
-  $("open").style.setProperty("--glow",GLOW[c.rarity]);
-  $("deckCount").textContent=`${run.i+1} / ${run.cards.length}`;
-  haptic(c.rarity==="legendaire"?[30,50,30,50,60]:c.rarity==="epique"?[20,40,20]:8);
-  setTimeout(()=>run&&(run.busy=false),280);
+open.addEventListener("click",e=>{if(!e.target.closest("button"))advance()});
+// le tunnel : les lumières foncent vers nous, les fusées prennent la couleur de la meilleure carte
+function tunnel(){
+  scene.innerHTML=`<div class="flash"></div>`;
+  later(()=>scene.querySelector(".flash")?.remove(),520);
+  open.dataset.fl=run.best.rarity;open.classList.add("run");
+  haptic(run.best.rarity==="legendaire"?[40,60,40,60,80]:run.best.rarity==="epique"?[30,50,30]:12);
+  const wo=run.best.ovr>=WALKOUT&&!state.skipWO;
+  later(()=>{if(wo){run.phase="wo";open.classList.replace("run","wo");run.step=0;step()}else recap()},1800);
 }
-$("pile").addEventListener("click",next);
+// walkout : style, point fort, rareté, silhouette, puis la carte
+function step(){
+  const c=run.best,g=GENRE[c.genre],[sk,sv]=Object.entries(c.stats).sort((a,b)=>b[1]-a[1])[0];
+  const steps=[
+    `<div class="wstep g-${g}"><small>Style</small><div class="big-g"><i></i></div><strong>${c.genre}</strong></div>`,
+    `<div class="wstep"><small>Point fort</small><strong>${sk} ${sv}</strong></div>`,
+    `<div class="wstep"><small>Rareté</small><strong>${RNAME[c.rarity]}</strong></div>`,
+    `<div class="wstep">${sil("walker")}</div>`
+  ];
+  if(run.step>=steps.length){reveal();return}
+  scene.innerHTML=steps[run.step];
+  scene.firstElementChild.classList.add(`g-${g}`);
+  hint("Touche pour passer");haptic(10);
+  later(step,run.step===3?1900:1500);
+  run.step++;
+}
+function reveal(){
+  run.phase="card";
+  scene.innerHTML=`<div class="reveal">${cw(run.best,{isNew:run.fresh.has(run.best.id)})}</div>`;
+  burst();haptic([30,40,60]);
+  hint("Touche pour voir tout le pack");
+  tilt(scene);
+}
+function burst(){
+  const cols=[getComputedStyle(open).getPropertyValue("--fl"),"#ffffff","#ff3d8b","#22e0ff","#b6ff3b","#ff8a1f"];
+  $("burst").innerHTML=Array.from({length:46},()=>{
+    const a=Math.random()*Math.PI*2,d=120+Math.random()*220;
+    return `<i style="--x:${Math.cos(a)*d}px;--y:${Math.sin(a)*d}px;--c:${cols[Math.floor(Math.random()*cols.length)]};animation-delay:${Math.random()*.15}s"></i>`;
+  }).join("");
+}
 function recap(){
-  const seen=new Set();
-  $("recapGrid").innerHTML=run.cards.slice().reverse().map((c,i)=>{const n=run.fresh.has(c.id)&&!seen.has(c.id);seen.add(c.id);return `<div class="cw" style="--i:${i}">${cardHTML(c,n)}</div>`}).join("");
-  $("open").style.setProperty("--glow","transparent");
-  stage("stRecap");
+  run.phase="recap";clearT();
+  open.classList.remove("run","wo");
+  hint("");
+  scene.innerHTML=`<div class="recap"><h2>Ton pack</h2><div class="recapgrid">${run.cards.map((c,i)=>cw(c,{isNew:run.fresh.has(c.id)&&run.cards.findIndex(x=>x.id===c.id)===i,i})).join("")}</div><button class="btn" id="done">Continuer</button></div>`;
+  $("done").onclick=closePack;
 }
-$("done").onclick=()=>{
-  $("open").hidden=true;run=null;
+function closePack(){
+  open.hidden=true;run=null;scene.innerHTML="";
   if(!$("s-club").hidden)renderClub();
-  if(state.coins<PACKS[0].price)toast("Plus de crédits ? Vends tes doublons dans la collection.");
-};
+  if(state.coins<PACKS[0].price)toast("Plus de crédits ? Vends tes doublons");
+}
 
 // incliner une carte au doigt : le reflet suit
 function tilt(box){
+  if(box.dataset.tilt)return;box.dataset.tilt=1;
   box.addEventListener("pointermove",e=>{
-    const card=box.querySelector(".cw:not(.out) .card")||box.querySelector(".card");if(!card)return;
+    const card=box.querySelector(".card");if(!card)return;
     const r=card.getBoundingClientRect(),px=(e.clientX-r.left)/r.width,py=(e.clientY-r.top)/r.height;
     if(px<-.2||px>1.2||py<-.2||py>1.2)return;
     card.style.transition="transform .08s";
@@ -144,7 +163,7 @@ function tilt(box){
   });
   box.addEventListener("pointerleave",()=>box.querySelectorAll(".card").forEach(c=>{c.style.transition="";["--rx","--ry","--mx","--my"].forEach(v=>c.style.removeProperty(v))}));
 }
-tilt($("pile"));tilt($("viewCard"));
+tilt($("viewCard"));
 
 // ---------- collection ----------
 let filter="all";
@@ -152,19 +171,19 @@ function dupGain(){let g=0;for(const c of CARDS){const q=state.owned[c.id]||0;if
 function renderClub(){
   const list=CARDS.filter(c=>filter==="all"||c.rarity===filter);
   $("grid").innerHTML=list.map(c=>state.owned[c.id]
-    ?`<div class="cw" data-id="${c.id}">${cardHTML(c)}${state.owned[c.id]>1?`<span class="qty">×${state.owned[c.id]}</span>`:""}</div>`
-    :`<div class="cw"><div class="card ghost"><b>#${String(c.id+1).padStart(2,"0")}</b><span>${RAR[c.rarity]}</span></div></div>`).join("");
+    ?cw(c,{qty:state.owned[c.id],id:true})
+    :`<div class="cw"><div class="card ghost"><b>#${String(c.id+1).padStart(2,"0")}</b><span>${RNAME[c.rarity]}</span></div></div>`).join("");
   const n=CARDS.filter(c=>state.owned[c.id]).length;
   $("pbar").style.width=(n/CARDS.length*100)+"%";$("pct").innerHTML=`<b>${n}</b> / ${CARDS.length}`;
-  const g=dupGain();$("sellDupes").disabled=!g;$("sellDupes").textContent=g?`Vendre les doublons · +${fmt(g)}`:"Aucun doublon à vendre";
+  const g=dupGain();$("sellDupes").disabled=!g;$("sellDupes").innerHTML=g?`Vendre les doublons · <i class="coin"></i>+${fmt(g)}`:"Aucun doublon à vendre";
 }
 $("filter").onclick=e=>{
   const b=e.target.closest("button");if(!b)return;
   filter=b.dataset.f;$("filter").querySelectorAll("button").forEach(x=>x.setAttribute("aria-pressed",x===b));renderClub();
 };
 $("grid").onclick=e=>{
-  const cw=e.target.closest(".cw[data-id]");if(!cw)return;
-  $("viewCard").innerHTML=`<div class="cw">${cardHTML(CARDS[+cw.dataset.id])}</div>`;$("view").hidden=false;haptic();
+  const el=e.target.closest(".cw[data-id]");if(!el)return;
+  $("viewCard").innerHTML=cw(CARDS[+el.dataset.id]);$("view").hidden=false;haptic();
 };
 $("view").onclick=()=>{$("view").hidden=true};
 $("sellDupes").onclick=()=>{
@@ -176,9 +195,11 @@ $("sellDupes").onclick=()=>{
 // ---------- réglages ----------
 $("optVibrate").checked=state.vibrate;
 $("optVibrate").onchange=e=>{state.vibrate=e.target.checked;save()};
+$("optSkip").checked=state.skipWO;
+$("optSkip").onchange=e=>{state.skipWO=e.target.checked;save()};
 $("reset").onclick=()=>{
   if(!confirm("Effacer ta collection et repartir avec 5 000 crédits ?"))return;
-  state={...START,owned:{},vibrate:state.vibrate};save();wallet();toast("Nouvelle partie");
+  state={...START,owned:{},vibrate:state.vibrate,skipWO:state.skipWO};save();wallet();toast("Nouvelle partie");
 };
 
 // ---------- écrans ----------

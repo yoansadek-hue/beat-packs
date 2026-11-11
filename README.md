@@ -6,7 +6,7 @@ Un jeu de packs de cartes de rap US, UK et FR, inspiré de FIFA Ultimate Team.
 Ouvre `index.html` dans ton navigateur (ou utilise l'extension Live Server dans VS Code).
 
 ## Le jeu
-- **Cartes** : une carte par titre, pour **toute la discographie** de 70 artistes de rap US, UK et FR (environ 11 500 titres). Sur la carte : la note, la pochette (Apple Music), le titre, l'artiste et les streams.
+- **Cartes** : une carte par titre, pour **toute la discographie** de 69 artistes de rap US, UK et FR (770 albums, environ 11 500 titres). Sur la carte : la note, la pochette (Apple Music), le titre, l'artiste et les streams.
   - **Disques** : chaque titre reçoit un disque (Or, Platine, Diamant) selon ses streams et les seuils de certification de son pays.
   - **Note** : mélange des streams et des disques.
   - **Valeur** (pour vendre) : selon les disques.

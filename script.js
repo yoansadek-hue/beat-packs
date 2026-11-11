@@ -5,7 +5,9 @@ const ARTISTS = [
   ["Petit Gravier","Rap","commun"],["Mila Sol","Pop","commun"],["Ronron","Rock","commun"],["Basse Cour","Électro","commun"],["Jojo Swing","Jazz","commun"],["Sunny K","Afro","commun"],["Lola Drift","R&B","commun"],["Gaston Beat","Rap","commun"],["Clara Vinyle","Pop","commun"],["Les Fusibles","Rock","commun"],["Noor","R&B","commun"],["Tempo Libre","Jazz","commun"]
 ];
 const RANGE = {commun:[60,72],rare:[73,81],epique:[82,88],legendaire:[89,96]};
-const LABEL = {commun:"Commune",rare:"Rare",epique:"Épique",legendaire:"Légendaire"};
+const RAR = {commun:"◆",rare:"◆◆",epique:"◆◆◆",legendaire:"★"};
+const GLOW = {commun:"transparent",rare:"#2f7bff",epique:"#ff3dbb",legendaire:"#f0c040"};
+const GENRE = {"Pop":"pop","Rap":"rap","Électro":"electro","R&B":"rnb","Rock":"rock","Afro":"afro","Jazz":"jazz"};
 const SELL = {commun:50,rare:200,epique:600,legendaire:2000};
 function seeded(s){let h=0;for(const c of s)h=(h*31+c.charCodeAt(0))>>>0;return()=>{h=(h*1103515245+12345)>>>0;return h/4294967296}}
 const CARDS = ARTISTS.map(([name,genre,rarity],id)=>{
@@ -14,9 +16,9 @@ const CARDS = ARTISTS.map(([name,genre,rarity],id)=>{
   return {id,name,genre,rarity,ovr,stats:{Voix:st(),Flow:st(),Rythme:st(),Hype:st()}};
 });
 const PACKS = [
-  {key:"bronze",name:"Pack Bronze",desc:"3 cartes",price:500,size:3,odds:{commun:.8,rare:.17,epique:.028,legendaire:.002}},
-  {key:"silver",name:"Pack Argent",desc:"4 cartes, 1 rare minimum",price:1500,size:4,guarantee:"rare",odds:{commun:.6,rare:.3,epique:.09,legendaire:.01}},
-  {key:"gold",name:"Pack Or",desc:"5 cartes, 1 épique minimum",price:4000,size:5,guarantee:"epique",odds:{commun:.4,rare:.38,epique:.18,legendaire:.04}}
+  {key:"bronze",label:"Bronze",desc:"3 cartes",price:500,size:3,odds:{commun:.8,rare:.17,epique:.028,legendaire:.002}},
+  {key:"silver",label:"Argent",desc:"4 cartes · 1 ◆◆ minimum",price:1500,size:4,guarantee:"rare",odds:{commun:.6,rare:.3,epique:.09,legendaire:.01}},
+  {key:"gold",label:"Or",desc:"5 cartes · 1 ◆◆◆ minimum",price:4000,size:5,guarantee:"epique",odds:{commun:.4,rare:.38,epique:.18,legendaire:.04}}
 ];
 const ORDER=["commun","rare","epique","legendaire"];
 const START={coins:5000,owned:{},vibrate:true};
@@ -26,64 +28,157 @@ try{const s=JSON.parse(localStorage.getItem("beatpacks"));if(s&&typeof s.coins==
 function save(){try{localStorage.setItem("beatpacks",JSON.stringify(state))}catch(e){}}
 
 const $=id=>document.getElementById(id);
+const fmt=n=>n.toLocaleString("fr-FR");
 function toast(t){const el=$("toast");el.textContent=t;el.classList.add("show");clearTimeout(toast.t);toast.t=setTimeout(()=>el.classList.remove("show"),2200)}
-function wallet(){$("wallet").textContent=state.coins.toLocaleString("fr-FR");renderPacks()}
+function haptic(p=8){if(state.vibrate&&navigator.vibrate)navigator.vibrate(p)}
+function wallet(){$("wallet").textContent=fmt(state.coins);renderPacks()}
 
-function cardHTML(c,extra=""){
-  return `<div class="card r-${c.rarity} ${extra}">
-    <span class="tag">${LABEL[c.rarity]}</span>
-    <div class="ovr">${c.ovr}</div><div class="genre">${c.genre}</div>
-    <div class="disc"><span></span></div>
-    <div class="name">${c.name}</div>
-    <div class="stats">${Object.entries(c.stats).map(([k,v])=>`<span><b>${k.slice(0,3).toUpperCase()}</b>${v}</span>`).join("")}</div>
+function cardHTML(c,isNew=false){
+  return `<div class="card r-${c.rarity} g-${GENRE[c.genre]}">
+    ${isNew?`<span class="new">NOUVEAU</span>`:""}
+    <div class="top"><span class="ovr">${c.ovr}</span><span class="gen">${c.genre}</span></div>
+    <span class="rar">${RAR[c.rarity]}</span>
+    <div class="art"><i></i></div>
+    <div class="nm">${c.name}</div>
+    <div class="st">${Object.entries(c.stats).map(([k,v])=>`<span><b>${k.slice(0,3).toUpperCase()}</b>${v}</span>`).join("")}</div>
+    <div class="glare"></div>
   </div>`;
+}
+function packHTML(p){
+  return `<div class="pack p-${p.key}"><div class="rec"></div><div class="shine"></div>
+    <div class="face"><small>Beat Packs</small><div><strong>${p.label}</strong><span>${p.desc}</span></div></div></div>`;
 }
 function pickRarity(odds){let x=Math.random(),acc=0;for(const r of ORDER){acc+=odds[r];if(x<acc)return r}return "commun"}
 function draw(r){const pool=CARDS.filter(c=>c.rarity===r);return pool[Math.floor(Math.random()*pool.length)]}
+const pct=x=>x>=.1?Math.round(x*100)+"%":(+(x*100).toFixed(1))+"%";
 
+// ---------- boutique ----------
 function renderPacks(){
-  $("packs").innerHTML=PACKS.map(p=>`<button class="pack p-${p.key}" data-k="${p.key}" ${state.coins<p.price?"disabled":""}>
-    <div><h3>${p.name}</h3><p>${p.desc}</p></div><div class="price"><span class="coin"></span>${p.price.toLocaleString("fr-FR")}</div></button>`).join("");
-  document.querySelectorAll(".pack").forEach(b=>b.onclick=()=>openPack(b.dataset.k));
+  $("packs").innerHTML=PACKS.map(p=>`<div class="offer">
+    ${packHTML(p)}
+    <div class="meta"><b>Pack ${p.label}</b><span>${p.size} cartes</span></div>
+    <div class="odds">${ORDER.slice().reverse().map(r=>`<span>${RAR[r]} <em>${pct(p.odds[r])}</em></span>`).join("")}</div>
+    <button class="btn" data-k="${p.key}" ${state.coins<p.price?"disabled":""}><i class="dot" style="background:#111"></i>${fmt(p.price)}</button>
+  </div>`).join("");
+  document.querySelectorAll(".offer .btn").forEach(b=>b.onclick=()=>openPack(b.dataset.k));
 }
+
+// ---------- ouverture : déchirer, puis les cartes une par une, puis le récap ----------
+let run=null;
+function stage(id){["stTear","stDeck","stRecap"].forEach(s=>$(s).hidden=s!==id)}
 function openPack(k){
   const p=PACKS.find(x=>x.key===k); if(state.coins<p.price)return;
   state.coins-=p.price;
   let rs=Array.from({length:p.size},()=>pickRarity(p.odds));
   if(p.guarantee&&!rs.some(r=>ORDER.indexOf(r)>=ORDER.indexOf(p.guarantee)))rs[0]=p.guarantee;
-  const cards=rs.map(draw).sort((a,b)=>a.ovr-b.ovr);
-  cards.forEach(c=>state.owned[c.id]=(state.owned[c.id]||0)+1);
+  const cards=rs.map(draw).sort((a,b)=>a.ovr-b.ovr); // la meilleure carte arrive en dernier
+  const fresh=new Set();
+  cards.forEach(c=>{if(!state.owned[c.id]&&!fresh.has(c.id))fresh.add(c.id);state.owned[c.id]=(state.owned[c.id]||0)+1});
   save();wallet();
-  const box=$("reveal");box.innerHTML="";$("hint").textContent="";
-  box.scrollIntoView({behavior:"smooth",block:"start"});
-  cards.forEach((c,i)=>setTimeout(()=>{
-    box.insertAdjacentHTML("beforeend",cardHTML(c,"flip"));haptic(c.rarity==="legendaire"?[30,40,30]:8);
-    if(i===cards.length-1){const best=cards[cards.length-1];
-      $("hint").textContent=best.rarity==="legendaire"?`Incroyable, ${best.name} est dans ton club !`:`Meilleure carte : ${best.name} (${best.ovr})`;}
-  },i*420));
-  if(state.coins<500)setTimeout(()=>toast("Plus assez de crédits ? Vends tes doublons dans ta collection."),cards.length*420+400);
+  run={cards,fresh,shownNew:new Set(),i:-1,busy:false,cut:0};
+  $("open").style.setProperty("--glow","transparent");
+  $("bigpack").className="bigpack";
+  $("bigpack").innerHTML=`<div class="body">${packHTML(p)}</div><div class="cap">${packHTML(p)}</div><div class="cut"><i></i></div>`;
+  $("bigpack").style.setProperty("--cut",0);
+  stage("stTear");$("open").hidden=false;
 }
-
-function renderClub(){
-  const f=$("filter").value;
-  const list=CARDS.filter(c=>f==="all"||c.rarity===f).sort((a,b)=>b.ovr-a.ovr);
-  $("grid").innerHTML=list.map(c=>state.owned[c.id]
-    ?`<div class="slot">${cardHTML(c)}${state.owned[c.id]>1?`<span class="count">×${state.owned[c.id]}</span>`:""}</div>`
-    :`<div class="card locked"><div class="ovr">?</div><div class="genre">${LABEL[c.rarity]}</div><div class="disc"></div><div class="name">À trouver</div></div>`).join("");
-  const n=CARDS.filter(c=>state.owned[c.id]).length;
-  $("pbar").style.width=(n/CARDS.length*100)+"%";$("pct").textContent=`${n} / ${CARDS.length} artistes trouvés`;
+// on glisse le doigt le long du trait pointillé ; aux trois quarts, le pack s'ouvre
+(()=>{
+  const bp=$("bigpack");let g=null;
+  bp.addEventListener("pointerdown",e=>{if(!run||bp.classList.contains("torn"))return;g={x0:e.clientX,w:bp.offsetWidth,step:0};try{bp.setPointerCapture(e.pointerId)}catch(err){}});
+  bp.addEventListener("pointermove",e=>{
+    if(!g)return;
+    run.cut=Math.max(run.cut,Math.min(1,Math.abs(e.clientX-g.x0)/(g.w*.9)));
+    bp.style.setProperty("--cut",run.cut);
+    const s=Math.floor(run.cut*8);if(s>g.step){g.step=s;haptic(4)}
+    if(run.cut>=.75){g=null;tear()}
+  });
+  const up=()=>{if(!g)return;g=null;if(run&&run.cut<.75){run.cut=0;bp.style.setProperty("--cut",0)}};
+  bp.addEventListener("pointerup",up);bp.addEventListener("pointercancel",up);
+})();
+$("tearBtn").onclick=()=>tear();
+function tear(){
+  const bp=$("bigpack");if(!run||bp.classList.contains("torn"))return;
+  bp.style.setProperty("--cut",1);bp.classList.add("torn");haptic([10,30,18]);
+  setTimeout(()=>{$("pile").innerHTML="";stage("stDeck");next()},850);
 }
-$("filter").onchange=renderClub;
-$("sellDupes").onclick=()=>{
-  let gain=0;for(const c of CARDS){const q=state.owned[c.id]||0;if(q>1){gain+=(q-1)*SELL[c.rarity];state.owned[c.id]=1}}
-  if(!gain)return toast("Aucun doublon à vendre.");
-  state.coins+=gain;save();wallet();renderClub();toast(`+${gain.toLocaleString("fr-FR")} crédits`);
+function next(){
+  if(!run||run.busy)return;
+  const pile=$("pile"),cur=pile.querySelector(".cw:not(.out)");
+  if(run.i>=run.cards.length-1){recap();return}
+  run.busy=true;
+  if(cur){cur.classList.add("out");setTimeout(()=>cur.remove(),360)}
+  const c=run.cards[++run.i],isNew=run.fresh.has(c.id)&&!run.shownNew.has(c.id);
+  if(isNew)run.shownNew.add(c.id);
+  const el=document.createElement("div");
+  el.className="cw in"+(ORDER.indexOf(c.rarity)>=2?" hot":"");
+  el.innerHTML=cardHTML(c,isNew);
+  pile.append(el);
+  $("open").style.setProperty("--glow",GLOW[c.rarity]);
+  $("deckCount").textContent=`${run.i+1} / ${run.cards.length}`;
+  haptic(c.rarity==="legendaire"?[30,50,30,50,60]:c.rarity==="epique"?[20,40,20]:8);
+  setTimeout(()=>run&&(run.busy=false),280);
+}
+$("pile").addEventListener("click",next);
+function recap(){
+  const seen=new Set();
+  $("recapGrid").innerHTML=run.cards.slice().reverse().map((c,i)=>{const n=run.fresh.has(c.id)&&!seen.has(c.id);seen.add(c.id);return `<div class="cw" style="--i:${i}">${cardHTML(c,n)}</div>`}).join("");
+  $("open").style.setProperty("--glow","transparent");
+  stage("stRecap");
+}
+$("done").onclick=()=>{
+  $("open").hidden=true;run=null;
+  if(!$("s-club").hidden)renderClub();
+  if(state.coins<PACKS[0].price)toast("Plus de crédits ? Vends tes doublons dans la collection.");
 };
+
+// incliner une carte au doigt : le reflet suit
+function tilt(box){
+  box.addEventListener("pointermove",e=>{
+    const card=box.querySelector(".cw:not(.out) .card")||box.querySelector(".card");if(!card)return;
+    const r=card.getBoundingClientRect(),px=(e.clientX-r.left)/r.width,py=(e.clientY-r.top)/r.height;
+    if(px<-.2||px>1.2||py<-.2||py>1.2)return;
+    card.style.transition="transform .08s";
+    card.style.setProperty("--rx",((.5-py)*18).toFixed(1)+"deg");card.style.setProperty("--ry",((px-.5)*22).toFixed(1)+"deg");
+    card.style.setProperty("--mx",(px*100).toFixed(0)+"%");card.style.setProperty("--my",(py*100).toFixed(0)+"%");
+  });
+  box.addEventListener("pointerleave",()=>box.querySelectorAll(".card").forEach(c=>{c.style.transition="";["--rx","--ry","--mx","--my"].forEach(v=>c.style.removeProperty(v))}));
+}
+tilt($("pile"));tilt($("viewCard"));
+
+// ---------- collection ----------
+let filter="all";
+function dupGain(){let g=0;for(const c of CARDS){const q=state.owned[c.id]||0;if(q>1)g+=(q-1)*SELL[c.rarity]}return g}
+function renderClub(){
+  const list=CARDS.filter(c=>filter==="all"||c.rarity===filter);
+  $("grid").innerHTML=list.map(c=>state.owned[c.id]
+    ?`<div class="cw" data-id="${c.id}">${cardHTML(c)}${state.owned[c.id]>1?`<span class="qty">×${state.owned[c.id]}</span>`:""}</div>`
+    :`<div class="cw"><div class="card ghost"><b>#${String(c.id+1).padStart(2,"0")}</b><span>${RAR[c.rarity]}</span></div></div>`).join("");
+  const n=CARDS.filter(c=>state.owned[c.id]).length;
+  $("pbar").style.width=(n/CARDS.length*100)+"%";$("pct").innerHTML=`<b>${n}</b> / ${CARDS.length}`;
+  const g=dupGain();$("sellDupes").disabled=!g;$("sellDupes").textContent=g?`Vendre les doublons · +${fmt(g)}`:"Aucun doublon à vendre";
+}
+$("filter").onclick=e=>{
+  const b=e.target.closest("button");if(!b)return;
+  filter=b.dataset.f;$("filter").querySelectorAll("button").forEach(x=>x.setAttribute("aria-pressed",x===b));renderClub();
+};
+$("grid").onclick=e=>{
+  const cw=e.target.closest(".cw[data-id]");if(!cw)return;
+  $("viewCard").innerHTML=`<div class="cw">${cardHTML(CARDS[+cw.dataset.id])}</div>`;$("view").hidden=false;haptic();
+};
+$("view").onclick=()=>{$("view").hidden=true};
+$("sellDupes").onclick=()=>{
+  const g=dupGain();if(!g)return;
+  for(const c of CARDS)if((state.owned[c.id]||0)>1)state.owned[c.id]=1;
+  state.coins+=g;save();wallet();renderClub();haptic([10,30,10]);toast(`+${fmt(g)} crédits`);
+};
+
+// ---------- réglages ----------
 $("optVibrate").checked=state.vibrate;
 $("optVibrate").onchange=e=>{state.vibrate=e.target.checked;save()};
 $("reset").onclick=()=>{
   if(!confirm("Effacer ta collection et repartir avec 5 000 crédits ?"))return;
-  state={...START,owned:{},vibrate:state.vibrate};save();wallet();$("reveal").innerHTML="";$("hint").textContent="Choisis un pack pour l’ouvrir.";toast("Nouvelle partie !");
+  state={...START,owned:{},vibrate:state.vibrate};save();wallet();toast("Nouvelle partie");
 };
 
 // ---------- écrans ----------
@@ -94,13 +189,12 @@ function show(id){
   scrollTo(0,0);
 }
 
-// ---------- barre d'onglets du bas, comme Quizly : la bulle de verre s'étire en glissant d'un onglet à l'autre,
+// ---------- barre d'onglets du bas : la bulle de verre s'étire en glissant d'un onglet à l'autre,
 // grossit comme une loupe sous le doigt et suit le doigt quand on la fait glisser ----------
 const bar=$("tabbar"),pill=$("tabPill"),TABS=[...bar.querySelectorAll(".tab")];
 const P={x:0,shown:false,anim:null};
 const still=()=>matchMedia("(prefers-reduced-motion: reduce)").matches;
 const place=(x,sx=1,sy=1)=>{P.x=x;pill.style.transform=`translate3d(${x}px,0,0) scale(${sx},${sy})`};
-function haptic(p=8){if(state.vibrate&&navigator.vibrate)navigator.vibrate(p)}
 function pillTo(t,from){
   const x=t.offsetLeft,w=t.offsetWidth,x0=from??P.x;
   pill.style.width=w+"px";

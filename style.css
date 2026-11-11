@@ -100,16 +100,19 @@ input::placeholder{color:var(--dim)}
 .odds span{display:inline-flex;align-items:center;gap:5px;padding:2px 8px;border-radius:999px;background:rgba(0,0,0,.25);font-weight:700;font-size:12px}
 .odds i{width:9px;height:9px;border-radius:2px;transform:rotate(45deg)}
 .offer .btn{margin-top:10px;min-height:46px}
-.pack{position:relative;flex:none;width:92px;aspect-ratio:.66;border-radius:10px;overflow:hidden;z-index:1;box-shadow:0 12px 24px -8px rgba(0,0,0,.55),inset 0 0 0 2px rgba(255,255,255,.35)}
-.pack .foil{position:absolute;inset:0;background:linear-gradient(160deg,#ffffff,var(--pc,#8a7bff) 45%,#1b1450)}
+.pack{position:relative;flex:none;width:92px;aspect-ratio:.66;border-radius:5px;overflow:hidden;z-index:1;box-shadow:0 14px 26px -8px rgba(0,0,0,.6)}
+.pack .foil{position:absolute;inset:0;background:radial-gradient(ellipse 80% 55% at 50% 50%,rgba(255,255,255,.35),transparent 70%),linear-gradient(160deg,#ffffff,var(--pc,#8a7bff) 40%,#1b1450)}
+.pack .foil::after{content:"";position:absolute;inset:0;box-shadow:inset 6px 0 10px -4px rgba(0,0,0,.35),inset -6px 0 10px -4px rgba(0,0,0,.35)} /* le sachet est un peu bombé */
+.pack .crimp{position:absolute;left:0;right:0;height:9%;z-index:3;background:repeating-linear-gradient(90deg,rgba(255,255,255,.55) 0 1.5px,rgba(0,0,0,.28) 1.5px 3.5px),linear-gradient(var(--pc,#8a7bff),#1b1450)}
+.pack .crimp.t{top:0;border-bottom:1px solid rgba(0,0,0,.25)}
+.pack .crimp.b{bottom:0;border-top:1px solid rgba(0,0,0,.25)}
+.pack .pemb{position:absolute;left:50%;bottom:14%;z-index:2;width:22%;aspect-ratio:1;transform:translateX(-50%)}
+.pack .pemb .coin{width:100%;height:100%;box-shadow:0 0 0 2px rgba(255,255,255,.6),0 4px 10px rgba(0,0,0,.4)}
 .pack.k-3{--pc:#4fc3ff} .pack.k-5{--pc:#ff5aa8} .pack.k-10{--pc:#ffb21f} .pack.k-sp{--pc:#7dff8a}
 .pack .shine{position:absolute;inset:-40%;background:linear-gradient(115deg,transparent 40%,rgba(255,255,255,.55) 50%,transparent 60%);animation:sheen 3.2s ease-in-out infinite}
 @keyframes sheen{0%,60%{transform:translateX(-60%)}100%{transform:translateX(60%)}}
-.pack .logo{position:absolute;left:0;right:0;bottom:5%;display:flex;flex-direction:column;align-items:center;justify-content:flex-end;gap:2px;color:#fff;text-shadow:0 2px 8px rgba(0,0,0,.35)}
-.pack .logo b{font:900 30px/0.9 var(--font)}
-.pack .logo small{font:800 9px var(--font);letter-spacing:.2em}
-.pack .pcovs{position:absolute;left:0;right:0;top:9%;height:52%;display:flex;justify-content:center;align-items:center}
-.pack .pcovs img{width:46%;aspect-ratio:1;object-fit:cover;border-radius:6%;box-shadow:0 6px 14px rgba(0,0,0,.45);margin:0 -9%}
+.pack .pcovs{position:absolute;left:0;right:0;top:14%;height:58%;display:flex;justify-content:center;align-items:center;z-index:1}
+.pack .pcovs img{width:52%;aspect-ratio:1;object-fit:cover;border-radius:6%;box-shadow:0 6px 14px rgba(0,0,0,.45);margin:0 -9%}
 .pack .pcovs img:nth-child(1){transform:rotate(-14deg) translateY(6%)}
 .pack .pcovs img:nth-child(2){position:relative;z-index:1;transform:scale(1.12)}
 .pack .pcovs img:nth-child(3){transform:rotate(14deg) translateY(6%)}
@@ -288,11 +291,11 @@ input::placeholder{color:var(--dim)}
 .endcard{position:absolute;left:50%;top:44%;z-index:1;width:min(19vw,80px);aspect-ratio:.72;margin:calc(min(19vw,80px) / -1.44) 0 0 calc(min(19vw,80px) / -2);border-radius:7px;background:linear-gradient(160deg,#3a3550,#1a1726);border:2px solid rgba(255,241,201,.35);box-shadow:0 0 24px rgba(255,241,201,.18);animation:approach 1.9s cubic-bezier(.4,0,.8,.6) both}
 .endcard.h-rare{border-color:rgba(255,241,201,.75);outline:2px solid rgba(255,241,201,.4);outline-offset:4px;box-shadow:0 0 30px rgba(255,241,201,.3)}
 .endcard.h-board{width:min(24vw,100px);margin:calc(min(24vw,100px) / -1.44) 0 0 calc(min(24vw,100px) / -2);border-radius:3px;background:#fffdf3;border:0;box-shadow:0 0 40px 14px rgba(255,248,225,.75),0 0 120px 40px rgba(255,241,201,.35)}
-.endcard.twin{width:min(17vw,72px);margin:calc(min(17vw,72px) / -1.44) 0 0 calc(min(17vw,72px) / -2)}
+.endcard.twin{width:min(12vw,50px);margin:calc(min(12vw,50px) / -1.44) 0 0 calc(min(12vw,50px) / -2);box-shadow:0 0 22px 6px rgba(255,248,225,.55),0 0 60px 20px rgba(255,241,201,.2)}
 .endcard.twin.l{animation-name:approachL}
 .endcard.twin.r{animation-name:approachR;animation-delay:.12s}
-@keyframes approachL{from{transform:translateX(-62%) scale(.35);opacity:0}25%{opacity:1}to{transform:translateX(-62%) scale(1.15);opacity:1}}
-@keyframes approachR{from{transform:translateX(62%) scale(.35);opacity:0}25%{opacity:1}to{transform:translateX(62%) scale(1.15);opacity:1}}
+@keyframes approachL{from{transform:translateX(-58%) scale(.35);opacity:0}25%{opacity:1}to{transform:translateX(-58%) scale(1.15);opacity:1}}
+@keyframes approachR{from{transform:translateX(58%) scale(.35);opacity:0}25%{opacity:1}to{transform:translateX(58%) scale(1.15);opacity:1}}
 @keyframes approach{from{transform:scale(.35);opacity:0}25%{opacity:1}to{transform:scale(1.15);opacity:1}}
 .flare{position:absolute;bottom:-10vh;width:26vw;max-width:180px;height:130vh;background:linear-gradient(to top,var(--fl),transparent 70%);filter:blur(16px);opacity:0;transform-origin:bottom center;transition:background .4s}
 .flare.l{left:8%;transform:rotate(-22deg)} .flare.r{right:8%;transform:rotate(22deg)}
@@ -309,10 +312,8 @@ input::placeholder{color:var(--dim)}
 @keyframes swayR{from{transform:rotate(28deg)}to{transform:rotate(12deg)}}
 .scene{position:relative;z-index:2;width:100%;max-width:440px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:18px;min-height:60vh}
 .skip{position:relative;z-index:2;margin:0;color:var(--dim);font:600 14px var(--font);text-align:center;min-height:1.4em}
-.bigpack .pack{width:min(52vw,210px);border-radius:16px}
-.bigpack .pack .logo b{font-size:min(15vw,64px)}
-.bigpack .pack .logo small{font-size:15px}
-.bigpack{animation:packin .6s cubic-bezier(.2,1.3,.4,1) both}
+.bigpack .pack{width:min(52vw,210px);border-radius:8px}
+.bigpack .bigpack .bigpack{animation:packin .6s cubic-bezier(.2,1.3,.4,1) both}
 .bigpack.shake{animation:shake .5s ease-in-out both}
 .bigpack.go{animation:packgo .55s cubic-bezier(.6,0,.9,.5) both}
 @keyframes packin{from{transform:translateY(40vh) scale(.6) rotate(-8deg);opacity:0}}
@@ -383,9 +384,7 @@ html,body{-webkit-text-size-adjust:100%;text-size-adjust:100%}
   h2{font-size:19px}
   .offer{gap:12px;padding:13px;border-radius:20px}
   .pack{width:78px}
-  .pack .logo b{font-size:24px}
-  .pack .logo small{font-size:8px}
-  .offer h3{font-size:21px}
+      .offer h3{font-size:21px}
   .offer p{font-size:13px}
   .odds{gap:4px}
   .odds span{font-size:11px;padding:2px 7px}

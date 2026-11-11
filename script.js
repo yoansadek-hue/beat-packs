@@ -129,7 +129,7 @@ function packCovers(p){
   while(out.length<3&&pool.length){const a=pool.splice(Math.floor(Math.random()*pool.length),1)[0];if(!out.some(x=>x.ar===a.ar))out.push(a)}
   return COVS[id]=out;
 }
-const packHTML=p=>`<div class="pack k-${p.key}"><div class="foil"></div><div class="pcovs">${packCovers(p).map(a=>`<img src="${a.cv}" alt="">`).join("")}</div><div class="logo"><small>BEAT PACKS</small><b>${p.size}</b><small>CARTES</small></div><div class="shine"></div></div>`;
+const packHTML=p=>`<div class="pack k-${p.key}"><div class="foil"></div><div class="pcovs">${packCovers(p).map(a=>`<img src="${a.cv}" alt="">`).join("")}</div><i class="crimp t"></i><i class="crimp b"></i><span class="pemb"><i class="coin"></i></span><div class="shine"></div></div>`;
 function pickTier(odds){let x=Math.random(),acc=0;for(const r of ORDER){acc+=odds[r];if(x<acc)return r}return "commune"}
 function drawTrack(t,f){
   for(let i=ORDER.indexOf(t);i>=0;i--){const p=f?POOL[ORDER[i]].filter(f):POOL[ORDER[i]];if(p.length)return any(p)}
@@ -302,7 +302,7 @@ function tunnel(){
   const two=run.wos.length>1; // double walkout : deux portes de lumière côte à côte
   scene.innerHTML=`<div class="flash"></div>${two?`<div class="endcard h-board twin l"></div><div class="endcard h-board twin r"></div>`:`<div class="endcard h-${h}"></div>`}`;
   later(()=>scene.querySelector(".flash")?.remove(),520);
-  open.classList.add("run");SFX.tunnel();if(h==="board")later(()=>{open.dataset.fl=colorOf(run.wos[run.wos.length-1]);open.classList.add("board");SFX.board();if(run.wos.length>1){later(SFX.board,450);later(()=>{open.classList.remove("board");void open.offsetWidth;open.classList.add("board")},450)}},900);haptic(14);
+  open.classList.add("run");SFX.tunnel();if(h==="board")later(()=>{open.dataset.fl=colorOf(run.wos[run.wos.length-1]);open.classList.add("board");SFX.board();if(run.wos.length>1)later(SFX.reveal,450)},900);haptic(14);
   later(()=>{open.classList.remove("board");open.dataset.fl=colorOf(run.wos.length?run.wos[run.wos.length-1]:run.best);if(run.wos.length){run.phase="wo";open.classList.replace("run","wo");run.step=0;step()}else{run.cur=run.best;reveal()}},1800);
 }
 // walkout : le pays, l'artiste, l'album, puis la carte
@@ -362,6 +362,13 @@ function recap(){
   scene.innerHTML=`<div class="recap"><h2>Ton pack</h2><p class="note" style="margin:-10px 0 0">Touche une carte pour la voir, la vendre ou l’offrir.</p><div class="recapgrid" style="grid-template-columns:repeat(${cols},${w}px);gap:${gap}px">${run.cards.map((c,i)=>{const f=run.fresh.has(c.key)&&!seen.has(c.key);seen.add(c.key);return cw(c,{fresh:f,i,tap:true})}).join("")}</div></div><div class="recapbar"><button class="btn go" id="done">Continuer</button></div>`;
   run.cards.forEach((_,i)=>later(SFX.tick,i*90)); // un petit tic par carte qui apparaît
   $("done").onclick=()=>{SFX.tap();closePack()};
+  requestAnimationFrame(()=>{
+    const grid=scene.querySelector(".recapgrid"),bar=document.querySelector(".recapbar");if(!grid||!bar)return;
+    const H2=bar.getBoundingClientRect().top-grid.getBoundingClientRect().top-12;
+    const fit=c=>{const r=Math.ceil(n/c);return Math.floor(Math.min((W-gap*(c-1))/c,((H2-gap*(r-1))/r)*.72,170))};
+    let c2=1;for(let c=2;c<=Math.min(n,5);c++)if(fit(c)>fit(c2))c2=c;
+    grid.style.gridTemplateColumns=`repeat(${c2},${fit(c2)}px)`;
+  });
 }
 function closePack(){
   stopAudio();

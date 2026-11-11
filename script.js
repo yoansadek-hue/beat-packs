@@ -14,9 +14,9 @@ function disc(country,m){
   return {lvl:"",label:"Aucun"};
 }
 const plat = (country,m) => m/CERT[country].pl; // nombre de disques de platine
-// la note mélange les streams et les disques : 1 M → ~57, 100 M → ~75, 1 Md → ~86, 3 Md → ~94
-const ovrOf = (country,m) => Math.max(40,Math.min(99,Math.round(.5*(50+13*Math.log10(Math.max(.1,m)))+.5*(55+20*Math.log10(1+plat(country,m)))+5)));
-const tierOf = o => o>=88?"legendaire":o>=80?"epique":o>=70?"rare":"commune";
+// la note vient des streams (1 M → 68, 10 M → 76, 100 M → 84, 1 Md → 92), plus un bonus selon les disques de platine (jusqu'à +4)
+const ovrOf = (country,m) => Math.max(50,Math.min(99,Math.round(60+8*(Math.log10(Math.max(.05,m))+1)+Math.min(4,plat(country,m)*.5))));
+const tierOf = o => o>=90?"legendaire":o>=83?"epique":o>=75?"rare":"commune";
 const slug = s => s.normalize("NFD").replace(/[̀-ͯ]/g,"").toLowerCase().replace(/[^a-z0-9]+/g,"-").replace(/^-|-$/g,"");
 const hue = s => {let h=0;for(const c of s)h=(h*31+c.charCodeAt(0))%360;return h};
 const initials = s => s.replace(/[^\p{L}\p{N} ]/gu,"").split(/\s+/).filter(Boolean).slice(0,2).map(w=>w[0]).join("").toUpperCase()||"♪";
@@ -34,11 +34,14 @@ ALBUMS.forEach(al=>{
     CARD[`h:${al.id}:${i}`]={...c,key:`h:${al.id}:${i}`,kind:"holo",ovr:Math.min(99,ovr+3)};
   });
 });
+// une Icône vaut au moins 85, et monte jusqu'à 99 avec le total des streams de l'artiste
+const TOT=ARTISTS.map(a=>a.tracks.reduce((s,t)=>s+t.streams,0)).filter(Boolean);
+const TLO=Math.log10(Math.min(...TOT)),THI=Math.log10(Math.max(...TOT));
 ARTISTS.forEach(a=>{
   if(!a.tracks.length)return;
   const best=a.tracks.reduce((x,y)=>y.streams>x.streams?y:x);
   a.cover=a.albums.reduce((x,y)=>y.total>x.total?y:x).id;
-  const c={key:`a:${a.id}`,kind:"icone",alb:a.cover,ar:a.id,title:a.n,artist:a.n,country:a.c,streams:Math.round(a.tracks.reduce((s,t)=>s+t.streams,0)),vs:best.streams,ovr:Math.min(99,best.ovr+2),tier:"legendaire"};
+  const c={key:`a:${a.id}`,kind:"icone",alb:a.cover,ar:a.id,title:a.n,artist:a.n,country:a.c,streams:Math.round(a.tracks.reduce((s,t)=>s+t.streams,0)),vs:best.streams,ovr:Math.round(85+14*(Math.log10(a.tracks.reduce((s,t)=>s+t.streams,0))-TLO)/(THI-TLO)),tier:"legendaire"};
   ICONES.push(c);CARD[c.key]=c;a.icone=c.key;
 });
 const holo = t => CARD["h"+t.key.slice(1)];
@@ -190,11 +193,14 @@ open.addEventListener("click",e=>{
   advance(e);
 });
 // le tunnel : les lumières foncent vers nous, toujours de la même couleur (rien ne trahit la carte)
+// l'indice, comme sur FIFA 21 : au bout du couloir, une simple carte (Vinyle, Or), une carte à cadre (Platine)
+// ou une porte de lumière (walkout) ; discret, sans couleur
 function tunnel(){
-  scene.innerHTML=`<div class="flash"></div>`;
+  const h=run.wos.length?"board":run.best.tier==="epique"?"rare":"plain";
+  scene.innerHTML=`<div class="flash"></div><div class="endcard h-${h}"></div>`;
   later(()=>scene.querySelector(".flash")?.remove(),520);
-  open.classList.add("run");haptic(14);
-  later(()=>{if(run.wos.length){run.phase="wo";open.classList.replace("run","wo");run.step=0;step()}else{run.cur=run.best;reveal()}},1800);
+  open.classList.add("run");if(h==="board")later(()=>open.classList.add("board"),900);haptic(14);
+  later(()=>{open.classList.remove("board");if(run.wos.length){run.phase="wo";open.classList.replace("run","wo");run.step=0;step()}else{run.cur=run.best;reveal()}},1800);
 }
 // walkout : le pays, l'artiste, l'album, puis la carte
 function step(){
@@ -213,7 +219,7 @@ function step(){
 }
 function reveal(){
   const c=run.cur;
-  run.phase="card";open.classList.remove("run");open.classList.add("wo");
+  run.phase="card";open.classList.remove("run","board");open.classList.add("wo");
   scene.innerHTML=`<div class="reveal">${cw(c,{fresh:run.fresh.has(c.key)})}</div>`;
   if(walkout(c)){burst();haptic([30,40,60])}
   hint("Touche la carte");
@@ -266,9 +272,9 @@ function tilt(box){
 }
 
 // ---------- feuille du bas : fiche d'une carte (vendre, mettre au marché, offrir) ----------
-function sheet(html){$("sheetIn").onclick=null;$("sheetIn").innerHTML=html;$("sheet").hidden=false;$("sheetIn").scrollTop=0}
+function sheet(html){$("sheetIn").onclick=null;$("sheetIn").innerHTML=`<button class="xclose" aria-label="Fermer">✕</button>`+html;$("sheet").hidden=false;$("sheetIn").scrollTop=0}
 const closeSheet=()=>{$("sheet").hidden=true};
-$("sheet").onclick=e=>{if(e.target.id==="sheet")closeSheet()};
+$("sheet").addEventListener("click",e=>{if(e.target.id==="sheet"||e.target.closest(".xclose"))closeSheet()});
 tilt($("sheetIn"));
 function facts(c){
   const a=ALB[c.alb];
@@ -427,7 +433,7 @@ const SBC=[
   {id:"us",t:"Rap US",d:"5 cartes d’artistes américains",n:5,ok:c=>c.country==="US",rw:"us",c1:"#ff4d6d",c2:"#3a3b8f"},
   {id:"uk",t:"Rap UK",d:"5 cartes d’artistes anglais",n:5,ok:c=>c.country==="UK",rw:"uk",c1:"#3a7bff",c2:"#c8102e"},
   {id:"same",t:"Même artiste",d:"4 cartes du même artiste",n:4,ok:()=>true,check:cs=>new Set(cs.map(c=>c.ar)).size===1,rule:"Toutes du même artiste",rw:"icone",c1:"#ff3d8b",c2:"#7b2ff7"},
-  {id:"avg",t:"Note 80",d:"5 cartes, note moyenne de 80 ou plus",n:5,ok:()=>true,check:cs=>avg(cs)>=80,rule:"Note moyenne ≥ 80",rw:"legend",c1:"#ffd23f",c2:"#e8590c"},
+  {id:"avg",t:"Note 85",d:"5 cartes, note moyenne de 85 ou plus",n:5,ok:()=>true,check:cs=>avg(cs)>=85,rule:"Note moyenne ≥ 85",rw:"legend",c1:"#ffd23f",c2:"#e8590c"},
   {id:"dia",t:"Disques de diamant",d:"3 titres certifiés Diamant",n:3,ok:c=>disc(c.country,c.vs).lvl==="Diamant",rw:"holo",c1:"#7af0ff",c2:"#8a5cff"},
   {id:"old",t:"Old School",d:"4 cartes d’albums sortis avant 2005",n:4,ok:c=>ALB[c.alb].y<2005,rw:"old",c1:"#b6ff3b",c2:"#0b5e4a"}
 ];
@@ -460,7 +466,7 @@ function autoFill(s){
   const copies=[];eligible(s).forEach(c=>{for(let i=0;i<state.owned[c.key];i++)copies.push(c)});
   let pick=[];
   if(s.id==="same"){const by={};copies.forEach(c=>(by[c.ar]??=[]).push(c));const g=Object.values(by).filter(x=>x.length>=s.n).map(x=>x.slice(0,s.n)).sort((a,b)=>a.reduce((t,c)=>t+value(c),0)-b.reduce((t,c)=>t+value(c),0))[0];pick=g||[]}
-  else if(s.id==="avg")pick=copies.filter(c=>c.ovr>=80).slice(0,s.n);
+  else if(s.id==="avg")pick=copies.filter(c=>c.ovr>=85).slice(0,s.n);
   else pick=copies.slice(0,s.n);
   return pick.map(c=>c.key);
 }

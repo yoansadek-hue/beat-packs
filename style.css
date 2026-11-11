@@ -247,6 +247,9 @@ input::placeholder{color:var(--dim)}
 @keyframes up{from{transform:translateY(40px);opacity:0}}
 .sheetin > .cw{width:min(56vw,230px);touch-action:none}
 .sheetin h2{margin:0;align-self:flex-start}
+.sheetin{position:relative}
+.xclose{position:sticky;top:0;align-self:flex-end;margin:-8px -4px -46px 0;z-index:5;width:38px;height:38px;flex:none;border:0;border-radius:50%;background:#ff3b5c;color:#fff;font:900 17px/1 var(--font);cursor:pointer;box-shadow:0 6px 16px -4px rgba(255,59,92,.7)}
+.xclose:active{transform:scale(.92)}
 .facts{width:100%;display:grid;grid-template-columns:1fr 1fr;gap:8px}
 .facts div{padding:8px 12px;border-radius:12px;background:var(--surface)}
 .facts small{display:block;color:var(--dim);font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.05em}
@@ -260,21 +263,31 @@ input::placeholder{color:var(--dim)}
 .code{width:100%;padding:12px;border-radius:12px;background:#0c0b25;border:1px dashed var(--line);font:700 13px ui-monospace,Consolas,monospace;word-break:break-all;-webkit-user-select:all;user-select:all}
 
 /* ---------- ouverture : le tunnel ---------- */
-.open{position:fixed;inset:0;z-index:50;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:calc(20px + env(safe-area-inset-top)) 18px calc(24px + env(safe-area-inset-bottom));overflow:hidden;--fl:#b9a6ff;background:radial-gradient(circle at 50% 45%,#1c1450,#05041a 70%);animation:fade .25s both}
+.open{position:fixed;inset:0;z-index:50;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:calc(20px + env(safe-area-inset-top)) 18px calc(24px + env(safe-area-inset-bottom));overflow:hidden;--fl:#fff1c9;background:radial-gradient(ellipse 40% 50% at 50% 44%,#2a2540,#0b0a14 75%);animation:fade .25s both}
 @keyframes fade{from{opacity:0}}
 .tunnel{position:absolute;inset:0;pointer-events:none}
-.ring{position:absolute;left:50%;top:46%;width:70vmax;height:70vmax;margin:-35vmax 0 0 -35vmax;border:2px solid rgba(255,255,255,.35);border-radius:22%;opacity:0;animation:ring 2.4s linear infinite}
+.ring{position:absolute;left:50%;top:44%;width:56vmax;height:80vmax;margin:-40vmax 0 0 -28vmax;border:2px solid rgba(255,241,201,.28);border-radius:2%;opacity:0;animation:ring 2.4s linear infinite}
+.ring::before,.ring::after{content:"";position:absolute;top:4%;bottom:4%;width:1.2%;border-radius:9px;background:var(--fl);box-shadow:0 0 14px var(--fl);opacity:.55}
+.ring::before{left:6%} .ring::after{right:6%}
 .ring:nth-child(2){animation-delay:-.3s}.ring:nth-child(3){animation-delay:-.6s}.ring:nth-child(4){animation-delay:-.9s}
 .ring:nth-child(5){animation-delay:-1.2s}.ring:nth-child(6){animation-delay:-1.5s}.ring:nth-child(7){animation-delay:-1.8s}.ring:nth-child(8){animation-delay:-2.1s}
 @keyframes ring{0%{transform:scale(.04);opacity:0}25%{opacity:.7}100%{transform:scale(1.6);opacity:0}}
-.open.run .ring{border-color:var(--fl);box-shadow:0 0 24px var(--fl),inset 0 0 24px var(--fl);animation-duration:.7s}
+.open.run .ring{border-color:rgba(255,241,201,.45);animation-duration:.8s}
+.open.board .ring{border-color:var(--fl);box-shadow:0 0 30px var(--fl),inset 0 0 30px var(--fl)}
+.open.board .ring::before,.open.board .ring::after{opacity:1}
+/* l'indice au bout du couloir */
+.endcard{position:absolute;left:50%;top:44%;z-index:1;width:min(19vw,80px);aspect-ratio:.72;margin:calc(min(19vw,80px) / -1.44) 0 0 calc(min(19vw,80px) / -2);border-radius:7px;background:linear-gradient(160deg,#3a3550,#1a1726);border:2px solid rgba(255,241,201,.35);box-shadow:0 0 24px rgba(255,241,201,.18);animation:approach 1.9s cubic-bezier(.4,0,.8,.6) both}
+.endcard.h-rare{border-color:rgba(255,241,201,.75);outline:2px solid rgba(255,241,201,.4);outline-offset:4px;box-shadow:0 0 30px rgba(255,241,201,.3)}
+.endcard.h-board{width:min(24vw,100px);margin:calc(min(24vw,100px) / -1.44) 0 0 calc(min(24vw,100px) / -2);border-radius:3px;background:#fffdf3;border:0;box-shadow:0 0 40px 14px rgba(255,248,225,.75),0 0 120px 40px rgba(255,241,201,.35)}
+@keyframes approach{from{transform:scale(.35);opacity:0}25%{opacity:1}to{transform:scale(1.15);opacity:1}}
 .flare{position:absolute;bottom:-10vh;width:22vw;max-width:160px;height:130vh;background:linear-gradient(to top,var(--fl),transparent 75%);filter:blur(18px);opacity:0;transform-origin:bottom center}
 .flare.l{left:8%;transform:rotate(-22deg)} .flare.r{right:8%;transform:rotate(22deg)}
-.open.run .flare{animation:flare 1.6s ease-out both}
-.open.run .flare.r{animation-delay:.15s}
+.open.board .flare{animation:flare 1.2s ease-out both}
+.open.board .flare.r{animation-delay:.1s}
 @keyframes flare{0%{opacity:0}25%{opacity:1}100%{opacity:.6}}
-.floor{position:absolute;left:-20%;right:-20%;bottom:0;height:55%;background:radial-gradient(ellipse 55% 60% at 50% 100%,var(--fl),transparent 100%);opacity:.18;transition:opacity .6s}
-.open.run .floor,.open.wo .floor{opacity:.45}
+.floor{position:absolute;left:-20%;right:-20%;bottom:0;height:55%;background:radial-gradient(ellipse 55% 60% at 50% 100%,var(--fl),transparent 100%);opacity:.12;transition:opacity .6s}
+.open.run .floor{opacity:.22}
+.open.board .floor,.open.wo .floor{opacity:.45}
 .open.wo .ring{border-color:var(--fl);animation-duration:3s;opacity:.4}
 .open.wo .flare{opacity:.5;animation:sway 3s ease-in-out infinite alternate}
 .open.wo .flare.r{animation-name:swayR;animation-delay:-1.5s}

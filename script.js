@@ -69,9 +69,10 @@ const SPECIAL={
 
 // ---------- sauvegarde ----------
 const today = () => new Date().toLocaleDateString("sv");
-const START = () => ({coins:100000,owned:{},seen:{},vibrate:true,skipWO:false,pseudo:"Joueur"+Math.floor(1000+Math.random()*9000),listings:[],market:null,daily:null,claimed:[],friends:[],usedGifts:[],tick:Date.now()});
+const START = () => ({coins:500000,bonus2:1,owned:{},seen:{},vibrate:true,skipWO:false,pseudo:"Joueur"+Math.floor(1000+Math.random()*9000),listings:[],market:null,daily:null,claimed:[],friends:[],usedGifts:[],tick:Date.now()});
 let state=START();
-try{const s=JSON.parse(localStorage.getItem("beatpacks3"));if(s&&typeof s.coins==="number")state={...state,...s}}catch(e){}
+try{const s=JSON.parse(localStorage.getItem("beatpacks3"));if(s&&typeof s.coins==="number")state={...state,bonus2:0,...s}}catch(e){}
+if(!state.bonus2){state.coins+=400000;state.bonus2=1} // cadeau unique pour les parties déjà commencées
 for(const k in state.owned)if(!CARD[k])delete state.owned[k]; // un titre retiré du catalogue
 function save(){try{localStorage.setItem("beatpacks3",JSON.stringify(state))}catch(e){}}
 function daily(){if(!state.daily||state.daily.date!==today())state.daily={date:today(),packs:0,sold:0,bought:0,hi:0,sbc:0,claimed:[]};return state.daily}
@@ -106,7 +107,16 @@ function cardHTML(c,fresh){
   </div>`;
 }
 const cw=(c,{fresh=false,qty=0,tap=false,i}={})=>`<div class="cw"${tap?` data-k="${c.key}"`:""}${i!=null?` style="--i:${i}"`:""}>${cardHTML(c,fresh)}${qty>1?`<span class="qty">×${qty}</span>`:""}</div>`;
-const packHTML=p=>`<div class="pack k-${p.key}"><div class="foil"></div><div class="stripe"></div><div class="logo"><small>BEAT PACKS</small><b>${p.size}</b><small>CARTES</small></div><div class="shine"></div></div>`;
+// chaque pack montre trois pochettes, tirées parmi les albums les plus écoutés (du pays du pack s'il en a un)
+const TOPALB=ALBUMS.filter(a=>a.cv&&a.cv.includes("mzstatic")).sort((a,b)=>b.total-a.total);
+const COVS={};
+function packCovers(p){
+  const id=p.label;if(COVS[id])return COVS[id];
+  const pool=TOPALB.filter(a=>!p.country||ART[a.ar].c===p.country).filter(a=>!p.before||a.y<p.before).slice(0,90),out=[];
+  while(out.length<3&&pool.length){const a=pool.splice(Math.floor(Math.random()*pool.length),1)[0];if(!out.some(x=>x.ar===a.ar))out.push(a)}
+  return COVS[id]=out;
+}
+const packHTML=p=>`<div class="pack k-${p.key}"><div class="foil"></div><div class="pcovs">${packCovers(p).map(a=>`<img src="${a.cv}" alt="">`).join("")}</div><div class="logo"><small>BEAT PACKS</small><b>${p.size}</b><small>CARTES</small></div><div class="shine"></div></div>`;
 function pickTier(odds){let x=Math.random(),acc=0;for(const r of ORDER){acc+=odds[r];if(x<acc)return r}return "commune"}
 function drawTrack(t,f){
   for(let i=ORDER.indexOf(t);i>=0;i--){const p=f?POOL[ORDER[i]].filter(f):POOL[ORDER[i]];if(p.length)return any(p)}
@@ -151,7 +161,9 @@ function openPack(p){
   cards.forEach(c=>{if(!has(c.key))fresh.add(c.key);give(c.key)});
   const d=daily();d.packs++;if(cards.some(walkout))d.hi++;
   save();wallet();badge();
-  run={cards,fresh,best:cards[0],phase:"pack",timers:[],step:0};
+  // toutes les grosses cartes du pack ont leur walkout (2 ou 3 d'affilée, comme les doubles animations de FIFA)
+  const wos=state.skipWO?[]:cards.filter(walkout).slice(0,3);
+  run={cards,fresh,best:cards[0],wos,wi:0,phase:"pack",timers:[],step:0};
   open.className="open";open.dataset.fl="";$("burst").innerHTML="";
   scene.innerHTML=`<div class="bigpack">${packHTML(p)}</div><b style="font:900 24px var(--font)">${esc(p.label)}</b>`;
   hint("Touche le pack pour l’ouvrir");
@@ -165,21 +177,31 @@ function advance(e){
     later(()=>bp.classList.replace("shake","go"),500);
     later(tunnel,1000);
   }else if(run.phase==="wo"){clearT();step()}
-  else if(run.phase==="card"&&e.target.closest(".reveal")){clearT();recap()} // il faut toucher la carte pour voir les autres
+  else if(run.phase==="card"&&e.target.closest(".reveal")){clearT();nextWalkout()} // il faut toucher la carte pour continuer
 }
-open.addEventListener("click",e=>{if(!e.target.closest("button"))advance(e)});
+open.addEventListener("click",e=>{
+  if(e.target.closest("button"))return;
+  const c=run&&run.phase==="recap"&&e.target.closest(".cw[data-k]");
+  if(c){cardSheet(c.dataset.k);haptic();return} // dans le récap, on touche une carte pour la voir, comme sur FIFA
+  advance(e);
+});
+// le signe du tunnel : un disque qui annonce la meilleure carte (et ×2 / ×3 quand il y a plusieurs walkouts)
+function sign(){
+  const n=run.wos.length,c=run.best;
+  const txt=n>1?`${n}× WALKOUT`:n?"WALKOUT":labelOf(c);
+  return `<div class="sign s-${flOf(c)}${n?" big":""}"><i class="coin"></i><b>${txt}</b></div>`;
+}
 // le tunnel : les lumières foncent vers nous, les fusées prennent la couleur de la meilleure carte
 function tunnel(){
-  scene.innerHTML=`<div class="flash"></div>`;
+  scene.innerHTML=`<div class="flash"></div>${sign()}`;
   later(()=>scene.querySelector(".flash")?.remove(),520);
   open.dataset.fl=flOf(run.best);open.classList.add("run");
-  haptic(walkout(run.best)?[40,60,40,60,80]:run.best.tier==="epique"?[30,50,30]:12);
-  const wo=walkout(run.best)&&!state.skipWO;
-  later(()=>{if(wo){run.phase="wo";open.classList.replace("run","wo");run.step=0;step()}else reveal()},1800);
+  haptic(run.wos.length>1?[40,60,40,60,40,60,120]:run.wos.length?[40,60,40,60,80]:run.best.tier==="epique"?[30,50,30]:12);
+  later(()=>{if(run.wos.length){run.phase="wo";open.classList.replace("run","wo");run.step=0;step()}else{run.cur=run.best;reveal()}},run.wos.length>1?2400:1800);
 }
 // walkout : le pays, l'artiste, l'album, puis la carte
 function step(){
-  const c=run.best,a=ALB[c.alb];
+  const c=run.wos[run.wi],a=ALB[c.alb];run.cur=c;
   const steps=[
     `<div class="wstep"><small>Pays</small><strong>${c.country}</strong></div>`,
     `<div class="wstep"><small>Artiste</small><strong>${esc(c.artist)}</strong></div>`,
@@ -189,15 +211,27 @@ function step(){
   ];
   if(run.step>=steps.length){reveal();return}
   scene.innerHTML=steps[run.step++];
-  hint("Touche pour passer");haptic(10);
+  hint(run.wos.length>1?`Walkout ${run.wi+1} sur ${run.wos.length} · touche pour passer`:"Touche pour passer");haptic(10);
   later(step,1600);
 }
 function reveal(){
+  const c=run.cur;
   run.phase="card";open.classList.remove("run");open.classList.add("wo");
-  scene.innerHTML=`<div class="reveal">${cw(run.best,{fresh:run.fresh.has(run.best.key)})}</div>`;
-  if(walkout(run.best)){burst();haptic([30,40,60])}
-  hint("Touche la carte pour voir les autres");
+  scene.innerHTML=`<div class="reveal">${cw(c,{fresh:run.fresh.has(c.key)})}</div>`;
+  if(walkout(c)){burst();haptic([30,40,60])}
+  hint(run.wi<run.wos.length-1?"Touche la carte pour la walkout suivante":"Touche la carte pour voir les autres");
   tilt(scene);
+}
+// après une walkout : la suivante (nouveau passage dans le tunnel), sinon le récap
+function nextWalkout(){
+  if(run.wi<run.wos.length-1){
+    run.wi++;run.step=0;run.phase="busy";$("burst").innerHTML="";
+    const c=run.wos[run.wi];open.dataset.fl=flOf(c);open.classList.replace("wo","run");
+    scene.innerHTML=`<div class="flash"></div><div class="sign s-${flOf(c)} big"><i class="coin"></i><b>ENCORE UNE !</b></div>`;hint("");
+    later(()=>scene.querySelector(".flash")?.remove(),520);
+    haptic([40,60,40,60,80]);
+    later(()=>{run.phase="wo";open.classList.replace("run","wo");step()},1500);
+  }else recap();
 }
 function burst(){
   const cols=[getComputedStyle(open).getPropertyValue("--fl"),"#ffffff","#ff3d8b","#22e0ff","#b6ff3b","#ff8a1f"];
@@ -210,7 +244,7 @@ function recap(){
   run.phase="recap";clearT();
   open.classList.remove("run","wo");hint("");
   const seen=new Set();
-  scene.innerHTML=`<div class="recap"><h2>Ton pack</h2><div class="recapgrid${run.cards.length>6?" many":""}">${run.cards.map((c,i)=>{const f=run.fresh.has(c.key)&&!seen.has(c.key);seen.add(c.key);return cw(c,{fresh:f,i})}).join("")}</div><button class="btn" id="done">Continuer</button></div>`;
+  scene.innerHTML=`<div class="recap"><h2>Ton pack</h2><p class="note" style="margin:-10px 0 0">Touche une carte pour la voir, la vendre ou l’offrir.</p><div class="recapgrid${run.cards.length>6?" many":""}">${run.cards.map((c,i)=>{const f=run.fresh.has(c.key)&&!seen.has(c.key);seen.add(c.key);return cw(c,{fresh:f,i,tap:true})}).join("")}</div><button class="btn" id="done">Continuer</button></div>`;
   $("done").onclick=closePack;
 }
 function closePack(){
@@ -234,7 +268,7 @@ function tilt(box){
 }
 
 // ---------- feuille du bas : fiche d'une carte (vendre, mettre au marché, offrir) ----------
-function sheet(html){$("sheetIn").innerHTML=html;$("sheet").hidden=false;$("sheetIn").scrollTop=0}
+function sheet(html){$("sheetIn").onclick=null;$("sheetIn").innerHTML=html;$("sheet").hidden=false;$("sheetIn").scrollTop=0}
 const closeSheet=()=>{$("sheet").hidden=true};
 $("sheet").onclick=e=>{if(e.target.id==="sheet")closeSheet()};
 tilt($("sheetIn"));
@@ -435,14 +469,14 @@ function autoFill(s){
 
 // ---------- défis du jour et albums : ils rapportent des pièces ----------
 const DAILY=[
-  {id:"login",t:"Connexion du jour",goal:1,get:()=>1,r:10000},
-  {id:"packs",t:"Ouvre 3 packs",goal:3,get:d=>d.packs,r:15000},
-  {id:"sold",t:"Vends 3 cartes",goal:3,get:d=>d.sold,r:10000},
-  {id:"bought",t:"Achète une carte au marché",goal:1,get:d=>d.bought,r:10000},
-  {id:"sbc",t:"Termine un défi de cartes",goal:1,get:d=>d.sbc,r:20000},
-  {id:"hi",t:"Obtiens une Légendaire, une Holo ou une Icône",goal:1,get:d=>d.hi,r:15000}
+  {id:"login",t:"Connexion du jour",goal:1,get:()=>1,r:30000},
+  {id:"packs",t:"Ouvre 3 packs",goal:3,get:d=>d.packs,r:45000},
+  {id:"sold",t:"Vends 3 cartes",goal:3,get:d=>d.sold,r:30000},
+  {id:"bought",t:"Achète une carte au marché",goal:1,get:d=>d.bought,r:30000},
+  {id:"sbc",t:"Termine un défi de cartes",goal:1,get:d=>d.sbc,r:60000},
+  {id:"hi",t:"Obtiens une Légendaire, une Holo ou une Icône",goal:1,get:d=>d.hi,r:45000}
 ];
-const albumReward=al=>5000+1000*al.tr.length;
+const albumReward=al=>15000+3000*al.tr.length;
 function quests(){
   const d=daily(),list=[];
   DAILY.forEach(q=>list.push({sec:"day",id:q.id,t:q.t,goal:q.goal,v:Math.min(q.goal,q.get(d)),r:q.r,got:d.claimed.includes(q.id)}));
@@ -457,11 +491,13 @@ function renderQuests(){
   const albs=all.filter(q=>q.sec==="alb").sort((a,b)=>ready(b)-ready(a)||a.got-b.got||b.v/b.goal-a.v/a.goal).slice(0,30);
   $("quests").innerHTML=`<h2 style="margin-top:4px">Défis de cartes</h2><p class="note">Donne des cartes de ta collection pour gagner un pack spécial. Tu peux les refaire autant que tu veux.</p>
     <div class="sbcs">${SBC.map(s=>`<button class="sbc" data-sbc="${s.id}" style="--c1:${s.c1};--c2:${s.c2}"><b>${esc(s.t)}</b><small>${esc(s.d)}</small><span class="rw">${SPECIAL[s.rw].label}</span></button>`).join("")}</div>
+    ${all.some(ready)?`<button class="btn" id="claimAll" style="margin-top:22px">Tout récupérer · <i class="coin"></i>${fmt(all.filter(ready).reduce((t,q)=>t+q.r,0))}</button>`:""}
     <h2>Défis du jour</h2><p class="note">Ils reviennent chaque jour à minuit.</p>${all.filter(q=>q.sec==="day").map(row).join("")}
     <h2>Albums</h2><p class="note">Complète un album pour toucher sa prime.</p>${albs.length?albs.map(row).join(""):`<p class="empty">Ouvre des packs pour commencer tes albums.</p>`}`;
 }
 $("quests").onclick=e=>{
   const s=e.target.closest("[data-sbc]");if(s){sbcSheet(s.dataset.sbc);haptic();return}
+  if(e.target.closest("#claimAll")){const rs=quests().filter(ready);rs.forEach(q=>(q.sec==="day"?daily().claimed:state.claimed).push(q.id));earn(rs.reduce((t,q)=>t+q.r,0),`${rs.length} défis récupérés`);renderQuests();badge();return}
   const b=e.target.closest("[data-claim]");if(!b)return;
   const q=quests().find(x=>x.id===b.dataset.claim);if(!q||!ready(q))return;
   (q.sec==="day"?daily().claimed:state.claimed).push(q.id);
@@ -493,7 +529,7 @@ $("optVibrate").onchange=e=>{state.vibrate=e.target.checked;save()};
 $("optSkip").checked=state.skipWO;
 $("optSkip").onchange=e=>{state.skipWO=e.target.checked;save()};
 $("reset").onclick=()=>{
-  if(!confirm("Effacer ta collection et repartir avec 100 000 pièces ?"))return;
+  if(!confirm("Effacer ta collection et repartir avec 500 000 pièces ?"))return;
   state={...START(),vibrate:state.vibrate,skipWO:state.skipWO,pseudo:state.pseudo};save();wallet();badge();toast("Nouvelle partie");
 };
 $("foot").textContent=`${ARTISTS.length} artistes · ${fmt(ALBUMS.length)} albums · ${fmt(TRACKS.length)} titres · pochettes Apple Music`;

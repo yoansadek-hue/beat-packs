@@ -53,7 +53,12 @@ button{font:inherit;color:inherit}
 .iconbtn{display:inline-flex;align-items:center;gap:6px;min-height:40px;padding:6px 12px;border:1px solid var(--line);border-radius:999px;background:var(--surface);cursor:pointer;font:700 14px var(--font)}
 .iconbtn.on{background:#fff;color:#14122e}
 .credits{display:inline-flex;align-items:center;gap:8px;min-height:40px;padding:6px 14px 6px 8px;border-radius:999px;background:var(--surface);border:1px solid var(--line);font:800 16px var(--font)}
-.coin{display:inline-block;width:18px;height:18px;border-radius:50%;background:radial-gradient(circle at 35% 30%,#fff6b0,#ffc21a 45%,#d18a00);box-shadow:inset 0 0 0 2px rgba(0,0,0,.15);flex:none}
+/* la pièce est un disque vinyle : sillons noirs, étiquette dorée, reflet */
+.coin{display:inline-block;width:18px;height:18px;border-radius:50%;flex:none;
+  background:conic-gradient(from 30deg,transparent 0 8%,rgba(255,255,255,.28) 11% 14%,transparent 17% 58%,rgba(255,255,255,.2) 61% 64%,transparent 67%),
+    radial-gradient(circle,#0c0b25 0 7%,#ffd23f 8% 29%,#e8590c 30% 33%,transparent 34%),
+    repeating-radial-gradient(circle,#2a2a2e 0 .6px,#111114 .6px 1.4px);
+  box-shadow:0 0 0 1px rgba(255,255,255,.18)}
 
 /* ---------- boutons, champs ---------- */
 .btn{
@@ -100,10 +105,14 @@ input::placeholder{color:var(--dim)}
 .pack.k-3{--pc:#4fc3ff} .pack.k-5{--pc:#ff5aa8} .pack.k-10{--pc:#ffb21f} .pack.k-sp{--pc:#7dff8a}
 .pack .shine{position:absolute;inset:-40%;background:linear-gradient(115deg,transparent 40%,rgba(255,255,255,.55) 50%,transparent 60%);animation:sheen 3.2s ease-in-out infinite}
 @keyframes sheen{0%,60%{transform:translateX(-60%)}100%{transform:translateX(60%)}}
-.pack .logo{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;color:#fff;text-shadow:0 2px 8px rgba(0,0,0,.35)}
-.pack .logo b{font:900 40px/0.9 var(--font)}
+.pack .logo{position:absolute;left:0;right:0;bottom:5%;display:flex;flex-direction:column;align-items:center;justify-content:flex-end;gap:2px;color:#fff;text-shadow:0 2px 8px rgba(0,0,0,.35)}
+.pack .logo b{font:900 30px/0.9 var(--font)}
 .pack .logo small{font:800 9px var(--font);letter-spacing:.2em}
-.pack .stripe{position:absolute;left:0;right:0;top:14%;height:6%;background:rgba(0,0,0,.18)}
+.pack .pcovs{position:absolute;left:0;right:0;top:9%;height:52%;display:flex;justify-content:center;align-items:center}
+.pack .pcovs img{width:46%;aspect-ratio:1;object-fit:cover;border-radius:6%;box-shadow:0 6px 14px rgba(0,0,0,.45);margin:0 -9%}
+.pack .pcovs img:nth-child(1){transform:rotate(-14deg) translateY(6%)}
+.pack .pcovs img:nth-child(2){position:relative;z-index:1;transform:scale(1.12)}
+.pack .pcovs img:nth-child(3){transform:rotate(14deg) translateY(6%)}
 
 /* ---------- cartes (croquis) ---------- */
 .cw{container-type:inline-size;position:relative;filter:drop-shadow(0 10px 16px rgba(0,0,0,.45))}
@@ -279,7 +288,7 @@ input::placeholder{color:var(--dim)}
 .scene{position:relative;z-index:2;width:100%;max-width:440px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:18px;min-height:60vh}
 .skip{position:relative;z-index:2;margin:0;color:var(--dim);font:600 14px var(--font);text-align:center;min-height:1.4em}
 .bigpack .pack{width:min(52vw,210px);border-radius:16px}
-.bigpack .pack .logo b{font-size:min(22vw,96px)}
+.bigpack .pack .logo b{font-size:min(15vw,64px)}
 .bigpack .pack .logo small{font-size:15px}
 .bigpack{animation:packin .6s cubic-bezier(.2,1.3,.4,1) both}
 .bigpack.shake{animation:shake .5s ease-in-out both}
@@ -287,6 +296,15 @@ input::placeholder{color:var(--dim)}
 @keyframes packin{from{transform:translateY(40vh) scale(.6) rotate(-8deg);opacity:0}}
 @keyframes shake{0%,100%{transform:none}20%{transform:rotate(-4deg) scale(1.03)}40%{transform:rotate(4deg) scale(1.05)}60%{transform:rotate(-3deg) scale(1.06)}80%{transform:rotate(2deg) scale(1.07)}}
 @keyframes packgo{to{transform:scale(.05);opacity:0;filter:brightness(3)}}
+/* le signe du tunnel : un disque qui tourne, à la couleur de la meilleure carte */
+.sign{position:relative;z-index:2;display:flex;flex-direction:column;align-items:center;gap:14px;animation:signin .7s .35s cubic-bezier(.2,1.4,.4,1) both}
+.sign .coin{width:min(30vw,130px);height:min(30vw,130px);box-shadow:0 0 0 3px var(--fl),0 0 50px 6px var(--fl);animation:spin 1.1s linear infinite}
+.sign b{font:900 min(9vw,40px)/1 var(--font);letter-spacing:.04em;color:#fff;text-shadow:0 0 24px var(--fl)}
+.sign.big .coin{width:min(42vw,180px);height:min(42vw,180px);animation-duration:.6s}
+.sign.big b{font-size:min(12vw,54px)}
+.sign.s-commune .coin,.sign.s-rare .coin{width:min(20vw,90px);height:min(20vw,90px)}
+@keyframes spin{to{transform:rotate(360deg)}}
+@keyframes signin{from{transform:scale(.2);opacity:0}}
 .flash{position:fixed;inset:0;z-index:3;background:#fff;pointer-events:none;animation:flash .5s ease-out both}
 @keyframes flash{from{opacity:.9}to{opacity:0}}
 /* walkout : le pays, l'artiste, l'album, puis la carte */
@@ -305,7 +323,7 @@ input::placeholder{color:var(--dim)}
 .recap h2{margin:0;font-size:30px;align-self:center}
 .recapgrid{width:100%;display:grid;grid-template-columns:repeat(3,1fr);gap:14px 10px}
 .recapgrid.many{grid-template-columns:repeat(4,1fr);gap:10px 8px}
-.recapgrid .cw{animation:cardflip .6s calc(var(--i) * 90ms) cubic-bezier(.2,1.2,.35,1) both}
+.recapgrid .cw{cursor:pointer;animation:cardflip .6s calc(var(--i) * 90ms) cubic-bezier(.2,1.2,.35,1) both}
 .recap .btn{max-width:280px;flex:none}
 @media (prefers-reduced-motion:reduce){*,*::before,*::after{animation-duration:.01ms!important;animation-iteration-count:1!important;transition-duration:.01ms!important}}
 

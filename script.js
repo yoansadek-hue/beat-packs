@@ -52,8 +52,11 @@ ARTISTS.forEach(a=>{
 const holo = t => CARD["h"+t.key.slice(1)]; // undefined si le titre n'a pas de version Holo
 const drawHolo = f => any(f?HOLOS.filter(f):HOLOS);
 // la valeur vient des disques : 100 pièces + 800 par disque de platine (×2,5 en Holo, ×4 en Icône)
-const value = c => Math.round((100+800*plat(c.country,c.vs))*(c.kind==="holo"?2.5:c.kind==="icone"?4:1)/10)*10;
-const quick = c => Math.round(value(c)*.6/10)*10;
+// valeur au marché, comme les prix moyens de FIFA selon la note : ~400 à 75, ~1 000 à 81, ~9 000 à 86, ~55 000 à 90, plus d'un million à 99
+const FIFA={75:400,76:450,77:500,78:600,79:700,80:850,81:1000,82:1300,83:1800,84:3000,85:5000,86:9000,87:15000,88:24000,89:35000,90:55000,91:75000,92:100000,93:140000,94:200000,95:300000,96:450000,97:650000,98:900000,99:1300000};
+const baseValue = o => o>=75?FIFA[Math.min(99,o)]:o>=70?300+(o-70)*20:o>=65?200:o>=60?150:100;
+const value = c => Math.round(baseValue(c.ovr)*(c.kind==="holo"?1.5:c.kind==="icone"?2:1)/10)*10;
+const quick = c => Math.max(10,Math.round(value(c)*.25/10)*10); // la vente rapide rapporte peu, comme sur FIFA
 const weight = c => c.ovr+(c.kind==="icone"?20:c.kind==="holo"?10:0);
 const walkout = c => c.kind==="icone"||(c.kind==="holo"?c.ovr>=83:c.ovr>=86); // walkout : 86+ (Holo 83+), et toujours pour une Icône
 const labelOf = c => c.kind==="icone"?"Icône":c.kind==="holo"?"Holo":TIER[c.tier];
@@ -104,9 +107,9 @@ function coverHTML(id,cls=""){
 }
 const PLAY='<svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M8 5v14l11-7z"/></svg>';
 const fmtStreams=m=>m>=1000?(m/1000).toLocaleString("fr-FR",{maximumFractionDigits:1})+" Md":m>=1?fmt(Math.round(m))+" M":fmt(Math.round(m*1000))+" k";
-function cardHTML(c,fresh){
+function cardHTML(c,fresh,qty){
   return `<div class="card ${c.kind==="track"?"t-"+c.tier:"k-"+c.kind}">
-    <span class="ovr">${c.ovr}</span>${fresh?`<span class="new">NEW</span>`:""}
+    <span class="ovr">${c.ovr}</span>${fresh?`<span class="new">NEW</span>`:qty>1?`<span class="new dup">×${qty}</span>`:""}
     ${c.kind!=="track"?`<span class="kind">${labelOf(c).toUpperCase()}</span>`:""}
     ${coverHTML(c.alb,"art")}
     <div class="nm">${esc(c.kind==="icone"?"Icône":c.title)}</div>
@@ -115,7 +118,7 @@ function cardHTML(c,fresh){
     <div class="glare"></div>
   </div>`;
 }
-const cw=(c,{fresh=false,qty=0,tap=false,i}={})=>`<div class="cw"${tap?` data-k="${c.key}"`:""}${i!=null?` style="--i:${i}"`:""}>${cardHTML(c,fresh)}${qty>1?`<span class="qty">×${qty}</span>`:""}</div>`;
+const cw=(c,{fresh=false,qty=0,tap=false,i}={})=>`<div class="cw"${tap?` data-k="${c.key}"`:""}${i!=null?` style="--i:${i}"`:""}>${cardHTML(c,fresh,qty)}</div>`;
 // les pochettes des packs : les albums de rap les plus streamés au monde, trois par pack
 const WORLD=[["Views","beerbongs & bentleys","The Eminem Show"],["ASTROWORLD","Goodbye & Good Riddance","DAMN."],["Certified Lover Boy","My Beautiful Dark Twisted Fantasy","Rodeo"]]
   .map(g=>g.map(t=>ALBUMS.find(a=>a.t.toLowerCase().startsWith(t.toLowerCase()))).filter(Boolean));
@@ -129,23 +132,32 @@ function packCovers(p){
   while(out.length<3&&pool.length){const a=pool.splice(Math.floor(Math.random()*pool.length),1)[0];if(!out.some(x=>x.ar===a.ar))out.push(a)}
   return COVS[id]=out;
 }
-const packHTML=p=>`<div class="pack k-${p.key}"><div class="foil"></div><div class="pcovs">${packCovers(p).map(a=>`<img src="${a.cv}" alt="">`).join("")}</div><i class="crimp t"></i><i class="crimp b"></i><span class="pemb"><i class="coin"></i></span><div class="shine"></div></div>`;
+const packHTML=p=>`<div class="pack k-${p.key}"><div class="foil"></div><div class="pcovs">${packCovers(p).map(a=>`<img src="${a.cv}" alt="">`).join("")}</div><i class="crimp t"></i><i class="crimp b"></i><div class="shine"></div></div>`;
 function pickTier(odds){let x=Math.random(),acc=0;for(const r of ORDER){acc+=odds[r];if(x<acc)return r}return "commune"}
-function drawTrack(t,f){
-  for(let i=ORDER.indexOf(t);i>=0;i--){const p=f?POOL[ORDER[i]].filter(f):POOL[ORDER[i]];if(p.length)return any(p)}
-  return any(f?TRACKS.filter(f):TRACKS);
+// tirage par note : dans une rareté, chaque point de note en plus rend la carte ~30 % plus rare
+function byNote(p){
+  const lo=Math.min(...p.map(c=>c.ovr)),w=p.map(c=>Math.exp(-.35*(c.ovr-lo))),tot=w.reduce((s,x)=>s+x,0);
+  let x=Math.random()*tot;for(let i=0;i<p.length;i++){x-=w[i];if(x<=0)return p[i]}return p[p.length-1];
+}
+function drawTrack(t,f,not){
+  for(let i=ORDER.indexOf(t);i>=0;i--){const p=POOL[ORDER[i]].filter(c=>(!f||f(c))&&!(not&&not.has(c.key)));if(p.length)return byNote(p)}
+  return any(TRACKS.filter(c=>(!f||f(c))&&!(not&&not.has(c.key))));
 }
 const drawIcone = country => any(ICONES.filter(c=>!country||c.country===country));
 function drawPack(p){
   const f=p.country||p.before?c=>(!p.country||c.country===p.country)&&(!p.before||ALB[c.alb].y<p.before):null;
-  const out=Array.from({length:p.size},()=>{
+  // jamais deux fois la même carte (ni un titre et sa Holo) dans un même pack
+  const used=new Set(),songKey=c=>c.kind==="icone"?c.key:"s"+c.key.slice(1);
+  const take1=gen=>{for(let k=0;k<40;k++){const c=gen();if(!used.has(songKey(c))){used.add(songKey(c));return c}}const c=gen();used.add(songKey(c));return c};
+  const notUsed=()=>new Set([...used].map(k=>"t"+k.slice(1)));
+  const out=Array.from({length:p.size},()=>take1(()=>{
     if(!p.before&&Math.random()<.004)return drawIcone(p.country);
-    const t=drawTrack(pickTier(ODDS),f);
-    return Math.random()<.03?drawHolo(f):t;
-  });
-  if(p.guarantee&&!out.some(c=>c.kind!=="track"||ORDER.indexOf(c.tier)>=ORDER.indexOf(p.guarantee)))out[0]=drawTrack(p.guarantee,f);
-  if(p.icon&&!out.some(c=>c.kind==="icone"))out[out.length-1]=drawIcone();
-  for(let i=0,n=0;n<(p.holo||0)&&i<out.length;i++)if(out[i].kind==="track"){out[i]=drawHolo(f);n++}
+    return Math.random()<.03?drawHolo(f):drawTrack(pickTier(ODDS),f,notUsed());
+  }));
+  const swap=(i,gen)=>{used.delete(songKey(out[i]));out[i]=take1(gen)};
+  if(p.guarantee&&!out.some(c=>c.kind!=="track"||ORDER.indexOf(c.tier)>=ORDER.indexOf(p.guarantee)))swap(0,()=>drawTrack(p.guarantee,f,notUsed()));
+  if(p.icon&&!out.some(c=>c.kind==="icone"))swap(out.length-1,()=>drawIcone());
+  for(let i=0,n=0;n<(p.holo||0)&&i<out.length;i++)if(out[i].kind==="track"){swap(i,()=>drawHolo(f));n++}
   return out.sort((a,b)=>weight(b)-weight(a)); // la meilleure carte en premier
 }
 
@@ -254,7 +266,7 @@ function playFor(c){
   if(!state.sound)return;
   const want=songOf(c).key;audio.dataset.want=want;
   previewUrl(c).then(u=>{
-    if(!u||audio.dataset.want!==want||!run)return;
+    if(!u||audio.dataset.want!==want)return;
     audio.src=u;audio.currentTime=0;audio.volume=0;
     audio.play().then(()=>fadeTo(.9,600),()=>{});
   });
@@ -329,7 +341,7 @@ function reveal(){
   if(walkout(c)){burst();haptic([30,40,60]);SFX.bigReveal()}else SFX.reveal();
   hint("");playFor(c);
   tilt(scene);
-  if(run.wi<run.wos.length-1)later(nextWalkout,2600); // double animation : la carte se retourne seule sur la meilleure
+  if(run.wi<run.wos.length-1)later(nextWalkout,1300); // double animation : la carte reste 0,5 s (après son entrée), puis se retourne seule sur la meilleure
 }
 // plusieurs grosses cartes : quand on touche la carte, elle se retourne et laisse place à une meilleure ; ensuite le récap
 function nextWalkout(){
@@ -339,7 +351,7 @@ function nextWalkout(){
     later(()=>{
       run.cur=c;box.innerHTML=cw(c,{fresh:run.fresh.has(c.key)});
       box.classList.replace("flipout","flipin");$("burst").innerHTML="";burst();haptic([30,40,60]);SFX.bigReveal();playFor(c);
-      later(()=>{run.phase="card";if(run.wi<run.wos.length-1)later(nextWalkout,2600)},450);
+      later(()=>{run.phase="card";if(run.wi<run.wos.length-1)later(nextWalkout,500)},450);
     },320);
   }else recap();
 }
@@ -393,7 +405,7 @@ function tilt(box){
 
 // ---------- feuille du bas : fiche d'une carte (vendre, mettre au marché, offrir) ----------
 function sheet(html){SFX.tap();$("sheetIn").onclick=null;$("sheetIn").innerHTML=`<button class="xclose" aria-label="Fermer">✕</button>`+html;$("sheet").hidden=false;$("sheetIn").scrollTop=0}
-const closeSheet=()=>{$("sheet").hidden=true};
+const closeSheet=()=>{$("sheet").hidden=true;if(!run)stopAudio()};
 $("sheet").addEventListener("click",e=>{if(e.target.id==="sheet"||e.target.closest(".xclose"))closeSheet()});
 tilt($("sheetIn"));
 function facts(c){
@@ -408,6 +420,7 @@ function facts(c){
 }
 function cardSheet(k){
   const c=CARD[k],q=state.owned[k]||0;
+  if(!run){unlockAudio();playFor(c)} // on écoute l'extrait du titre en ouvrant sa carte
   state.seen[k]=1;save();
   sheet(`${cw(c)}${facts(c)}<div class="acts" id="acts">
     <div class="two"><button class="btn ghost" id="shQuick">Vente rapide · +${fmt(quick(c))}</button><button class="btn cyan" id="shList">Au marché</button></div>
@@ -441,7 +454,7 @@ function giftSheet(k){
 function addFriend(name,dir){let f=state.friends.find(x=>x.name.toLowerCase()===name.toLowerCase());if(!f){f={name,sent:0,recv:0};state.friends.push(f)}f[dir]++}
 
 // ---------- collection : mes artistes → tous leurs albums → toutes les cartes de l'album ----------
-const club={view:"artists",ar:null,alb:null,q:""};
+const club={view:"artists",ar:null,alb:null,q:"",sort:"note"};
 const albumOwned=al=>al.tr.filter((_,i)=>has(`t:${al.id}:${i}`)||has(`h:${al.id}:${i}`)).length;
 const uniq=()=>TRACKS.filter(t=>has(t.key)||has(holo(t)?.key)).length;
 const albumDone=al=>albumOwned(al)===al.tr.length;
@@ -454,22 +467,24 @@ function renderClub(){
   if($("s-club").hidden)return;
   const el=$("club");let html="";
   const seg=`<div class="seg" id="clubSeg"><button aria-pressed="${club.view==="artists"}" data-v="artists">Artistes</button><button aria-pressed="${club.view==="binder"}" data-v="binder">Classeur</button></div>`;
+  const SORTS={note:["Note",(a,b)=>weight(b)-weight(a)||a.title.localeCompare(b.title)],streams:["Streams",(a,b)=>b.streams-a.streams],valeur:["Valeur",(a,b)=>value(b)-value(a)],titre:["Titre",(a,b)=>a.title.localeCompare(b.title)],artiste:["Artiste",(a,b)=>a.artist.localeCompare(b.artist)||weight(b)-weight(a)],doublons:["Doublons",(a,b)=>(state.owned[b.key]||0)-(state.owned[a.key]||0)||weight(b)-weight(a)]};
+  const sortBar=`<div class="chips" id="sortBar">${Object.entries(SORTS).map(([k,[l]])=>`<button aria-pressed="${club.sort===k}" data-sort="${k}">${l}</button>`).join("")}</div>`;
+  const sorter=SORTS[club.sort][1];
   if(club.view==="binder"){
-    // le classeur : toutes tes cartes, une par exemplaire (doublons compris), de la meilleure à la moins bonne
-    const q=slug(club.q),copies=[];
-    Object.keys(state.owned).map(k=>CARD[k]).filter(c=>!q||slug(c.title+" "+c.artist).includes(q)).sort((a,b)=>weight(b)-weight(a)||a.title.localeCompare(b.title))
-      .forEach(c=>{for(let i=0;i<state.owned[c.key];i++)copies.push(c)});
+    // le classeur : toutes tes cartes, une par titre, avec le nombre de doublons ; tri au choix
+    const q=slug(club.q);
+    const list=Object.keys(state.owned).map(k=>CARD[k]).filter(c=>!q||slug(c.title+" "+c.artist).includes(q)).sort(sorter);
     const total=Object.values(state.owned).reduce((s,n)=>s+n,0);
-    html=`<div class="titlerow"><h1>Collection</h1><span class="count-big"><b>${fmt(total)}</b> cartes</span></div>${seg}
-      <input type="search" id="search" class="search" placeholder="Rechercher un titre ou un artiste" value="${esc(club.q)}" autocomplete="off">
-      ${copies.length?`<div class="grid">${copies.slice(0,600).map(c=>cw(c,{tap:true,fresh:isNew(c.key)})).join("")}</div>${copies.length>600?`<p class="note" style="text-align:center;margin-top:14px">+ ${fmt(copies.length-600)} cartes : affine avec la recherche</p>`:""}`
+    html=`<div class="titlerow"><h1>Collection</h1><span class="count-big"><b>${fmt(Object.keys(state.owned).length)}</b> cartes</span></div>${seg}
+      <input type="search" id="search" class="search" placeholder="Rechercher un titre ou un artiste" value="${esc(club.q)}" autocomplete="off">${sortBar}
+      ${list.length?`<div class="grid">${list.slice(0,600).map(c=>cw(c,{tap:true,qty:state.owned[c.key]})).join("")}</div>${list.length>600?`<p class="note" style="text-align:center;margin-top:14px">+ ${fmt(list.length-600)} cartes : affine avec la recherche</p>`:""}`
         :`<p class="empty">${total?"Aucune carte ne correspond.":"Ta collection est vide : ouvre un pack dans la Boutique."}</p>`}`;
   }else if(club.view==="artists"){
     const {n,fresh}=myArtists(),q=slug(club.q);
-    const list=ARTISTS.filter(a=>n[a.id]&&(!q||slug(a.n).includes(q))).sort((a,b)=>n[b.id]-n[a.id]);
+    const list=ARTISTS.filter(a=>n[a.id]&&(!q||slug(a.n).includes(q))).sort(club.sort==="titre"||club.sort==="artiste"?(a,b)=>a.n.localeCompare(b.n):(a,b)=>n[b.id]-n[a.id]);
     html=`<div class="titlerow"><h1>Collection</h1><span class="count-big"><b>${uniq()}</b> / ${fmt(TRACKS.length)}</span></div>${seg}
-      <input type="search" id="search" class="search" placeholder="Rechercher un artiste" value="${esc(club.q)}" autocomplete="off">
-      ${list.length?`<div class="agrid">${list.map(a=>`<button class="atile" data-ar="${a.id}">${fresh[a.id]?`<i class="dot"></i>`:""}${coverHTML(a.cover)}<b>${esc(a.n)}</b><small>${n[a.id]} carte${n[a.id]>1?"s":""}</small></button>`).join("")}</div>`
+      <input type="search" id="search" class="search" placeholder="Rechercher un artiste" value="${esc(club.q)}" autocomplete="off"><div class="chips" id="sortBar"><button aria-pressed="${club.sort!=="titre"&&club.sort!=="artiste"}" data-sort="note">Nombre de cartes</button><button aria-pressed="${club.sort==="titre"||club.sort==="artiste"}" data-sort="artiste">Nom</button></div>
+      ${list.length?`<div class="agrid">${list.map(a=>`<button class="atile" data-ar="${a.id}">${coverHTML(a.cover)}<b>${esc(a.n)}</b><small>${n[a.id]} carte${n[a.id]>1?"s":""}</small></button>`).join("")}</div>`
         :`<p class="empty">${Object.keys(state.owned).length?"Aucun artiste ne correspond.":"Ta collection est vide : ouvre un pack dans la Boutique."}</p>`}`;
   }else if(club.view==="artist"){
     const a=ART[club.ar],own=a.tracks.filter(t=>has(t.key)||has(holo(t)?.key)).length,ic=CARD[a.icone];
@@ -483,14 +498,16 @@ function renderClub(){
     const a=ART[club.ar],al=ALB[club.alb];
     if(club.alb==="icone"){
       const ic=CARD[a.icone];
-      html=`<button class="back" data-back="artist">‹ ${esc(a.n)}</button><h1>Carte Icône</h1><div class="grid">${has(ic.key)?cw(ic,{qty:state.owned[ic.key],tap:true,fresh:isNew(ic.key)}):`<div class="cw"><div class="card ghost"><b>★</b><span>${esc(a.n)}</span></div></div>`}</div>`;
+      html=`<button class="back" data-back="artist">‹ ${esc(a.n)}</button><h1>Carte Icône</h1><div class="grid">${has(ic.key)?cw(ic,{qty:state.owned[ic.key],tap:true}):`<div class="cw"><div class="card ghost"><b>★</b><span>${esc(a.n)}</span></div></div>`}</div>`;
     }else{
       const mine=[],miss=[];
-      al.tr.forEach((tr,i)=>{const t=CARD[`t:${al.id}:${i}`];if(has(t.key))mine.push(cw(t,{qty:state.owned[t.key],tap:true,fresh:isNew(t.key)}));else miss.push(`<div class="cw"><div class="card ghost"><b>#${i+1}</b><span>${esc(tr[0])}</span></div></div>`)});
-      const holos=al.tr.map((_,i)=>CARD[`h:${al.id}:${i}`]).filter(h=>h&&has(h.key)).map(h=>cw(h,{qty:state.owned[h.key],tap:true,fresh:isNew(h.key)})).join("");
+      const own=[];
+      al.tr.forEach((tr,i)=>{const t=CARD[`t:${al.id}:${i}`];if(has(t.key))own.push(t);else miss.push(`<div class="cw"><div class="card ghost"><b>#${i+1}</b><span>${esc(tr[0])}</span></div></div>`)});
+      own.sort(sorter).forEach(t=>mine.push(cw(t,{qty:state.owned[t.key],tap:true})));
+      const holos=al.tr.map((_,i)=>CARD[`h:${al.id}:${i}`]).filter(h=>h&&has(h.key)).sort(sorter).map(h=>cw(h,{qty:state.owned[h.key],tap:true})).join("");
       html=`<button class="back" data-back="artist">‹ ${esc(a.n)}</button>
         <div class="ahero alb">${coverHTML(al.id)}<div><h1 style="font-size:26px">${esc(al.t)}</h1><small>${esc(a.n)} · ${al.y} · ${albumOwned(al)}/${al.tr.length} titres</small></div></div>
-        <div class="grid">${mine.join("")}${holos}${miss.join("")}</div>`;
+        ${sortBar}<div class="grid">${mine.join("")}${holos}${miss.join("")}</div>`;
     }
   }
   el.innerHTML=html;
@@ -499,6 +516,7 @@ function renderClub(){
 $("club").onclick=e=>{
   const t=e.target;
   const v=t.closest("#clubSeg [data-v]");if(v){club.view=v.dataset.v;club.q="";renderClub();haptic(6);return}
+  const so=t.closest("#sortBar [data-sort]");if(so){club.sort=so.dataset.sort;renderClub();haptic(6);return}
   const b=t.closest("[data-back]");if(b){club.view=b.dataset.back;renderClub();scrollTo(0,0);return}
   const ar=t.closest("[data-ar]");if(ar){club.view="artist";club.ar=ar.dataset.ar;renderClub();scrollTo(0,0);haptic();return}
   const al=t.closest("[data-alb]");if(al){club.view="album";club.alb=al.dataset.alb;renderClub();markSeen();scrollTo(0,0);haptic();return}
@@ -538,7 +556,7 @@ $("s-market").onclick=e=>{
   if(buy){const m=state.market,o=m.offers.find(x=>x.id===buy.dataset.buy);if(!o||state.coins<o.price)return;
     state.coins-=o.price;give(o.k);SFX.cash();m.offers=m.offers.filter(x=>x!==o);daily().bought++;save();wallet();renderMarket();badge();toast(`${CARD[o.k].title} rejoint ta collection`);haptic([10,30,10]);return}
   if(cancel){const l=state.listings.find(x=>x.id===cancel.dataset.cancel);if(!l)return;give(l.k);state.listings=state.listings.filter(x=>x!==l);save();renderMarket();toast("Carte retirée du marché");return}
-  if(card){const c=CARD[card.dataset.k];sheet(`${cw(c)}${facts(c)}<button class="btn ghost" onclick="closeSheet()">Fermer</button>`)}
+  if(card){const c=CARD[card.dataset.k];sheet(`${cw(c)}${facts(c)}<button class="btn ghost" onclick="closeSheet()">Fermer</button>`);unlockAudio();playFor(c)}
 };
 // des acheteurs passent : plus le prix est bas par rapport à la valeur, plus la carte part vite
 function tickListings(){

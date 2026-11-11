@@ -9,10 +9,10 @@ Ouvre `index.html` dans ton navigateur (ou utilise l'extension Live Server dans 
 - **Cartes** : une carte par titre, pour **toute la discographie** de 69 artistes de rap US, UK et FR (770 albums, environ 11 500 titres). Sur la carte : la note, la pochette (Apple Music), le titre, l'artiste et les streams.
   - **Disques** : chaque titre reçoit un disque (Or, Platine, Diamant) selon ses streams et les seuils de certification de son pays.
   - **Note** : selon les streams (1 M → 68, 10 M → 76, 100 M → 84, 1 Md → 92), plus un bonus de disques de platine. Une Icône vaut de 85 à 99 selon le total des streams de l'artiste.
-  - **Valeur** (pour vendre) : selon les disques.
+  - **Valeur** au marché : comme les prix moyens de FIFA selon la note (~400 à 75, ~9 000 à 86, ~55 000 à 90, ~1,3 M à 99) ; Holo ×1,5, Icône ×2. La vente rapide rapporte 25 % de la valeur.
   - Raretés, au code couleur des disques : **Vinyle** (noir), **Or**, **Platine**, **Diamant**. Spéciales : **Icône** (la carte d'un artiste, de 85 à 99) et **Holo** (version brillante, +1, des 5 titres les plus streamés de chaque album, en plus de leur carte normale).
 - **Boutique** : 3 packs, seul le nombre de cartes change (3, 6, 12). Ouverture façon FIFA 21 : un couloir de lumières avec un indice discret au bout (une carte simple, une carte à cadre pour un Platine, une porte de lumière pour une walkout, deux petites portes pour une double walkout), puis walkout (pays, artiste, album) pour une carte 86+, une Holo 83+ ou une Icône. S'il y en a deux, la carte se retourne toute seule sur la meilleure ; on touche la dernière pour voir tout le pack. Chaque carte révélée joue un extrait de 30 s du titre (le plus gros titre de l'artiste pour une Icône).
-- **Collection** (bouton en haut) : onglet **Artistes** (tes artistes → tous leurs albums → toutes les cartes de l'album, y compris celles qui manquent) et onglet **Classeur** (toutes tes cartes, doublons compris).
+- **Collection** (bouton en haut) : onglet **Artistes** (tes artistes → tous leurs albums → toutes les cartes de l'album, y compris celles qui manquent) et onglet **Classeur** (toutes tes cartes, avec le nombre de doublons). Tri par note, streams, valeur, titre, artiste ou doublons. Toucher une carte joue l'extrait du titre.
 - **Défis** : défis de cartes (on donne des cartes pour gagner un pack spécial) et défis du jour.
 - **Marché** : acheter les offres des autres joueurs, mettre ses cartes en vente (5 % de taxe).
 - **Amis** : offrir une carte à un ami avec un code, recevoir les siennes.

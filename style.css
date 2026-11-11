@@ -106,8 +106,6 @@ input::placeholder{color:var(--dim)}
 .pack .crimp{position:absolute;left:0;right:0;height:9%;z-index:3;background:repeating-linear-gradient(90deg,rgba(255,255,255,.55) 0 1.5px,rgba(0,0,0,.28) 1.5px 3.5px),linear-gradient(var(--pc,#8a7bff),#1b1450)}
 .pack .crimp.t{top:0;border-bottom:1px solid rgba(0,0,0,.25)}
 .pack .crimp.b{bottom:0;border-top:1px solid rgba(0,0,0,.25)}
-.pack .pemb{position:absolute;left:50%;bottom:14%;z-index:2;width:22%;aspect-ratio:1;transform:translateX(-50%)}
-.pack .pemb .coin{width:100%;height:100%;box-shadow:0 0 0 2px rgba(255,255,255,.6),0 4px 10px rgba(0,0,0,.4)}
 .pack.k-3{--pc:#4fc3ff} .pack.k-5{--pc:#ff5aa8} .pack.k-10{--pc:#ffb21f} .pack.k-sp{--pc:#7dff8a}
 .pack .shine{position:absolute;inset:-40%;background:linear-gradient(115deg,transparent 40%,rgba(255,255,255,.55) 50%,transparent 60%);animation:sheen 3.2s ease-in-out infinite}
 @keyframes sheen{0%,60%{transform:translateX(-60%)}100%{transform:translateX(60%)}}
@@ -147,13 +145,18 @@ input::placeholder{color:var(--dim)}
 .t-epique .glare,.t-legendaire .glare,.k-holo .glare,.k-icone .glare{background:radial-gradient(circle at var(--mx,25%) var(--my,15%),rgba(255,255,255,.4),transparent 40%),linear-gradient(calc(115deg + var(--ry,0deg) * 4),transparent 25%,rgba(255,255,255,.45) 45%,transparent 60%);background-size:100% 100%,250% 100%;animation:foil 3.5s linear infinite}
 .k-holo .glare{mix-blend-mode:normal;background:radial-gradient(circle at var(--mx,25%) var(--my,15%),rgba(255,255,255,.5),transparent 40%),linear-gradient(calc(115deg + var(--ry,0deg) * 4),transparent 20%,rgba(255,120,220,.3) 35%,rgba(120,255,240,.3) 50%,rgba(255,255,140,.3) 65%,transparent 80%);background-size:100% 100%,250% 100%}
 @keyframes foil{from{background-position:0 0,120% 0}to{background-position:0 0,-120% 0}}
-.qty{position:absolute;left:4px;bottom:6%;z-index:3;padding:1px 7px;border-radius:999px;background:var(--pink);color:#fff;font:800 12px var(--font)}
+.card .new.dup{background:var(--pink);color:#fff}
+.picker .qty{position:absolute;left:4px;bottom:6%;z-index:3;padding:1px 7px;border-radius:999px;background:var(--pink);color:#fff;font:800 12px var(--font)}
 /* emplacement vide */
 .card.ghost{background:rgba(255,255,255,.05);border:1.1cqw dashed rgba(255,255,255,.2);color:rgba(255,255,255,.4);justify-content:center;align-items:center;gap:3cqw;padding:10cqw}
 .card.ghost b{font:900 18cqw/1 var(--font)}
 .card.ghost span{font:600 8cqw/1.15 var(--font);text-align:center;display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden}
 
 /* ---------- collection : artistes → albums → cartes ---------- */
+.chips{display:flex;gap:6px;overflow-x:auto;margin:0 -18px 14px;padding:0 18px;scrollbar-width:none}
+.chips::-webkit-scrollbar{display:none}
+.chips button{flex:none;min-height:34px;padding:4px 13px;border:0;border-radius:999px;background:var(--surface);color:var(--dim);font:700 14px var(--font);cursor:pointer}
+.chips button[aria-pressed=true]{background:#fff;color:#14122e}
 .titlerow{display:flex;justify-content:space-between;align-items:baseline;gap:10px}
 .count-big{font:800 18px var(--font);color:var(--dim);white-space:nowrap}
 .count-big b{color:#fff;font-size:26px}
@@ -344,11 +347,11 @@ input::placeholder{color:var(--dim)}
 .recap .btn{max-width:300px;flex:none}
 .recapbar{position:fixed;left:0;right:0;bottom:0;z-index:4;display:flex;justify-content:center;padding:16px 18px calc(18px + env(safe-area-inset-bottom));background:linear-gradient(to top,#0b0a14 55%,transparent)}
 .recapbar .btn{width:min(320px,100%)}
-.recapbar .btn.go{min-height:58px;font-size:19px;box-shadow:0 0 0 3px rgba(255,255,255,.25),0 12px 34px -6px var(--pink);animation:gopulse 1.6s ease-in-out infinite}
+.recapbar .btn.go{min-height:58px;font-size:19px;background:linear-gradient(100deg,var(--pink),var(--orange),#ffd23f,var(--orange),var(--pink));background-size:300% 100%;box-shadow:0 0 0 3px rgba(255,255,255,.25),0 12px 34px -6px var(--pink);animation:gopulse 2.4s ease-in-out infinite}
 .open.recapmode .scene{justify-content:flex-start;padding-top:8px;min-height:0}
 .open.recapmode .skip{display:none}
-.recap .btn.go{min-height:58px;font-size:19px;box-shadow:0 0 0 3px rgba(255,255,255,.25),0 12px 34px -6px var(--pink);animation:gopulse 1.6s ease-in-out infinite}
-@keyframes gopulse{50%{transform:scale(1.04);box-shadow:0 0 0 5px rgba(255,255,255,.12),0 16px 40px -6px var(--orange)}}
+.recap .btn.go{min-height:58px;font-size:19px;background:linear-gradient(100deg,var(--pink),var(--orange),#ffd23f,var(--orange),var(--pink));background-size:300% 100%;box-shadow:0 0 0 3px rgba(255,255,255,.25),0 12px 34px -6px var(--pink);animation:gopulse 2.4s ease-in-out infinite}
+@keyframes gopulse{0%,100%{background-position:0% 50%}50%{background-position:100% 50%}}
 @media (prefers-reduced-motion:reduce){*,*::before,*::after{animation-duration:.01ms!important;animation-iteration-count:1!important;transition-duration:.01ms!important}}
 
 /* ---------- toast ---------- */

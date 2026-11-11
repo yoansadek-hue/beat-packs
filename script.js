@@ -78,7 +78,7 @@ const SPECIAL={
 
 // ---------- sauvegarde ----------
 const today = () => new Date().toLocaleDateString("sv");
-const START = () => ({coins:500000,bonus2:1,owned:{},seen:{},vibrate:true,sound:true,skipWO:false,pseudo:"Joueur"+Math.floor(1000+Math.random()*9000),listings:[],market:null,daily:null,claimed:[],friends:[],usedGifts:[],tick:Date.now()});
+const START = () => ({coins:500000,bonus2:1,owned:{},seen:{},vibrate:true,sound:true,sfx:true,skipWO:false,pseudo:"Joueur"+Math.floor(1000+Math.random()*9000),listings:[],market:null,daily:null,claimed:[],friends:[],usedGifts:[],tick:Date.now()});
 let state=START();
 try{const s=JSON.parse(localStorage.getItem("beatpacks3"));if(s&&typeof s.coins==="number")state={...state,bonus2:0,...s}}catch(e){}
 if(!state.bonus2){state.coins+=400000;state.bonus2=1} // cadeau unique pour les parties déjà commencées
@@ -95,7 +95,7 @@ const fmt=n=>n.toLocaleString("fr-FR");
 function toast(t){const el=$("toast");el.textContent=t;el.classList.add("show");clearTimeout(toast.t);toast.t=setTimeout(()=>el.classList.remove("show"),2400)}
 function haptic(p=8){if(state.vibrate&&navigator.vibrate)navigator.vibrate(p)}
 function wallet(){$("wallet").textContent=fmt(state.coins);if(!$("s-shop").hidden)renderPacks()}
-function earn(n,why){state.coins+=n;save();wallet();toast(`${why?why+" · ":""}+${fmt(n)} pièces`);haptic([10,30,10])}
+function earn(n,why){state.coins+=n;save();wallet();SFX.coin();toast(`${why?why+" · ":""}+${fmt(n)} pièces`);haptic([10,30,10])}
 
 // ---------- cartes ----------
 function coverHTML(id,cls=""){
@@ -161,7 +161,7 @@ function renderPacks(){
   </div>`).join("")+`<p class="note">Les packs spéciaux se gagnent dans les défis de cartes (onglet Défis).</p>`;
   document.querySelectorAll(".offer .btn").forEach(b=>b.onclick=()=>buyPack(b.dataset.k));
 }
-function buyPack(k){const p=PACKS.find(x=>x.key===k);if(state.coins<p.price)return;state.coins-=p.price;openPack(p)}
+function buyPack(k){const p=PACKS.find(x=>x.key===k);if(state.coins<p.price)return;state.coins-=p.price;SFX.cash();openPack(p)}
 
 // ---------- ouverture façon FIFA 21 : le pack, le tunnel, la walkout si grosse carte, la carte, puis les autres ----------
 let run=null;
@@ -169,6 +169,49 @@ const open=$("open"),scene=$("scene");
 const hint=t=>$("skipHint").textContent=t;
 const later=(f,ms)=>run.timers.push(setTimeout(f,ms));
 const clearT=()=>{run.timers.forEach(clearTimeout);run.timers=[]};
+// ---------- bruitages : fabriqués à la volée avec Web Audio, aucun fichier à charger ----------
+let AC=null,MASTER=null;
+function ac(){
+  if(!AC){const C=window.AudioContext||window.webkitAudioContext;if(!C)return null;AC=new C();MASTER=AC.createGain();MASTER.gain.value=.7;MASTER.connect(AC.destination)}
+  if(AC.state==="suspended")AC.resume();
+  return AC;
+}
+addEventListener("pointerdown",()=>{if(state.sfx!==false)ac()},{passive:true}); // les téléphones exigent un geste pour lancer le son
+// une note : fréquence (avec glissé), forme d'onde, durée, volume
+function tone({f=440,f2,type="sine",d=.15,v=.2,delay=0}){
+  const c=ac();if(!c||state.sfx===false)return;
+  const t=c.currentTime+delay,o=c.createOscillator(),g=c.createGain();
+  o.type=type;o.frequency.setValueAtTime(f,t);if(f2)o.frequency.exponentialRampToValueAtTime(f2,t+d);
+  g.gain.setValueAtTime(0,t);g.gain.linearRampToValueAtTime(v,t+.008);g.gain.exponentialRampToValueAtTime(.0001,t+d);
+  o.connect(g).connect(MASTER);o.start(t);o.stop(t+d+.05);
+}
+// un souffle : bruit blanc filtré (avec glissé du filtre)
+function noise({d=.3,v=.2,f=1000,f2,q=1,type="bandpass",delay=0,attack=.01}){
+  const c=ac();if(!c||state.sfx===false)return;
+  const t=c.currentTime+delay,len=Math.ceil(c.sampleRate*(d+.05)),buf=c.createBuffer(1,len,c.sampleRate),data=buf.getChannelData(0);
+  for(let i=0;i<len;i++)data[i]=Math.random()*2-1;
+  const src=c.createBufferSource(),fl=c.createBiquadFilter(),g=c.createGain();
+  src.buffer=buf;fl.type=type;fl.Q.value=q;fl.frequency.setValueAtTime(f,t);if(f2)fl.frequency.exponentialRampToValueAtTime(f2,t+d);
+  g.gain.setValueAtTime(0,t);g.gain.linearRampToValueAtTime(v,t+attack);g.gain.exponentialRampToValueAtTime(.0001,t+d);
+  src.connect(fl).connect(g).connect(MASTER);src.start(t);src.stop(t+d+.05);
+}
+const SFX={
+  tap:()=>tone({f:880,f2:620,d:.05,v:.05,type:"triangle"}),
+  tab:()=>tone({f:520,f2:760,d:.07,v:.045}),
+  coin:()=>{tone({f:1319,d:.09,v:.07,type:"square"});tone({f:1976,d:.28,v:.06,type:"square",delay:.08})},
+  cash:()=>{noise({d:.06,v:.25,f:3000,type:"highpass"});tone({f:1568,d:.12,v:.07,type:"triangle",delay:.05});tone({f:2093,d:.3,v:.06,type:"triangle",delay:.13})},
+  shake:()=>{noise({d:.55,v:.35,f:180,type:"lowpass",q:4});for(let i=0;i<5;i++)tone({f:70+i*6,d:.08,v:.12,type:"sawtooth",delay:i*.1})},
+  whoosh:()=>noise({d:.5,v:.3,f:300,f2:4000,q:1.5,attack:.2}),
+  tunnel:()=>{noise({d:1.8,v:.16,f:200,f2:1800,q:2,attack:.6});tone({f:55,f2:110,d:1.8,v:.18})},
+  board:()=>{tone({f:110,f2:38,d:1,v:.5});noise({d:.5,v:.3,f:400,type:"lowpass"});[1568,2093,2637,3136].forEach((f,i)=>tone({f,d:.9,v:.035,type:"triangle",delay:.15+i*.07}))},
+  slam:()=>{tone({f:160,f2:55,d:.3,v:.35});noise({d:.12,v:.18,f:900,type:"lowpass"})},
+  reveal:()=>[523,659,784].forEach((f,i)=>tone({f,d:.35,v:.07,type:"triangle",delay:i*.06})),
+  bigReveal:()=>{tone({f:98,f2:49,d:.9,v:.4});[523,659,784,1047,1319].forEach((f,i)=>tone({f,d:.7,v:.08,type:"triangle",delay:i*.07}));noise({d:1,v:.08,f:6000,type:"highpass",delay:.2,attack:.3})},
+  flip:()=>noise({d:.25,v:.22,f:1500,f2:7000,q:.8,attack:.05}),
+  tick:()=>tone({f:1400,f2:1100,d:.04,v:.04,type:"triangle"}),
+  done:()=>[784,1047,1319,1568].forEach((f,i)=>tone({f,d:.4,v:.06,type:"triangle",delay:i*.08}))
+};
+
 // ---------- extraits audio : 30 s de la carte révélée (le plus gros titre pour une Icône) ----------
 // l'extrait vient de l'album Deezer du titre (liens valables un moment seulement, donc pris à l'ouverture du pack) ;
 // à défaut, l'aperçu Apple Music
@@ -236,8 +279,8 @@ function advance(e){
   if(!run)return;
   if(run.phase==="pack"){
     run.phase="busy";hint("");unlockAudio();
-    const bp=scene.querySelector(".bigpack");bp.classList.add("shake");haptic([15,40,15,40,15]);
-    later(()=>bp.classList.replace("shake","go"),500);
+    const bp=scene.querySelector(".bigpack");bp.classList.add("shake");haptic([15,40,15,40,15]);SFX.shake();
+    later(()=>{bp.classList.replace("shake","go");SFX.whoosh()},500);
     later(tunnel,1000);
   }else if(run.phase==="wo"){clearT();step()}
   else if(run.phase==="card"&&e.target.closest(".reveal")&&run.wi>=run.wos.length-1){clearT();nextWalkout()} // on touche la dernière carte pour voir les autres
@@ -258,7 +301,7 @@ function tunnel(){
   const h=run.wos.length?"board":run.best.tier==="epique"?"rare":"plain";
   scene.innerHTML=`<div class="flash"></div><div class="endcard h-${h}"></div>`;
   later(()=>scene.querySelector(".flash")?.remove(),520);
-  open.classList.add("run");if(h==="board")later(()=>{open.dataset.fl=colorOf(run.wos[run.wos.length-1]);open.classList.add("board")},900);haptic(14);
+  open.classList.add("run");SFX.tunnel();if(h==="board")later(()=>{open.dataset.fl=colorOf(run.wos[run.wos.length-1]);open.classList.add("board");SFX.board()},900);haptic(14);
   later(()=>{open.classList.remove("board");open.dataset.fl=colorOf(run.wos.length?run.wos[run.wos.length-1]:run.best);if(run.wos.length){run.phase="wo";open.classList.replace("run","wo");run.step=0;step()}else{run.cur=run.best;reveal()}},1800);
 }
 // walkout : le pays, l'artiste, l'album, puis la carte
@@ -274,7 +317,7 @@ function step(){
     `<div class="wstep"><small>Album · ${a.y}</small><strong style="font-size:min(12vw,64px)">${esc(a.t)}</strong></div>`
   ];
   if(run.step>=steps.length){reveal();return}
-  scene.innerHTML=steps[run.step++];
+  scene.innerHTML=steps[run.step++];SFX.slam();
   hint("");haptic(10);
   later(step,1600);
 }
@@ -282,7 +325,7 @@ function reveal(){
   const c=run.cur;
   run.phase="card";open.classList.remove("run","board");open.classList.add("wo");
   scene.innerHTML=`<div class="reveal">${cw(c,{fresh:run.fresh.has(c.key)})}</div>`;
-  if(walkout(c)){burst();haptic([30,40,60])}
+  if(walkout(c)){burst();haptic([30,40,60]);SFX.bigReveal()}else SFX.reveal();
   hint("");playFor(c);
   tilt(scene);
   if(run.wi<run.wos.length-1)later(nextWalkout,2600); // double animation : la carte se retourne seule sur la meilleure
@@ -291,10 +334,10 @@ function reveal(){
 function nextWalkout(){
   if(run.wi<run.wos.length-1){
     run.wi++;run.phase="busy";const c=run.wos[run.wi],box=scene.querySelector(".reveal");
-    box.classList.remove("flipin");box.classList.add("flipout");haptic([20,30,20]);
+    box.classList.remove("flipin");box.classList.add("flipout");haptic([20,30,20]);SFX.flip();
     later(()=>{
       run.cur=c;box.innerHTML=cw(c,{fresh:run.fresh.has(c.key)});
-      box.classList.replace("flipout","flipin");$("burst").innerHTML="";burst();haptic([30,40,60]);playFor(c);
+      box.classList.replace("flipout","flipin");$("burst").innerHTML="";burst();haptic([30,40,60]);SFX.bigReveal();playFor(c);
       later(()=>{run.phase="card";if(run.wi<run.wos.length-1)later(nextWalkout,2600)},450);
     },320);
   }else recap();
@@ -316,7 +359,8 @@ function recap(){
   let cols=1;for(let c=2;c<=Math.min(n,5);c++)if(size(c)>size(cols))cols=c; // le nombre de colonnes qui donne les plus grandes cartes
   const w=size(cols);
   scene.innerHTML=`<div class="recap"><h2>Ton pack</h2><p class="note" style="margin:-10px 0 0">Touche une carte pour la voir, la vendre ou l’offrir.</p><div class="recapgrid" style="grid-template-columns:repeat(${cols},${w}px);gap:${gap}px">${run.cards.map((c,i)=>{const f=run.fresh.has(c.key)&&!seen.has(c.key);seen.add(c.key);return cw(c,{fresh:f,i,tap:true})}).join("")}</div></div><div class="recapbar"><button class="btn go" id="done">Continuer</button></div>`;
-  $("done").onclick=closePack;
+  run.cards.forEach((_,i)=>later(SFX.tick,i*90)); // un petit tic par carte qui apparaît
+  $("done").onclick=()=>{SFX.tap();closePack()};
 }
 function closePack(){
   stopAudio();
@@ -340,7 +384,7 @@ function tilt(box){
 }
 
 // ---------- feuille du bas : fiche d'une carte (vendre, mettre au marché, offrir) ----------
-function sheet(html){$("sheetIn").onclick=null;$("sheetIn").innerHTML=`<button class="xclose" aria-label="Fermer">✕</button>`+html;$("sheet").hidden=false;$("sheetIn").scrollTop=0}
+function sheet(html){SFX.tap();$("sheetIn").onclick=null;$("sheetIn").innerHTML=`<button class="xclose" aria-label="Fermer">✕</button>`+html;$("sheet").hidden=false;$("sheetIn").scrollTop=0}
 const closeSheet=()=>{$("sheet").hidden=true};
 $("sheet").addEventListener("click",e=>{if(e.target.id==="sheet"||e.target.closest(".xclose"))closeSheet()});
 tilt($("sheetIn"));
@@ -484,7 +528,7 @@ $("mktRefresh").onclick=()=>{if(state.coins<REFRESH_COST)return;state.coins-=REF
 $("s-market").onclick=e=>{
   const buy=e.target.closest("[data-buy]"),cancel=e.target.closest("[data-cancel]"),card=e.target.closest(".cw[data-k]");
   if(buy){const m=state.market,o=m.offers.find(x=>x.id===buy.dataset.buy);if(!o||state.coins<o.price)return;
-    state.coins-=o.price;give(o.k);m.offers=m.offers.filter(x=>x!==o);daily().bought++;save();wallet();renderMarket();badge();toast(`${CARD[o.k].title} rejoint ta collection`);haptic([10,30,10]);return}
+    state.coins-=o.price;give(o.k);SFX.cash();m.offers=m.offers.filter(x=>x!==o);daily().bought++;save();wallet();renderMarket();badge();toast(`${CARD[o.k].title} rejoint ta collection`);haptic([10,30,10]);return}
   if(cancel){const l=state.listings.find(x=>x.id===cancel.dataset.cancel);if(!l)return;give(l.k);state.listings=state.listings.filter(x=>x!==l);save();renderMarket();toast("Carte retirée du marché");return}
   if(card){const c=CARD[card.dataset.k];sheet(`${cw(c)}${facts(c)}<button class="btn ghost" onclick="closeSheet()">Fermer</button>`)}
 };
@@ -537,7 +581,7 @@ function drawSbc(id){
     if(u){sbcSel.splice(+u.dataset.un,1);drawSbc(id);return}
     if(e.target.closest("#sbAuto")){sbcSel=autoFill(s);if(sbcSel.length<s.n)toast("Pas assez de cartes éligibles");drawSbc(id);return}
     if(e.target.closest("#sbGo")&&ok){
-      sbcSel.forEach(take);daily().sbc++;save();closeSheet();$("sheetIn").onclick=null;sbcSel=[];
+      sbcSel.forEach(take);daily().sbc++;SFX.done();save();closeSheet();$("sheetIn").onclick=null;sbcSel=[];
       renderQuests();badge();toast(`Défi réussi : ${SPECIAL[s.rw].label} !`);openPack(SPECIAL[s.rw]);
     }
   };
@@ -608,6 +652,8 @@ $("optPseudo").value=state.pseudo;
 $("optPseudo").onchange=e=>{state.pseudo=e.target.value.trim().slice(0,16)||state.pseudo;e.target.value=state.pseudo;save()};
 $("optVibrate").checked=state.vibrate;
 $("optVibrate").onchange=e=>{state.vibrate=e.target.checked;save()};
+$("optSfx").checked=state.sfx!==false;
+$("optSfx").onchange=e=>{state.sfx=e.target.checked;save();if(state.sfx){ac();SFX.tap()}};
 $("optSound").checked=state.sound!==false;
 $("optSound").onchange=e=>{state.sound=e.target.checked;save();if(!state.sound)stopAudio()};
 $("optSkip").checked=state.skipWO;
@@ -627,7 +673,7 @@ function show(id){
   ({"s-shop":renderPacks,"s-club":renderClub,"s-market":renderMarket,"s-quests":renderQuests,"s-friends":renderFriends})[id]?.();
   scrollTo(0,0);
 }
-$("btnClub").onclick=()=>{haptic();club.view="artists";show("s-club")};
+$("btnClub").onclick=()=>{haptic();SFX.tab();club.view="artists";show("s-club")};
 
 // ---------- barre d'onglets du bas : la bulle de verre s'étire en glissant d'un onglet à l'autre,
 // grossit comme une loupe sous le doigt et suit le doigt quand on la fait glisser ----------
@@ -693,7 +739,7 @@ function dragEnd(e,cancel){
   drag=null;
   bar.classList.remove("press","drag");TABS.forEach(b=>b.classList.remove("over"));
   bar.style.scale="";
-  if(t){if(!d0.moved&&!t.classList.contains("on"))haptic();TABS.forEach(b=>b.classList.toggle("on",b===t));pillTo(t,P.x);show(t.dataset.go)}
+  if(t){if(!t.classList.contains("on")){if(!d0.moved)haptic();SFX.tab()}TABS.forEach(b=>b.classList.toggle("on",b===t));pillTo(t,P.x);show(t.dataset.go)}
   else pillTo(bar.querySelector(".tab.on"),P.x);
 }
 bar.addEventListener("pointerup",e=>dragEnd(e,false));

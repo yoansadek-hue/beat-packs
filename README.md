@@ -16,7 +16,8 @@ Ouvre `index.html` dans ton navigateur (ou utilise l'extension Live Server dans 
 - **Défis** : défis de cartes (on donne des cartes pour gagner un pack spécial) et défis du jour.
 - **Marché** : acheter les offres des autres joueurs, mettre ses cartes en vente (5 % de taxe).
 - **Amis** : offrir une carte à un ami avec un code, recevoir les siennes.
-- **Paramètres** : pseudo, vibrations, passer les walkouts, recommencer.
+- **Bruitages** : pack qui tremble, souffle, montée du tunnel, impact de la walkout, carillon de révélation, retournement, pièces… fabriqués à la volée (Web Audio), sans fichier.
+- **Paramètres** : pseudo, vibrations, bruitages, extraits audio, passer les walkouts, recommencer.
 
 ## Fichiers
 - `data.js` : le catalogue généré (artistes, albums, titres, streams, pochettes).

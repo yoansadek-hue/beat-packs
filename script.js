@@ -57,7 +57,7 @@ const FIFA={75:400,76:450,77:500,78:600,79:700,80:850,81:1000,82:1300,83:1800,84
 const baseValue = o => o>=75?FIFA[Math.min(99,o)]:o>=70?300+(o-70)*20:o>=65?200:o>=60?150:100;
 const value = c => Math.round(baseValue(c.ovr)*(c.kind==="holo"?1.5:c.kind==="icone"?2:1)/10)*10;
 const quick = c => Math.max(10,Math.round(value(c)*.25/10)*10); // la vente rapide rapporte peu, comme sur FIFA
-const weight = c => c.ovr+(c.kind==="icone"?20:c.kind==="holo"?10:0);
+const weight = c => c.ovr+(c.kind==="icone"?.2:c.kind==="holo"?.1:0); // on range par note, la couleur ne sert qu'à départager une égalité
 const walkout = c => c.kind==="icone"||(c.kind==="holo"?c.ovr>=83:c.ovr>=86); // walkout : 86+ (Holo 83+), et toujours pour une Icône
 const labelOf = c => c.kind==="icone"?"Icône":c.kind==="holo"?"Holo":TIER[c.tier];
 
@@ -282,7 +282,7 @@ function openPack(p){
   const wos=state.skipWO?[]:cards.filter(walkout).slice(0,2).reverse(); // 2 walkouts au plus, même en cas d'égalité
   run={cards,fresh,best:cards[0],wos,wi:0,phase:"pack",timers:[],step:0};
   if(state.sound)[...wos,cards[0]].forEach(c=>previewUrl(c));
-  open.className="open";$("burst").innerHTML="";
+  open.className="open";open.dataset.h="";open.dataset.fl="";$("burst").innerHTML="";
   scene.innerHTML=`<div class="bigpack">${packHTML(p)}</div><b style="font:900 24px var(--font)">${esc(p.label)}</b>`;
   hint("Touche le pack pour l’ouvrir");
   open.hidden=false;
@@ -309,13 +309,20 @@ open.addEventListener("click",e=>{
 // couleur de la lumière : celle de la carte (Icône, Holo, sinon sa rareté)
 const colorOf = c => c.kind==="track"?c.tier:c.kind;
 function tunnel(){
+  // comme sur FIFA 21 : on avance dans le couloir, les néons des murs défilent ; l'indice vient des néons :
+  // éteints pour une carte simple, allumés en blanc pour un Platine, et pour une walkout les 2 grandes barres du fond s'allument
+  // puis la porte de lumière s'ouvre (aucune différence pour une double walkout)
   open.dataset.fl="";
   const h=run.wos.length?"board":run.best.tier==="epique"?"rare":"plain";
-  const two=run.wos.length>1; // double walkout : deux portes de lumière côte à côte
-  scene.innerHTML=`<div class="flash"></div>${two?`<div class="endcard h-board twin l"></div><div class="endcard h-board twin r"></div>`:`<div class="endcard h-${h}"></div>`}`;
+  open.dataset.h=h;
+  scene.innerHTML=`<div class="flash"></div><div class="endcard h-${h==="board"?"plain":h}"></div>`;
   later(()=>scene.querySelector(".flash")?.remove(),520);
-  open.classList.add("run");SFX.tunnel();if(h==="board")later(()=>{open.dataset.fl=colorOf(run.wos[run.wos.length-1]);open.classList.add("board");SFX.board();if(run.wos.length>1){later(SFX.reveal,450);later(()=>{scene.querySelectorAll(".twin").forEach(x=>x.classList.add("gone"));scene.insertAdjacentHTML("beforeend",`<div class="endcard h-board solo"></div>`)},500)}},900); // l'indice double : deux portes pendant 0,5 s, qui se fondent en unehaptic(14);
-  later(()=>{open.classList.remove("board");open.dataset.fl=colorOf(run.wos.length?run.wos[run.wos.length-1]:run.best);if(run.wos.length){run.phase="wo";open.classList.replace("run","wo");run.step=0;step()}else{run.cur=run.best;reveal()}},1800);
+  open.classList.add("run");SFX.tunnel();haptic(14);
+  if(h==="board"){
+    later(()=>{open.classList.add("bars");SFX.slam()},700); // les 2 barres du fond s'allument
+    later(()=>{const e=scene.querySelector(".endcard");if(e)e.className="endcard h-board";open.dataset.fl=colorOf(run.wos[run.wos.length-1]);open.classList.add("board");SFX.board()},1150);
+  }
+  later(()=>{open.classList.remove("board","bars");open.dataset.fl=colorOf(run.wos.length?run.wos[run.wos.length-1]:run.best);if(run.wos.length){run.phase="wo";open.classList.replace("run","wo");run.step=0;step()}else{run.cur=run.best;reveal()}},2000);
 }
 // walkout : le pays, l'artiste, l'album, puis la carte
 function step(){
@@ -341,7 +348,7 @@ function reveal(){
   if(walkout(c)){burst();haptic([30,40,60]);SFX.bigReveal()}else SFX.reveal();
   hint("");playFor(c);
   tilt(scene);
-  if(run.wi<run.wos.length-1)later(nextWalkout,3800); // double animation : la carte reste 3 s (après son entrée), puis se retourne seule sur la meilleure
+  if(run.wi<run.wos.length-1)later(nextWalkout,2800); // double animation : la carte reste 2 s (après son entrée), puis se retourne seule sur la meilleure
 }
 // plusieurs grosses cartes : quand on touche la carte, elle se retourne et laisse place à une meilleure ; ensuite le récap
 function nextWalkout(){

@@ -128,7 +128,7 @@ input::placeholder{color:var(--dim)}
 .t-rare{background:linear-gradient(160deg,#fff1a8,#ffcf3a 35%,#d99a00 70%,#8a5a00);color:#2a1a00;--b:#ffe9a0}
 .t-epique{background:linear-gradient(160deg,#ffffff,#e3e6ef 30%,#b8bccb 60%,#8c90a3);color:#1c1f2b;--b:#ffffff}
 .t-legendaire{background:radial-gradient(circle at 20% 15%,rgba(255,255,255,.9),transparent 30%),linear-gradient(160deg,#f2fdff,#aef3ff 30%,#5ad8f5 60%,#2a8fd6);color:#062a44;--b:#e8fdff}
-.k-holo{background:linear-gradient(160deg,#f4feff,#9fe9ff 35%,#55b6ff 65%,#b9a2ff);color:#0b1f3f;--b:#fff}
+.k-holo{background:linear-gradient(135deg,#ff7ad9,#c77dff 30%,#7f8cff 55%,#4ee6d0 80%,#c6ff7a);color:#2a0b3d;--b:#fff}
 .k-icone{background:radial-gradient(circle at 70% 15%,rgba(255,61,139,.6),transparent 55%),radial-gradient(circle at 10% 95%,rgba(34,224,255,.45),transparent 55%),linear-gradient(160deg,#21125a,#07051e);color:#ffd86b;--b:#ffd86b}
 .card .ovr{position:absolute;left:6cqw;top:4cqw;z-index:2;font:900 16cqw/1 var(--font);letter-spacing:-.04em}
 .card .new{position:absolute;right:-1.1cqw;top:-1.1cqw;z-index:2;padding:2.5cqw 4.5cqw;border:1.1cqw solid var(--b);border-radius:0 7cqw 0 5cqw;background:var(--lime);color:#14122e;font:900 6.5cqw/1 var(--font);letter-spacing:.06em}
@@ -279,7 +279,7 @@ input::placeholder{color:var(--dim)}
 .open[data-fl=rare]{--fl:#ffcf3a}
 .open[data-fl=epique]{--fl:#eef1ff}
 .open[data-fl=legendaire]{--fl:#7af0ff}
-.open[data-fl=holo]{--fl:#ff9cf0}
+.open[data-fl=holo]{--fl:#c77dff}
 .open[data-fl=icone]{--fl:#ff4fd8} /* les Icônes ont leur propre lumière, rose violet */
 .ring{position:absolute;left:50%;top:44%;width:56vmax;height:80vmax;margin:-40vmax 0 0 -28vmax;border:2px solid rgba(255,241,201,.28);border-radius:2%;opacity:0;animation:ring 2.4s linear infinite}
 .ring::before,.ring::after{content:"";position:absolute;top:4%;bottom:4%;width:1.2%;border-radius:9px;background:var(--fl);box-shadow:0 0 14px var(--fl);opacity:.55}
@@ -294,13 +294,6 @@ input::placeholder{color:var(--dim)}
 .endcard{position:absolute;left:50%;top:44%;z-index:1;width:min(19vw,80px);aspect-ratio:.72;margin:calc(min(19vw,80px) / -1.44) 0 0 calc(min(19vw,80px) / -2);border-radius:7px;background:linear-gradient(160deg,#3a3550,#1a1726);border:2px solid rgba(255,241,201,.35);box-shadow:0 0 24px rgba(255,241,201,.18);animation:approach 1.9s cubic-bezier(.4,0,.8,.6) both}
 .endcard.h-rare{border-color:rgba(255,241,201,.75);outline:2px solid rgba(255,241,201,.4);outline-offset:4px;box-shadow:0 0 30px rgba(255,241,201,.3)}
 .endcard.h-board{width:min(24vw,100px);margin:calc(min(24vw,100px) / -1.44) 0 0 calc(min(24vw,100px) / -2);border-radius:3px;background:#fffdf3;border:0;box-shadow:0 0 40px 14px rgba(255,248,225,.75),0 0 120px 40px rgba(255,241,201,.35)}
-.endcard.twin{width:min(12vw,50px);margin:calc(min(12vw,50px) / -1.44) 0 0 calc(min(12vw,50px) / -2);box-shadow:0 0 22px 6px rgba(255,248,225,.55),0 0 60px 20px rgba(255,241,201,.2)}
-.endcard.twin.gone{opacity:0;transition:opacity .15s}
-.endcard.solo{animation:none;transform:scale(1.05)}
-.endcard.twin.l{animation-name:approachL}
-.endcard.twin.r{animation-name:approachR;animation-delay:.12s}
-@keyframes approachL{from{transform:translateX(-58%) scale(.35);opacity:0}25%{opacity:1}to{transform:translateX(-58%) scale(1.15);opacity:1}}
-@keyframes approachR{from{transform:translateX(58%) scale(.35);opacity:0}25%{opacity:1}to{transform:translateX(58%) scale(1.15);opacity:1}}
 @keyframes approach{from{transform:scale(.35);opacity:0}25%{opacity:1}to{transform:scale(1.15);opacity:1}}
 .flare{position:absolute;bottom:-10vh;width:26vw;max-width:180px;height:130vh;background:linear-gradient(to top,var(--fl),transparent 70%);filter:blur(16px);opacity:0;transform-origin:bottom center;transition:background .4s}
 .flare.l{left:8%;transform:rotate(-22deg)} .flare.r{right:8%;transform:rotate(22deg)}
@@ -419,3 +412,35 @@ html,body{-webkit-text-size-adjust:100%;text-size-adjust:100%}
 /* aucune barre de défilement visible (on fait toujours défiler au doigt) */
 html,body,.sheetin,.recap,.chips,.packs{scrollbar-width:none;-ms-overflow-style:none}
 html::-webkit-scrollbar,body::-webkit-scrollbar,.sheetin::-webkit-scrollbar,.recap::-webkit-scrollbar{display:none;width:0;height:0}
+
+/* ---------- couloir en 3D façon FIFA 21 ---------- */
+.ring{display:none}
+.corr{position:absolute;inset:0;perspective:420px;perspective-origin:50% 44%;overflow:hidden;--bar:rgba(255,241,201,.14);--glow:0}
+.corr i{position:absolute;display:block;background-color:#0d0b16}
+/* les murs : des néons verticaux tous les 300 px de profondeur */
+.wall{top:-10%;height:120%;width:4200px;
+  background-image:linear-gradient(90deg,transparent 0 141px,var(--bar) 141px 159px,transparent 159px),linear-gradient(#17131f,#0d0b16);
+  background-size:300px 100%,100% 100%;animation:advance 1.2s linear infinite}
+.wall.l{left:0;transform-origin:0 50%;transform:rotateY(90deg)}
+.wall.r{right:0;transform-origin:100% 50%;transform:rotateY(-90deg);animation-name:advanceR}
+.ceil,.flr{left:-10%;width:120%;height:4200px;background-image:linear-gradient(0deg,transparent 0 146px,rgba(255,241,201,.05) 146px 154px,transparent 154px);background-size:100% 300px;animation:advanceY 1.2s linear infinite}
+.ceil{top:0;transform-origin:50% 0;transform:rotateX(-90deg)}
+.flr{bottom:0;transform-origin:50% 100%;transform:rotateX(90deg);background-color:#100d18;animation-name:advanceYR}
+@keyframes advance{from{background-position:0 0,0 0}to{background-position:-300px 0,0 0}}
+@keyframes advanceR{from{background-position:0 0,0 0}to{background-position:300px 0,0 0}}
+@keyframes advanceY{from{background-position:0 0}to{background-position:0 300px}}
+@keyframes advanceYR{from{background-position:0 0}to{background-position:0 -300px}}
+.open.run .corr i{animation-duration:.32s} /* on fonce dans le couloir */
+.open.wo .corr i,.open.recapmode .corr i{animation-duration:3.5s}
+/* l'indice : les néons s'allument (Platine) ; pour une walkout, ils prennent la couleur de la carte */
+.open[data-h=rare] .corr{--bar:rgba(255,248,230,.85)}
+.open.bars .corr,.open.board .corr{--bar:#fffaf0}
+.open.board .corr{--bar:var(--fl)}
+.open.wo .corr{--bar:var(--fl)}
+.open:not(.run):not(.wo) .corr{--bar:rgba(255,241,201,.1)}
+/* les 2 grandes barres du fond, de chaque côté de la porte */
+.endbar{position:absolute;top:28%;height:32%;width:6px;border-radius:6px;background:#fffaf0;box-shadow:0 0 18px 4px rgba(255,248,225,.8),0 0 60px 12px rgba(255,241,201,.35);opacity:0;transform:scaleY(.2);transition:opacity .2s,transform .35s cubic-bezier(.2,1.2,.4,1)}
+.endbar.l{left:calc(50% - 74px)} .endbar.r{left:calc(50% + 68px)}
+.open.bars .endbar,.open.board .endbar{opacity:1;transform:none}
+.open.board .endbar{background:var(--fl);box-shadow:0 0 22px 6px var(--fl)}
+.open.recapmode .corr{opacity:.35}

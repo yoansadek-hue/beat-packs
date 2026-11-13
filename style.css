@@ -100,15 +100,21 @@ input::placeholder{color:var(--dim)}
 .odds span{display:inline-flex;align-items:center;gap:5px;padding:2px 8px;border-radius:999px;background:rgba(0,0,0,.25);font-weight:700;font-size:12px}
 .odds i{width:9px;height:9px;border-radius:2px;transform:rotate(45deg)}
 .offer .btn{margin-top:10px;min-height:46px}
-.pack{position:relative;flex:none;width:92px;aspect-ratio:.66;border-radius:5px;overflow:hidden;z-index:1;box-shadow:0 14px 26px -8px rgba(0,0,0,.6)}
-.pack .foil{position:absolute;inset:0;background:radial-gradient(ellipse 80% 55% at 50% 50%,rgba(255,255,255,.35),transparent 70%),linear-gradient(160deg,#ffffff,var(--pc,#8a7bff) 40%,#1b1450)}
-.pack .foil::after{content:"";position:absolute;inset:0;box-shadow:inset 6px 0 10px -4px rgba(0,0,0,.35),inset -6px 0 10px -4px rgba(0,0,0,.35)} /* le sachet est un peu bombé */
-.pack .crimp{position:absolute;left:0;right:0;height:9%;z-index:3;background:repeating-linear-gradient(90deg,rgba(255,255,255,.55) 0 1.5px,rgba(0,0,0,.28) 1.5px 3.5px),linear-gradient(var(--pc,#8a7bff),#1b1450)}
-.pack .crimp.t{top:0;border-bottom:1px solid rgba(0,0,0,.25)}
-.pack .crimp.b{bottom:0;border-top:1px solid rgba(0,0,0,.25)}
-.pack.k-3{--pc:#4fc3ff} .pack.k-5{--pc:#ff5aa8} .pack.k-10{--pc:#ffb21f} .pack.k-sp{--pc:#7dff8a}
-.pack .shine{position:absolute;inset:-40%;background:linear-gradient(115deg,transparent 40%,rgba(255,255,255,.55) 50%,transparent 60%);animation:sheen 3.2s ease-in-out infinite}
-@keyframes sheen{0%,60%{transform:translateX(-60%)}100%{transform:translateX(60%)}}
+.pack{position:relative;flex:none;width:92px;aspect-ratio:.66;z-index:1;filter:drop-shadow(0 12px 16px rgba(0,0,0,.5));
+  --zz:polygon(0 3%,5% 0,10% 3%,15% 0,20% 3%,25% 0,30% 3%,35% 0,40% 3%,45% 0,50% 3%,55% 0,60% 3%,65% 0,70% 3%,75% 0,80% 3%,85% 0,90% 3%,95% 0,100% 3%,100% 97%,95% 100%,90% 97%,85% 100%,80% 97%,75% 100%,70% 97%,65% 100%,60% 97%,55% 100%,50% 97%,45% 100%,40% 97%,35% 100%,30% 97%,25% 100%,20% 97%,15% 100%,10% 97%,5% 100%,0 97%)}
+.pack .foil{position:absolute;inset:0;clip-path:var(--zz);
+  background:
+    linear-gradient(180deg,rgba(255,255,255,.35),transparent 18%,transparent 82%,rgba(0,0,0,.35)),
+    repeating-radial-gradient(circle at 50% 46%,rgba(255,255,255,.07) 0 1px,transparent 1px 4px),
+    radial-gradient(circle at 50% 46%,color-mix(in srgb,var(--pc) 70%,#fff) 0,var(--pc) 32%,color-mix(in srgb,var(--pc) 40%,#0c0b25) 70%,#0c0b25 100%)}
+.pack .foil::after{content:"";position:absolute;inset:0;box-shadow:inset 7px 0 12px -6px rgba(0,0,0,.5),inset -7px 0 12px -6px rgba(0,0,0,.5)} /* le sachet est bombé */
+.pack .crimp{position:absolute;left:0;right:0;height:8%;z-index:3;clip-path:var(--zz);background:repeating-linear-gradient(90deg,rgba(255,255,255,.5) 0 1px,rgba(0,0,0,.3) 1px 3px)}
+.pack .crimp.t{top:0} .pack .crimp.b{bottom:0}
+.pack .crimp.t::after{content:"";position:absolute;right:9%;bottom:-40%;width:6%;aspect-ratio:1;border-radius:50%;background:#0c0b25;box-shadow:0 0 0 1px rgba(255,255,255,.4)} /* l'encoche pour déchirer */
+.pack.k-3{--pc:#2ec5ff} .pack.k-5{--pc:#ff4fae} .pack.k-10{--pc:#ffb21f} .pack.k-sp{--pc:#4ee6a0}
+.pack .shine{position:absolute;inset:0;z-index:4;clip-path:var(--zz);overflow:hidden;pointer-events:none;background:linear-gradient(115deg,transparent 35%,rgba(255,120,220,.28) 44%,rgba(120,255,240,.32) 50%,rgba(255,255,140,.26) 56%,transparent 65%);background-size:300% 100%;animation:holo 3.6s ease-in-out infinite}
+@keyframes holo{0%,40%{background-position:100% 0}100%{background-position:-50% 0}}
+.pack::after{content:"";position:absolute;left:8%;right:8%;bottom:12%;height:3%;z-index:2;border-radius:2px;background:linear-gradient(90deg,transparent,rgba(255,255,255,.7),transparent);opacity:.6} /* une fine bande brillante sous les pochettes */
 .pack .pcovs{position:absolute;left:0;right:0;top:14%;height:58%;display:flex;justify-content:center;align-items:center;z-index:1}
 .pack .pcovs img{width:52%;aspect-ratio:1;object-fit:cover;border-radius:6%;box-shadow:0 6px 14px rgba(0,0,0,.45);margin:0 -9%}
 .pack .pcovs img:nth-child(1){transform:rotate(-14deg) translateY(6%)}
@@ -116,10 +122,10 @@ input::placeholder{color:var(--dim)}
 .pack .pcovs img:nth-child(3){transform:rotate(14deg) translateY(6%)}
 
 /* ---------- cartes (croquis) ---------- */
-.cw{container-type:inline-size;position:relative;filter:drop-shadow(0 10px 16px rgba(0,0,0,.45))}
+.cw{container-type:inline-size;position:relative}
 .card{
   --b:rgba(255,255,255,.35);
-  position:relative;width:100%;aspect-ratio:.72;display:flex;flex-direction:column;
+  position:relative;width:100%;aspect-ratio:.72;display:flex;flex-direction:column;box-shadow:0 10px 18px -6px rgba(0,0,0,.55);
   padding:6cqw 6cqw 0;border-radius:7cqw;border:1.1cqw solid var(--b);overflow:hidden;color:#fff;
   transform:perspective(900px) rotateX(var(--rx,0deg)) rotateY(var(--ry,0deg));transition:transform .4s cubic-bezier(.2,.8,.2,1)
 }
@@ -272,7 +278,7 @@ input::placeholder{color:var(--dim)}
 .open{position:fixed;inset:0;z-index:50;touch-action:none;overscroll-behavior:none;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:calc(20px + env(safe-area-inset-top)) 18px calc(24px + env(safe-area-inset-bottom));overflow:hidden;--fl:#fff1c9;background:radial-gradient(ellipse 40% 50% at 50% 44%,#2a2540,#0b0a14 75%);animation:fade .25s both}
 @keyframes fade{from{opacity:0}}
 .tunnel{position:absolute;inset:0;pointer-events:none;transition:opacity .4s}
-.open.recapmode .tunnel{opacity:0}
+.open.recapmode .tunnel{display:none} /* on libère toute la mémoire du tunnel pendant le récap */
 .open.recapmode{background:radial-gradient(ellipse 70% 55% at 50% 40%,#2a2540,#0b0a14 80%)}
 /* la lumière prend la couleur de la carte révélée (la meilleure en cas de double walkout) */
 .open[data-fl=commune]{--fl:#c9c9d6}
@@ -287,7 +293,7 @@ input::placeholder{color:var(--dim)}
 @keyframes flash{from{opacity:.9}to{opacity:0}}
 /* walkout : le pays, l'artiste, l'album, puis la carte */
 .wstep{display:flex;flex-direction:column;align-items:center;gap:14px;text-align:center;animation:zin .7s cubic-bezier(.15,.9,.3,1) both}
-@keyframes zin{from{transform:scale(2.8);opacity:0;filter:blur(14px)}to{transform:none;opacity:1;filter:none}}
+@keyframes zin{from{transform:scale(2.8);opacity:0}to{transform:none;opacity:1}}
 .wstep small{font:800 15px var(--font);letter-spacing:.3em;text-transform:uppercase;color:var(--dim)}
 .wstep strong{font:900 min(17vw,96px)/.95 var(--font);letter-spacing:-.03em;text-transform:uppercase;max-width:100%;overflow-wrap:anywhere}
 .wstep .cov{width:min(62vw,260px);aspect-ratio:1;border-radius:14px;font-size:60px;box-shadow:0 0 70px -6px var(--fl)}
@@ -395,9 +401,12 @@ html::-webkit-scrollbar,body::-webkit-scrollbar,.sheetin::-webkit-scrollbar,.rec
 .bigpack.torn .pk.cap{transform:translate(42%,-150%) rotate(28deg);opacity:0}
 .bigpack.torn .mouth{opacity:1}
 .bigpack.torn .outs i{opacity:1}
-.bigpack.torn .outs i:nth-child(1){transform:translateY(-36%) rotate(-10deg);transition-delay:.3s,.3s}
-.bigpack.torn .outs i:nth-child(2){transform:translateY(-46%);transition-delay:.38s,.38s}
-.bigpack.torn .outs i:nth-child(3){transform:translateY(-36%) rotate(10deg);transition-delay:.46s,.46s}
+.bigpack.torn .outs.n1 i{transform:translateY(-46%);transition-delay:.3s,.3s}
+.bigpack.torn .outs.n2 i:nth-child(1){transform:translateY(-40%) rotate(-8deg);transition-delay:.3s,.3s}
+.bigpack.torn .outs.n2 i:nth-child(2){transform:translateY(-40%) rotate(8deg);transition-delay:.4s,.4s}
+.bigpack.torn .outs.n3 i:nth-child(1){transform:translateY(-36%) rotate(-11deg);transition-delay:.3s,.3s}
+.bigpack.torn .outs.n3 i:nth-child(2){transform:translateY(-46%);transition-delay:.38s,.38s}
+.bigpack.torn .outs.n3 i:nth-child(3){transform:translateY(-36%) rotate(11deg);transition-delay:.46s,.46s}
 .bigpack.go{animation:packgo .5s cubic-bezier(.6,0,.9,.5) both}
 .plabel{font:900 24px var(--font)}
 @keyframes packin{from{transform:translateY(40vh) scale(.6) rotate(-8deg);opacity:0}}
@@ -408,18 +417,18 @@ html::-webkit-scrollbar,body::-webkit-scrollbar,.sheetin::-webkit-scrollbar,.rec
 /* ---------- tunnel 2D : on plonge dans les sillons d'un vinyle, entre deux égaliseurs ---------- */
 .open{--eq:rgba(255,241,201,.4);--lo:.05;--hi:.2}
 /* les sillons qui foncent vers nous */
-.ring{position:absolute;left:50%;top:44%;width:130vmax;height:130vmax;margin:-65vmax 0 0 -65vmax;border-radius:50%;border:2px solid rgba(255,241,201,.2);opacity:0;animation:ring 2.6s linear infinite}
+.ring{position:absolute;left:50%;top:44%;width:96vmax;height:96vmax;margin:-48vmax 0 0 -48vmax;border-radius:50%;border:2px solid rgba(255,241,201,.2);opacity:0;animation:ring 2.6s linear infinite}
 .ring:nth-child(3n){border-width:6px;border-color:rgba(255,241,201,.08)}
 .ring:nth-child(2){animation-delay:-.325s}.ring:nth-child(3){animation-delay:-.65s}.ring:nth-child(4){animation-delay:-.975s}
 .ring:nth-child(5){animation-delay:-1.3s}.ring:nth-child(6){animation-delay:-1.625s}.ring:nth-child(7){animation-delay:-1.95s}.ring:nth-child(8){animation-delay:-2.275s}
 @keyframes ring{0%{transform:scale(.02);opacity:0}20%{opacity:.9}100%{transform:scale(1.1);opacity:0}}
 .open.run .ring{animation-duration:.7s}
-.open.board .ring{border-color:var(--fl);box-shadow:0 0 22px var(--fl),inset 0 0 22px var(--fl)}
+.open.board .ring{border-color:var(--fl)}
 .open.wo .ring{border-color:var(--fl);animation-duration:3.2s}
 /* des rayons qui tournent, comme les reflets d'un disque */
-.rays{position:absolute;left:50%;top:44%;width:170vmax;height:170vmax;margin:-85vmax 0 0 -85vmax;border-radius:50%;background:repeating-conic-gradient(from 0deg,var(--ray,rgba(255,241,201,.06)) 0 3deg,transparent 3deg 20deg);-webkit-mask:radial-gradient(circle,transparent 5%,#000 28%,transparent 68%);mask:radial-gradient(circle,transparent 5%,#000 28%,transparent 68%);animation:spin 16s linear infinite}
+.rays{position:absolute;left:50%;top:44%;width:110vmax;height:110vmax;margin:-55vmax 0 0 -55vmax;border-radius:50%;background:repeating-conic-gradient(from 0deg,var(--ray,rgba(255,241,201,.05)) 0 3deg,transparent 3deg 20deg);opacity:.9;animation:spin 16s linear infinite}
 .open.run .rays{animation-duration:2.4s;--ray:rgba(255,241,201,.11)}
-.open.board .rays,.open.wo .rays{--ray:color-mix(in srgb,var(--fl) 26%,transparent)}
+.open.board .rays,.open.wo .rays{--ray:var(--fl);opacity:.16}
 .open.wo .rays{animation-duration:9s}
 @keyframes spin{to{transform:rotate(360deg)}}
 /* les égaliseurs des côtés : ce sont eux qui donnent l'indice */
@@ -435,12 +444,12 @@ html::-webkit-scrollbar,body::-webkit-scrollbar,.sheetin::-webkit-scrollbar,.rec
 .open.run[data-h=rare]{--eq:#fff8e6;--lo:.2;--hi:.62}
 .open.run[data-h=rare] .eq i{opacity:.9}
 .open.bars,.open.board{--eq:#fffaf0;--lo:.72;--hi:1}
-.open.bars .eq i,.open.board .eq i{opacity:1;animation-duration:.16s;box-shadow:0 0 14px rgba(255,248,225,.5)}
+.open.bars .eq i,.open.board .eq i{opacity:1;animation-duration:.16s}
 .open.board{--eq:var(--fl)}
 .open.wo{--eq:var(--fl);--lo:.12;--hi:.5}
 .open.wo .eq i{opacity:.75}
 /* les faisceaux du bas et le sol */
-.flare{position:absolute;bottom:-10vh;width:26vw;max-width:180px;height:130vh;background:linear-gradient(to top,var(--fl),transparent 70%);filter:blur(16px);opacity:0;transform-origin:bottom center;transition:background .4s}
+.flare{position:absolute;bottom:-6vh;width:30vw;max-width:180px;height:110vh;background:radial-gradient(ellipse 50% 100% at 50% 100%,var(--fl),transparent 70%);opacity:0;transform-origin:bottom center}
 .flare.l{left:8%;transform:rotate(-22deg)} .flare.r{right:8%;transform:rotate(22deg)}
 .open.board .flare{animation:flare 1s ease-out both}
 .open.board .flare.r{animation-delay:.1s}
@@ -456,7 +465,7 @@ html::-webkit-scrollbar,body::-webkit-scrollbar,.sheetin::-webkit-scrollbar,.rec
 .tdisc{position:absolute;left:50%;top:44%;z-index:1;width:min(26vw,108px);aspect-ratio:1;margin:calc(min(26vw,108px) / -2) 0 0 calc(min(26vw,108px) / -2);animation:approach 2.1s cubic-bezier(.4,0,.8,.6) both}
 .tdisc .coin{position:absolute;inset:0;width:100%;height:100%;animation:spin 1.3s linear infinite;filter:brightness(.5);transition:filter .2s,box-shadow .2s}
 .tdisc.rare .coin{filter:none;box-shadow:0 0 0 3px rgba(255,248,230,.85),0 0 26px rgba(255,248,230,.45)}
-.tdisc.lit .coin{filter:none;box-shadow:0 0 0 4px var(--fl),0 0 46px 12px var(--fl);animation-duration:.5s}
+.tdisc.lit .coin{filter:none;box-shadow:0 0 0 4px var(--fl),0 0 30px 6px var(--fl);animation-duration:.5s}
 .tdisc .halo{position:absolute;inset:0;border-radius:50%;border:3px solid var(--fl);animation:halo .9s ease-out both}
 .tdisc .halo.h2{animation-delay:.32s}
 .tdisc .twinw{position:absolute;inset:0;z-index:-1;animation:twin .45s cubic-bezier(.2,1.3,.4,1) both}

@@ -284,7 +284,9 @@ function openPack(p){
   run={cards,fresh,best:cards[0],wos,wi:0,phase:"pack",timers:[],step:0};
   if(state.sound)[...wos,cards[0]].forEach(c=>previewUrl(c));
   open.className="open";open.dataset.h="";open.dataset.fl="";$("burst").innerHTML="";
-  scene.innerHTML=`<div class="bigpack"><div class="outs"><i></i><i></i><i></i></div><div class="mouth"></div><div class="pk body">${packHTML(p)}</div><div class="pk cap">${packHTML(p)}</div><div class="tearline"></div></div><b class="plabel">${esc(p.label)}</b>`;
+  // ce qui sort du sachet est un indice : 1 carte (pas de walkout), 3 cartes (walkout 86+), 2 cartes (double walkout)
+  const outsN=wos.length===2?2:wos.length===1?3:1;
+  scene.innerHTML=`<div class="bigpack"><div class="outs n${outsN}">${"<i></i>".repeat(outsN)}</div><div class="mouth"></div><div class="pk body">${packHTML(p)}</div><div class="pk cap">${packHTML(p)}</div><div class="tearline"></div></div><b class="plabel">${esc(p.label)}</b>`;
   hint("Touche le pack pour l’ouvrir");
   open.hidden=false;
 }
@@ -371,7 +373,7 @@ function nextWalkout(){
 }
 function burst(){
   const cols=[getComputedStyle(open).getPropertyValue("--fl"),"#ffffff","#ff3d8b","#22e0ff","#b6ff3b","#ff8a1f"];
-  $("burst").innerHTML=Array.from({length:46},()=>{
+  $("burst").innerHTML=Array.from({length:28},()=>{
     const a=Math.random()*Math.PI*2,d=120+Math.random()*220;
     return `<i style="--x:${Math.cos(a)*d}px;--y:${Math.sin(a)*d}px;--c:${any(cols)};animation-delay:${Math.random()*.15}s"></i>`;
   }).join("");

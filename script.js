@@ -213,6 +213,7 @@ const SFX={
   coin:()=>{tone({f:1319,d:.09,v:.07,type:"square"});tone({f:1976,d:.28,v:.06,type:"square",delay:.08})},
   cash:()=>{noise({d:.06,v:.25,f:3000,type:"highpass"});tone({f:1568,d:.12,v:.07,type:"triangle",delay:.05});tone({f:2093,d:.3,v:.06,type:"triangle",delay:.13})},
   shake:()=>{noise({d:.55,v:.35,f:180,type:"lowpass",q:4});for(let i=0;i<5;i++)tone({f:70+i*6,d:.08,v:.12,type:"sawtooth",delay:i*.1})},
+  rip:()=>{noise({d:.28,v:.32,f:900,f2:7000,q:.6,attack:.01});noise({d:.12,v:.2,f:5000,type:"highpass",delay:.05})},
   whoosh:()=>noise({d:.5,v:.3,f:300,f2:4000,q:1.5,attack:.2}),
   tunnel:()=>{noise({d:1.8,v:.16,f:200,f2:1800,q:2,attack:.6});tone({f:55,f2:110,d:1.8,v:.18})},
   board:()=>{tone({f:110,f2:38,d:1,v:.5});noise({d:.5,v:.3,f:400,type:"lowpass"});[1568,2093,2637,3136].forEach((f,i)=>tone({f,d:.9,v:.035,type:"triangle",delay:.15+i*.07}))},
@@ -283,7 +284,7 @@ function openPack(p){
   run={cards,fresh,best:cards[0],wos,wi:0,phase:"pack",timers:[],step:0};
   if(state.sound)[...wos,cards[0]].forEach(c=>previewUrl(c));
   open.className="open";open.dataset.h="";open.dataset.fl="";$("burst").innerHTML="";
-  scene.innerHTML=`<div class="bigpack">${packHTML(p)}</div><b style="font:900 24px var(--font)">${esc(p.label)}</b>`;
+  scene.innerHTML=`<div class="bigpack"><div class="outs"><i></i><i></i><i></i></div><div class="mouth"></div><div class="pk body">${packHTML(p)}</div><div class="pk cap">${packHTML(p)}</div><div class="tearline"></div></div><b class="plabel">${esc(p.label)}</b>`;
   hint("Touche le pack pour l’ouvrir");
   open.hidden=false;
 }
@@ -292,8 +293,9 @@ function advance(e){
   if(run.phase==="pack"){
     run.phase="busy";hint("");unlockAudio();
     const bp=scene.querySelector(".bigpack");bp.classList.add("shake");haptic([15,40,15,40,15]);SFX.shake();
-    later(()=>{bp.classList.replace("shake","go");SFX.whoosh()},500);
-    later(tunnel,1000);
+    later(()=>{bp.classList.replace("shake","torn");SFX.rip();haptic([10,20,30])},500);
+    later(()=>{bp.classList.add("go");SFX.whoosh()},1500);
+    later(tunnel,2000);
   }else if(run.phase==="wo"){clearT();step()}
   else if(run.phase==="card"&&e.target.closest(".reveal")&&run.wi>=run.wos.length-1){clearT();nextWalkout()} // on touche la dernière carte pour voir les autres
 }
@@ -309,20 +311,25 @@ open.addEventListener("click",e=>{
 // couleur de la lumière : celle de la carte (Icône, Holo, sinon sa rareté)
 const colorOf = c => c.kind==="track"?c.tier:c.kind;
 function tunnel(){
-  // comme sur FIFA 21 : on avance dans le couloir, les néons des murs défilent ; l'indice vient des néons :
-  // éteints pour une carte simple, allumés en blanc pour un Platine, et pour une walkout les 2 grandes barres du fond s'allument
-  // puis la porte de lumière s'ouvre (aucune différence pour une double walkout)
+  // on plonge dans les sillons d'un vinyle, entre deux égaliseurs. Les indices, un peu comme sur FIFA :
+  // - les égaliseurs restent bas pour une carte simple, montent en blanc pour un Platine ;
+  // - walkout (86+) : ils saturent d'un coup, puis le disque du fond s'allume à la couleur de la carte ;
+  // - double walkout : un second disque sort de derrière le premier, avec une seconde onde.
   open.dataset.fl="";
-  const h=run.wos.length?"board":run.best.tier==="epique"?"rare":"plain";
+  const h=run.wos.length?"board":run.best.tier==="epique"?"rare":"plain",two=run.wos.length>1;
   open.dataset.h=h;
-  scene.innerHTML=`<div class="flash"></div><div class="endcard h-${h==="board"?"plain":h}"></div>`;
+  scene.innerHTML=`<div class="flash"></div><div class="tdisc${h==="rare"?" rare":""}"><i class="coin"></i></div>`;
   later(()=>scene.querySelector(".flash")?.remove(),520);
   open.classList.add("run");SFX.tunnel();haptic(14);
   if(h==="board"){
-    later(()=>{open.classList.add("bars");SFX.slam()},700); // les 2 barres du fond s'allument
-    later(()=>{const e=scene.querySelector(".endcard");if(e)e.className="endcard h-board";open.dataset.fl=colorOf(run.wos[run.wos.length-1]);open.classList.add("board");SFX.board()},1150);
+    later(()=>{open.classList.add("bars");SFX.slam()},700);
+    later(()=>{
+      const d=scene.querySelector(".tdisc");
+      if(d){d.classList.add("lit");d.insertAdjacentHTML("beforeend",`<b class="halo"></b>${two?`<b class="halo h2"></b><span class="twinw"><i class="coin"></i></span>`:""}`)}
+      open.dataset.fl=colorOf(run.wos[run.wos.length-1]);open.classList.add("board");SFX.board();if(two)later(SFX.reveal,350);
+    },1150);
   }
-  later(()=>{open.classList.remove("board","bars");open.dataset.fl=colorOf(run.wos.length?run.wos[run.wos.length-1]:run.best);if(run.wos.length){run.phase="wo";open.classList.replace("run","wo");run.step=0;step()}else{run.cur=run.best;reveal()}},2000);
+  later(()=>{open.classList.remove("board","bars");open.dataset.fl=colorOf(run.wos.length?run.wos[run.wos.length-1]:run.best);if(run.wos.length){run.phase="wo";open.classList.replace("run","wo");run.step=0;step()}else{run.cur=run.best;reveal()}},2100);
 }
 // walkout : le pays, l'artiste, l'album, puis la carte
 function step(){

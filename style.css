@@ -1223,3 +1223,42 @@ html{overflow-x:hidden}
   .packs{grid-template-columns:repeat(3,1fr)}
   .freepk{max-width:none}
 }
+
+/* ---------- patch 31 : NEW des cartes spéciales, accueil, blind test ---------- */
+.k-totw .new,.k-promo .new{top:-16cqw;right:-4cqw;z-index:6;border-radius:0 7cqw 0 5cqw}
+/* accueil : l'Actualité prend la grande place */
+.hub{grid-template-columns:1.55fr 1fr}
+.hubside.news{min-height:230px}
+.nslide{display:grid;grid-template-columns:1fr 46%;grid-template-rows:auto auto 1fr;column-gap:10px;align-items:start}
+.nslide small,.nslide h3,.nslide p{grid-column:1}
+.nslide p{white-space:normal;display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical}
+.nslide .nvis{grid-column:2;grid-row:1/4;margin:0;align-self:center}
+.hubmain{min-height:230px}
+.hubmain h3{font-size:22px}
+.hubmain p{max-width:none;font-size:12px}
+.hubmain .pack{width:52px;right:10px;bottom:10px}
+@media (min-width:700px){
+  .hubside.news,.hubmain{min-height:280px}
+  .nslide{grid-template-columns:1fr 200px;padding:18px 18px 26px}
+  .nslide h3{font-size:30px}
+  .nslide p{font-size:15px}
+  .nvis .cw,.hubside .cw{width:100%!important;margin:0!important}
+  .hubmain h3{font-size:30px}
+  .hubmain p{font-size:14px}
+  .hubmain .pack{width:90px}
+}
+@media (min-width:900px){
+  .hub{grid-template-columns:2fr 1fr}
+  .hubside.news,.hubmain{min-height:320px;max-height:none}
+  .nslide{grid-template-columns:1fr 210px}
+  .nslide h3{font-size:40px}
+}
+/* blind test : pochette révélée bien cadrée */
+.btdisc{position:relative;width:200px;height:200px;max-width:52vw;max-height:52vw;aspect-ratio:auto}
+.btdisc.open .cov{position:absolute;inset:0;width:100%;height:100%}
+.btdisc.open .cov img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
+.btopts b{font-size:16px}
+.nslide{padding-top:24px}
+@media (max-width:699px){.hubmain .pack{display:none}}
+@media (min-width:700px){.nslide{grid-template-columns:1fr 160px;padding-top:30px}}
+@media (min-width:900px){.nslide{grid-template-columns:1fr 175px;padding-top:34px}}

@@ -119,24 +119,18 @@ const SPECIAL={
 const REWARD={...SPECIAL,p3:PACKS[0],p6:PACKS[1],p12:PACKS[2]};
 // la boutique : pack gratuit du jour, classiques, premium, thématiques, événements
 const FREE={key:"free",label:"Pack gratuit",size:3,price:0,desc:"3 cartes, une fois par jour"};
+// boost : plus le pack coûte cher, plus les Platine, Diamant, Holo, Icônes et cartes spéciales sont fréquents (rien n'est garanti)
+PACKS[0].boost=1;PACKS[1].boost=1.15;PACKS[2].boost=1.3;
 const SHOP=[
   {t:"Classiques",d:"Des cartes de toutes les discographies",ps:PACKS},
-  {t:"Premium",d:"Plus de chances de tomber sur une grosse carte",ps:[
-    {key:"gold6",label:"Pack Or",size:6,price:30000,floor:"rare",desc:"6 cartes Or ou mieux"},
-    {key:"plat3",label:"Pack Platine",size:3,price:45000,guarantee:"epique",desc:"3 cartes dont 1 Platine ou mieux"},
-    {key:"holo6",label:"Pack Holo",size:6,price:75000,holo:1,desc:"6 cartes dont 1 Holo"},
-    {key:"prime12",label:"Pack Prime",size:12,price:125000,floor:"rare",guarantee:"epique",gN:3,desc:"12 cartes Or ou mieux, dont 3 Platine ou mieux"},
-    {key:"dia1",label:"Pack Diamant",size:1,price:300000,guarantee:"legendaire",desc:"1 carte Diamant"},
-    {key:"ico1",label:"Pack Icône",size:1,price:500000,icon:true,desc:"1 carte Icône"}]},
-  {t:"Thématiques",d:"Choisis ton style",ps:[
-    {key:"fr6",label:"Pack Rap FR",size:6,price:22000,country:"FR",guarantee:"rare",desc:"6 cartes FR dont 1 Or ou mieux"},
-    {key:"us6",label:"Pack Rap US",size:6,price:22000,country:"US",guarantee:"rare",desc:"6 cartes US dont 1 Or ou mieux"},
-    {key:"uk6",label:"Pack Rap UK",size:6,price:22000,country:"UK",guarantee:"rare",desc:"6 cartes UK dont 1 Or ou mieux"},
-    {key:"old6",label:"Pack Old School",size:6,price:22000,before:2005,guarantee:"rare",desc:"6 cartes d’avant 2005 dont 1 Or ou mieux"},
-    {key:"new6",label:"Pack Nouvelle vague",size:6,price:22000,after:2023,guarantee:"rare",desc:"6 cartes sorties depuis 2023 dont 1 Or ou mieux"}]},
-  {t:"Événements",d:"Pour un temps limité",ps:[
-    ...(TOTW_NOW.length?[{key:"totw4",label:"Pack TOTW",size:4,price:150000,live:"totw",desc:`4 cartes dont 1 TOTW de la semaine ${weekNo(LV.totw[0].w)}`}]:[]),
-    ...(PROMO_NOW.length?[{key:"promo5",label:"Pack "+PROMO.name,size:5,price:200000,live:"promo",desc:`5 cartes dont 1 ${PROMO.name}, jusqu’au ${PROMO.until.slice(8,10)}/${PROMO.until.slice(5,7)}`}]:[])]}
+  {t:"Premium",d:"Plus le pack est cher, plus tu as de chances sur les grosses cartes",ps:[
+    {key:"gold6",label:"Pack Or",size:6,price:30000,floor:"rare",boost:1.5,desc:"6 cartes Or ou mieux"},
+    {key:"plat3",label:"Pack Platine",size:3,price:45000,guarantee:"epique",boost:1.7,desc:"3 cartes dont 1 Platine ou mieux"},
+    {key:"holo6",label:"Pack Prisme",size:6,price:75000,boost:1.8,holoP:.12,desc:"6 cartes, chances de Holo ×8"},
+    {key:"prime12",label:"Pack Prime",size:12,price:125000,floor:"rare",guarantee:"epique",gN:3,boost:2.2,desc:"12 cartes Or ou mieux, dont 3 Platine ou mieux"}]},
+  {t:"Événements",d:"Plus de chances d’avoir une carte de l’événement, sans garantie",ps:[
+    ...(TOTW_NOW.length?[{key:"totw4",label:"Pack TOTW",size:4,price:150000,live:"totw",liveP:.07,boost:2,desc:`4 cartes, chances de TOTW ×6 (semaine ${weekNo(LV.totw[0].w)})`}]:[]),
+    ...(PROMO_NOW.length?[{key:"promo5",label:"Pack "+PROMO.name,size:5,price:200000,live:"promo",liveP:.07,boost:2.2,desc:`5 cartes, chances de ${PROMO.name} ×6, jusqu’au ${PROMO.until.slice(8,10)}/${PROMO.until.slice(5,7)}`}]:[])]}
 ].filter(x=>x.ps.length);
 const SHOPPACKS=[FREE,...SHOP.flatMap(x=>x.ps)];
 const OBG={free:"#f6f3ff",gold6:"#ffe14d",plat3:"#e9eef3",holo6:"#c4b8ff",prime12:"#ff3b5c",dia1:"#62c7ff",ico1:"#ff9f45",fr6:"#62c7ff",us6:"#ff3b5c",uk6:"#c4b8ff",old6:"#34e3b0",new6:"#ffe14d",totw4:"#111111",promo5:"#34e3b0"};
@@ -230,7 +224,12 @@ function packCovers(p){
   return COVS[id]=out;
 }
 const packHTML=p=>`<div class="pack k-${p.key}"><div class="foil"></div><div class="pcovs">${packCovers(p).map(a=>`<img src="${a.cv}" alt="">`).join("")}</div><i class="crimp t"></i><i class="crimp b"></i><div class="shine"></div></div>`;
-function floorOdds(t){const i=ORDER.indexOf(t),o={};let sum=0;ORDER.forEach((r,j)=>{o[r]=j>=i?ODDS[r]:0;sum+=o[r]});ORDER.forEach(r=>o[r]/=sum);return o}
+function oddsOf(p){
+  const m=p.boost||1,o={...ODDS};o.epique*=m;o.legendaire*=m*m;
+  const rest=1-o.epique-o.legendaire,base=ODDS.commune+ODDS.rare;o.commune=ODDS.commune*rest/base;o.rare=ODDS.rare*rest/base;
+  if(p.floor){const i=ORDER.indexOf(p.floor);let sum=0;ORDER.forEach((r,j)=>{if(j<i)o[r]=0;sum+=o[r]});ORDER.forEach(r=>o[r]/=sum)}
+  return o;
+}
 function pickTier(odds){let x=Math.random(),acc=0;for(const r of ORDER){acc+=odds[r];if(x<acc)return r}return "commune"}
 // tirage par note : dans une rareté, chaque point de note en plus rend la carte ~30 % plus rare
 function byNote(p){
@@ -248,11 +247,11 @@ function drawPack(p){
   const used=new Set(),songKey=c=>c.song||c.key;
   const take1=gen=>{for(let k=0;k<40;k++){const c=gen();if(!used.has(songKey(c))){used.add(songKey(c));return c}}const c=gen();used.add(songKey(c));return c};
   const notUsed=()=>new Set([...used].map(k=>"t"+k.slice(1)));
-  const live=f?LIVE_POOL.filter(f):LIVE_POOL;
+  const L0=p.live==="totw"?TOTW_NOW:p.live==="promo"?PROMO_NOW:LIVE_POOL,live=f?L0.filter(f):L0,m=p.boost||1,odds=oddsOf(p);
   const out=Array.from({length:p.size},()=>take1(()=>{
-    if(live.length&&Math.random()<.012)return byNote(live); // TOTW et équipe du mois
-    if(!p.before&&Math.random()<.0015)return drawIcone(p.country);
-    return Math.random()<.015?drawHolo(f):drawTrack(pickTier(p.floor?floorOdds(p.floor):ODDS),f,notUsed());
+    if(live.length&&Math.random()<(p.liveP||.012*m))return byNote(live); // TOTW et équipe du mois
+    if(!p.before&&Math.random()<.0015*m)return drawIcone(p.country);
+    return Math.random()<(p.holoP||.015*m)?drawHolo(f):drawTrack(pickTier(odds),f,notUsed());
   }));
   const swap=(i,gen)=>{used.delete(songKey(out[i]));out[i]=take1(gen)};
   if(p.guarantee&&!out.some(c=>c.kind!=="track"||ORDER.indexOf(c.tier)>=ORDER.indexOf(p.guarantee)))swap(0,()=>drawTrack(p.guarantee,f,notUsed()));
@@ -310,8 +309,8 @@ function renderHub(){
     :ready?{k:"Central Beat",t:"SBC prêts",p:`${ready} défi${ready>1?"s":""} de cartes faisable${ready>1?"s":""} maintenant avec tes doublons.`,b:"Voir les SBC",go:"s-quests"}
     :{k:"Central Beat",t:"Primes d’album",p:"Finis un album pour gagner des pièces et un pack offert. Toutes les primes sont dans le Catalogue.",b:"Voir le catalogue",go:"s-club"};
   const sl=newsSlides();
-  $("hub").innerHTML=`<button class="hubmain" data-hub="${main.go}"><small>${main.k}</small><h3>${main.t}</h3><p>${main.p}</p><span class="hubgo">${main.b}</span>${packHTML(PACKS[2])}</button>
-    <div class="hubside news"><div class="ntrack" id="ntrack">${sl.join("")}</div>${sl.length>1?`<div class="ndots">${sl.map((_,i)=>`<i data-nd="${i}" class="${i?"":"on"}"></i>`).join("")}</div>`:""}</div>`;
+  $("hub").innerHTML=`<div class="hubside news"><div class="ntrack" id="ntrack">${sl.join("")}</div>${sl.length>1?`<div class="ndots">${sl.map((_,i)=>`<i data-nd="${i}" class="${i?"":"on"}"></i>`).join("")}</div>`:""}</div>
+    <button class="hubmain" data-hub="${main.go}"><small>${main.k}</small><h3>${main.t}</h3><p>${main.p}</p><span class="hubgo">${main.b}</span>${packHTML(PACKS[2])}</button>`;
   const tr=$("ntrack");tr.onscroll=()=>{const i=Math.round(tr.scrollLeft/tr.clientWidth);$("hub").querySelectorAll("[data-nd]").forEach((d,j)=>d.classList.toggle("on",j===i))};
 }
 const ownOrLock=c=>has(c.key)?cw(c,{qty:state.owned[c.key],tap:true}):`<div data-k="${c.key}">${cw(c,{lock:true})}</div>`;
@@ -338,7 +337,7 @@ function renderMenu(){
   $("mtiles").innerHTML=`<button class="mtile mt-draft" data-play="draft"><small>Jouer</small><b>Draft</b><span>${d?(d.over?"Récompense à récupérer":d.step<5?`Choix ${d.step+1} sur 5 en cours`:`Combat ${d.round+1} sur 4`):"Monte ta maison de disque, puis 4 combats"}</span><i class="mic">♫</i></button>
     <button class="mtile mt-match" data-play="match"><small>Jouer</small><b>Match</b><span>Ton meilleur label contre l’ordinateur</span><i class="mic">⚔</i></button>
     <button class="mtile mt-sbc" data-go2="s-quests"><small>Objectifs</small><b>SBC</b><span>${ready} défi${ready>1?"s":""} prêt${ready>1?"s":""}</span><i class="mic">◆</i></button>
-    <button class="mtile mt-blind" data-play="blind"><small>Jouer</small><b>Blind test</b><span>Devine le son en 15 secondes</span><i class="mic">♪</i></button>`;
+    <button class="mtile mt-blind" data-play="blind"><small>Jouer</small><b>Blind test</b><span>Devine le son en 10 secondes</span><i class="mic">♪</i></button>`;
 }
 $("mtiles").onclick=e=>{
   const p=e.target.closest("[data-play]");if(p){SFX.tap();playView=p.dataset.play;show("s-play");return}
@@ -364,7 +363,7 @@ function renderPacks(){
       ${packHTML(p)}
       <div class="info">
         <h3>${p.label}</h3><p>${p.desc||p.size+" cartes tirées dans toutes les discographies"}</p>
-        ${PACKS.includes(p)?`<div class="odds">${ORDER.slice().reverse().map(r=>`<span><i style="background:${TCOLOR[r]}"></i>${TIER[r]} ${(ODDS[r]*100).toLocaleString("fr-FR",{maximumFractionDigits:1})}%</span>`).join("")}</div>`:`<div class="odds"><span>${p.size} carte${p.size>1?"s":""}</span></div>`}
+        <div class="odds">${(o=>ORDER.slice().reverse().filter(r=>o[r]>0).map(r=>`<span><i style="background:${TCOLOR[r]}"></i>${TIER[r]} ${(o[r]*100).toLocaleString("fr-FR",{maximumFractionDigits:1})}%</span>`).join(""))(oddsOf(p))}</div>
         <button class="btn light" data-k="${p.key}" ${state.coins<p.price?"disabled":""}><i class="coin"></i>${fmt(p.price)}</button>
       </div>
     </div>`};
@@ -1036,16 +1035,16 @@ function renderPlay(){
       :`<button class="btn" id="dPlay">Combat ${d.round+1} sur 4 · ${esc(d.opps[d.round])} (${DRAFT_OPP[d.round]})</button>`}`;
 }
 // ---------- blind test : 10 extraits, 4 titres au choix, plus on répond vite plus on marque ----------
-const BT_N=10,BT_T=15,BT_COINS=300,BT_DAILY=5;
+const BT_N=10,BT_T=10,BT_COINS=300,BT_DAILY=5;
 let blind=null,btScope="all";
-const btPool=()=>TRACKS.filter(c=>c.streams>=40&&(btScope==="all"||c.country===btScope));
+const btPool=()=>TRACKS.filter(c=>c.streams>=15&&(btScope==="all"||c.country===btScope));
 function btClear(){if(!blind)return;clearTimeout(blind.to);clearInterval(blind.iv);clearTimeout(blind.nx)}
 function quitBlind(){btClear();blind=null;stopAudio()}
 function renderBlind(back){
   const d=daily();d.blind??=0;
   if(!blind){
     $("play").innerHTML=`${back}<h1>Blind test</h1><div class="draftin"><small>Mode de jeu</small><h3>Devine le son</h3>
-      <p>${BT_N} extraits des plus gros sons du jeu. Trouve le bon titre parmi 4 en moins de ${BT_T} secondes : plus tu réponds vite, plus tu marques.</p>
+      <p>${BT_N} extraits pris au milieu du son. Trouve le bon titre parmi 4 en moins de ${BT_T} secondes, sans voir l’artiste : les choix se ressemblent (même artiste, même époque). Plus tu réponds vite, plus tu marques.</p>
       <p>${BT_COINS} pièces par bonne réponse · ${Math.max(0,BT_DAILY-d.blind)} partie${BT_DAILY-d.blind>1?"s":""} récompensée${BT_DAILY-d.blind>1?"s":""} aujourd’hui${state.btBest?` · record : ${fmt(state.btBest)} pts`:""}</p>
       <div class="chips" id="btScope">${[["all","Tout"],["FR","Rap FR"],["US","Rap US"],["UK","Rap UK"]].map(([k,l])=>`<button aria-pressed="${btScope===k}" data-btsc="${k}">${l}</button>`).join("")}</div>
       ${state.sound===false?`<p class="note" style="color:#ff8fa3">Active « Extraits audio » dans les paramètres pour jouer.</p>`:""}
@@ -1063,7 +1062,7 @@ function renderBlind(back){
     <div class="btdisc${ans?" open":""}">${ans?coverHTML(q.c.alb):`<i class="coin"></i>`}</div>
     <div class="btbar"><i id="btFill" style="width:${q&&q.t0?100-el/BT_T*100:100}%"></i></div>
     ${!q||!q.t0?`<p class="note" style="text-align:center">Chargement de l’extrait…</p>`:ans?`<p class="btres ${q.ans===q.right?"ok":"ko"}">${q.ans===q.right?`Bien joué ! +${q.pts}`:q.ans<0?"Temps écoulé":"Raté"}<small>${esc(q.c.title)} · ${esc(q.c.artist)}</small></p>`:`<p class="note" style="text-align:center">Quel est ce son ?</p>`}
-    <div class="btopts">${q&&q.t0?q.opts.map((c,i)=>`<button data-bt="${i}" class="${ans?(i===q.right?"right":i===q.ans?"wrong":"off"):""}" ${ans?"disabled":""}><b>${esc(c.title)}</b><small>${esc(c.artist)}</small></button>`).join(""):""}</div>`;
+    <div class="btopts">${q&&q.t0?q.opts.map((c,i)=>`<button data-bt="${i}" class="${ans?(i===q.right?"right":i===q.ans?"wrong":"off"):""}" ${ans?"disabled":""}><b>${esc(cleanT(c.title)||c.title)}</b>${ans?`<small>${esc(c.artist)}</small>`:""}</button>`).join(""):""}</div>`;
 }
 function startBlind(){
   if(btPool().length<20)return toast("Pas assez de sons pour ce choix");
@@ -1074,15 +1073,18 @@ function nextBlind(tries=0){
   if(blind.round>=BT_N)return endBlind();
   const pool=btPool();let c;do{c=any(pool)}while(blind.used.has(c.song)&&tries<50&&++tries);
   blind.used.add(c.song);
-  const same=pool.filter(x=>x.song!==c.song&&x.title!==c.title&&x.country===c.country),opts=[c];
-  while(opts.length<4){const x=any(same.length>8?same:pool);if(!opts.some(o=>o.title===x.title||o.song===x.song))opts.push(x)}
+  // des choix proches : d'abord le même artiste, puis la même époque et le même pays
+  const near=x=>x.song!==c.song&&cleanT(x.title)!==cleanT(c.title);
+  const sameAr=pool.filter(x=>near(x)&&x.ar===c.ar),sameEra=pool.filter(x=>near(x)&&x.country===c.country&&Math.abs(yr(x)-yr(c))<=4),opts=[c];
+  for(let k=0;opts.length<4&&k<80;k++){const src=k<20&&sameAr.length?sameAr:sameEra.length>6?sameEra:pool,x=any(src);if(near(x)&&!opts.some(o=>cleanT(o.title)===cleanT(x.title)))opts.push(x)}
+  while(opts.length<4){const x=any(pool);if(near(x)&&!opts.includes(x))opts.push(x)}
   opts.sort(()=>Math.random()-.5);
   const q=blind.q={c,opts,right:opts.indexOf(c),t0:0,ans:null,pts:0},me=blind;
   renderPlay();
   previewUrl(c).then(u=>{
     if(blind!==me||blind.q!==q)return;
     if(!u)return tries<6?nextBlind(tries+1):(toast("Extraits indisponibles"),endBlind());
-    audio.dataset.want="blind";audio.src=u;audio.currentTime=0;audio.volume=.9;audio.play().catch(()=>{});
+    audio.dataset.want="blind";audio.src=u;audio.volume=.9;const go=()=>{try{audio.currentTime=6+Math.random()*12}catch(e){}audio.play().catch(()=>{})};if(audio.readyState>=1)go();else audio.addEventListener("loadedmetadata",go,{once:true});
     q.t0=performance.now();renderPlay();SFX.tick();
     blind.iv=setInterval(()=>{const f=$("btFill");if(f)f.style.width=Math.max(0,100-(performance.now()-q.t0)/1000/BT_T*100)+"%"},100);
     blind.to=setTimeout(()=>answerBlind(-1),BT_T*1000);
@@ -1158,7 +1160,7 @@ function renderQuests(){
   if(qTab==="sbc"){
     $("quests").innerHTML=`<div class="qstats two"><div><b>${done}</b><small>SBC réussis</small></div><div><b>${readyN}</b><small>faisables maintenant</small></div></div>
       <p class="note" style="margin-top:12px">Donne des cartes pour gagner un pack. Les SBC simples se refont autant qu’on veut ; les défis de groupe, une seule fois. « Remplir auto » prend tes doublons en premier.</p>
-      <h3 class="qcat">Défis de groupe</h3><div class="stiles">${GROUPS.map(g=>{const st=grp(g),rw=REWARD[g.rw];return `<button class="stile gtile${st.fin?" fin":""}" data-grp="${g.id}">
+      <h3 class="qcat">Défis de groupe</h3><div class="stiles">${GROUPS.map(g=>{const st=grp(g),rw=REWARD[g.rw];return `<button class="stile gtile${st.fin?" fin":""}" data-grp="${g.id}" style="--c1:${g.c1};--c2:${g.c2}">
         <div class="sth">${sfan(g.parts[0])}<div><span>${rw.label}</span><small>${rw.desc||""}</small></div></div>
         <div class="stb"><b>${esc(g.t)}</b><small>${esc(g.d)}</small><span class="srq"><i style="width:${st.done.length/g.parts.length*100}%"></i></span>
         <div class="stf"><em>${st.fin?"Terminé ✓":`${st.done.length}/${g.parts.length} équipes`}</em></div></div></button>`}).join("")}</div>

@@ -446,7 +446,7 @@ function tunnel(){
     },1150);
   }
   // walkout : le tunnel garde la même couleur et la même énergie pendant pays, artiste, album ; il ne change qu'à l'arrivée de la carte
-  later(()=>{if(run.wos.length){run.phase="wo";run.step=0;scene.querySelector(".tdisc")?.classList.add("dim");step()}else{open.classList.remove("board","bars");run.cur=run.best;reveal()}},2100);
+  later(()=>{if(run.wos.length){run.phase="wo";run.step=0;scene.querySelector(".tdisc")?.remove();step()}else{open.classList.remove("board","bars");run.cur=run.best;reveal()}},2100);
 }
 // walkout : le pays, l'artiste, l'album, puis la carte
 function step(){
@@ -461,7 +461,7 @@ function step(){
     `<div class="wstep"><small>Album · ${a.y}</small><strong style="font-size:min(12vw,64px)">${esc(a.t)}</strong></div>`
   ];
   if(run.step>=steps.length){reveal();return}
-  scene.querySelector(".wstep")?.remove();scene.insertAdjacentHTML("beforeend",steps[run.step++]);SFX.slam(); // le disque reste derrière, rien ne coupe
+  scene.querySelector(".wstep")?.remove();scene.insertAdjacentHTML("beforeend",steps[run.step++]);SFX.slam();
   hint("");haptic(10);
   later(step,1600);
 }

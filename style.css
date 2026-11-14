@@ -837,8 +837,4 @@ input[type=search],input[type=text]{border-radius:0;clip-path:var(--cut);backgro
 /* récap : la grille prend toute la largeur (iPad, ordi), plus de bords coupés */
 .open.recapmode .scene{max-width:none}
 .open.recapmode .recap{overflow:visible}
-
-/* walkout : le disque reste allumé derrière les étapes, en retrait */
-.tdisc{transition:opacity .5s}
-.tdisc.dim{opacity:.35!important}
 .wstep{position:relative;z-index:2}

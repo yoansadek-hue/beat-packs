@@ -14,7 +14,13 @@ Ouvre `index.html` dans ton navigateur (ou utilise l'extension Live Server dans 
   - **Stats** façon FIFA : FLO (flow), TXT (textes), PRD (prod), VOX (voix), HYP (hype), STR (streams). Elles sont calculées à partir de la note, des streams et de l'année de sortie, et ne s'affichent que dans la fiche de la carte, le Draft et les Matchs.
   - Raretés, au code couleur des disques : **Vinyle** (noir), **Or**, **Platine**, **Diamant**. Spéciales : **Icône** (la carte d'un artiste, de 85 à 99) et **Holo** (version brillante, +1, des 5 titres les plus streamés de chaque album, en plus de leur carte normale).
 - **Barre du bas** : Boutique, Marché, Menu, Défis, Classeur.
-- **Menu** (écran d'accueil) : panneau « à la une », carte du jour, et les tuiles Draft, Match, SBC et Paramètres.
+- **Menu** (écran d'accueil) : panneau « à la une », **Actualité** (à faire glisser de gauche à droite) et les tuiles Draft, Match, SBC et Paramètres.
+- **Actualité** :
+  - **TOTW** (titres de la semaine) : les 10 titres du jeu les plus écoutés de la semaine sur Spotify (classements France, États-Unis, Royaume-Uni). Leur carte TOTW (noire et or) a +2 sur la note et peut tomber dans les packs toute la semaine.
+  - **Sorties** : les albums et EP sortis ces 4 dernières semaines par les artistes du jeu, ajoutés automatiquement au catalogue.
+  - **Anniversaires** : les albums qui fêtent leur sortie cette semaine. Leur carte anniversaire (+2 sur la carte album) peut tomber dans les packs.
+- **Carte album** : compléter un album d'au moins 4 titres donne sa carte album (note selon ses meilleurs titres), en plus de la prime.
+- **Mise à jour chaque vendredi** (GitHub Actions, `tools/weekly.js`) : streams Spotify de tous les titres, nouvelles sorties, dates de sortie, TOTW. Le fichier `live.js` garde la TOTW et l'historique des semaines.
 - **Draft** (15 000 pièces) : on fonde sa **maison de disque** et on signe un artiste par poste (Tête d'affiche HYP, Plume TXT, Flow FLO, Beatmaker PRD, Refrain VOX), en choisissant 1 carte parmi 5. Les postes voisins sont reliés : même artiste ou même pays donne de l'**alchimie**, qui augmente les stats. Puis 4 combats contre des labels de plus en plus forts (76, 82, 87, 92) : 5 duels poste contre poste. On peut abandonner à tout moment (on garde la récompense des victoires déjà gagnées). Récompenses : de 1 000 pièces (0 victoire) à 12 000 pièces + Pack 12 + Pack Spécial (4 victoires), affichées sur un écran de récompenses.
 - **Match** : ton meilleur label composé automatiquement contre l'ordinateur, 4 niveaux (de +1 500 à +12 000 pièces), 10 victoires récompensées par jour. Un combat peut être abandonné (il compte comme une défaite).
 - **Animations** : aucune ne peut être passée (ouverture de pack, walkouts, combats).
@@ -29,7 +35,9 @@ Ouvre `index.html` dans ton navigateur (ou utilise l'extension Live Server dans 
 - **Paramètres** : pseudo, vibrations, bruitages, extraits audio, recommencer.
 
 ## Fichiers
-- `data.js` : le catalogue généré (artistes, albums, titres, streams, pochettes).
+- `data.js` : le catalogue généré (artistes, albums, titres, streams, pochettes, dates de sortie).
+- `live.js` : TOTW, sorties récentes, date de la dernière mise à jour (régénéré chaque semaine).
+- `tools/weekly.js` et `.github/workflows/weekly.yml` : la mise à jour hebdomadaire.
 - `index.html`, `style.css`, `script.js` : la page, le style et le jeu.
 
 ## À savoir

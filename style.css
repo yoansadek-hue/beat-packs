@@ -981,3 +981,38 @@ body::after{content:"";position:fixed;inset:-50px;z-index:-1;pointer-events:none
 .open,.open.recapmode{background:#120a2e}
 .btn.danger{background:var(--coral)}
 .btn:not(.light):not(.ghost){color:var(--ink)}
+
+/* ---------- patch 26 : actualité, cartes TOTW, Album, Anniversaire ---------- */
+.open[data-fl=totw]{--fl:#ffd23f} .open[data-fl=anniv]{--fl:#ff9f45} .open[data-fl=album]{--fl:#ff3b5c}
+.k-totw{background:linear-gradient(160deg,#2a2a2a,#050505 55%,#2b2200);color:#ffd23f;--b:#ffd23f}
+.k-totw .cart{box-shadow:inset 0 0 0 1.1cqw #ffd23f,0 0 6cqw rgba(255,210,63,.45)}
+.k-totw .kind{background:#ffd23f;color:#111}
+.k-anniv{background:linear-gradient(150deg,#ffe2c2,#ff9f45 45%,#b93b0a);color:#2a0f00;--b:#fff}
+.k-anniv .cart{box-shadow:inset 0 0 0 1.1cqw #fff3e0,0 0 6cqw rgba(255,159,69,.55)}
+.k-anniv .kind{background:#2a0f00;color:#ffd6a8}
+.k-album{background:linear-gradient(160deg,#ff3b5c,#8a0b2a 70%);color:#fff;--b:#ffe14d}
+.k-album .cart{box-shadow:inset 0 0 0 1.1cqw #ffe14d,0 0 6cqw rgba(255,225,77,.4)}
+.k-album .kind{background:#ffe14d;color:#1e0f45}
+.k-totw .glare,.k-anniv .glare,.k-album .glare{background:linear-gradient(115deg,transparent 30%,rgba(255,255,255,.28) 45%,transparent 60%)}
+.card .plus{position:absolute;left:7.5cqw;top:33cqw;z-index:3;padding:1cqw 2.6cqw;background:#ffe14d;color:#1e0f45;font:900 6cqw/1 var(--cond);clip-path:polygon(1.5cqw 0,100% 0,calc(100% - 1.5cqw) 100%,0 100%)}
+.hubside.news{padding:0;cursor:default;align-items:stretch}
+.ntrack{display:flex;width:100%;height:100%;overflow-x:auto;scroll-snap-type:x mandatory;scrollbar-width:none;overscroll-behavior-x:contain}
+.ntrack::-webkit-scrollbar{display:none}
+.nslide{flex:0 0 100%;scroll-snap-align:start;display:flex;flex-direction:column;gap:4px;padding:14px 14px 22px;cursor:pointer;min-width:0}
+.nslide small{font:700 11px var(--cond);text-transform:uppercase;letter-spacing:.14em;color:#c4b8ff}
+.nslide h3{margin:0;font:800 19px/1 var(--cond);text-transform:uppercase;color:var(--sun)}
+.nslide p{margin:0;font-size:12px;font-weight:600;color:#efeaff;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.nvis{margin-top:auto;width:100%}
+.nvis .cw{width:100%}
+.ncov{position:relative}
+.ncov .cov{width:100%;aspect-ratio:1;border-radius:6px;font-size:30px;box-shadow:0 6px 0 rgba(30,15,69,.9)}
+.ntag{position:absolute;left:6px;top:6px;padding:2px 8px;background:#e6002d;color:#fff;font:800 11px var(--cond);text-transform:uppercase;letter-spacing:.06em}
+.ndots{position:absolute;left:0;right:0;bottom:8px;display:flex;justify-content:center;gap:6px;pointer-events:none}
+.ndots i{width:7px;height:7px;border-radius:50%;background:rgba(255,255,255,.3);pointer-events:auto;cursor:pointer}
+.ndots i.on{background:var(--sun)}
+.ngrid{width:100%}
+.ncap{display:flex;flex-direction:column;gap:4px}
+.ncap small{font-size:11px;color:var(--dim);text-align:center}
+.nlist{width:100%;display:flex;flex-direction:column;gap:8px}
+.albwin{width:min(46vw,190px)}
+.albwin .cw{width:100%}

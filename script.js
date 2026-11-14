@@ -30,7 +30,7 @@ const HOLOS=[];
 ALBUMS.forEach(al=>{
   const a=ART[al.ar];ALB[al.id]=al;a.albums.push(al);al.total=0;
   al.tr.forEach(([title,m],i)=>{
-    const ovr=ovrOf(a.c,m),c={key:`t:${al.id}:${i}`,kind:"track",alb:al.id,ar:a.id,title,artist:a.n,country:a.c,streams:m,vs:m,ovr,tier:tierOf(ovr)};
+    const ovr=ovrOf(a.c,m),c={key:`t:${al.id}:${i}`,song:`s:${al.id}:${i}`,idx:i,kind:"track",alb:al.id,ar:a.id,title,artist:a.n,country:a.c,streams:m,vs:m,ovr,tier:tierOf(ovr)};
     TRACKS.push(c);CARD[c.key]=c;POOL[c.tier].push(c);a.tracks.push(c);al.total+=m;
   });
 });
@@ -49,17 +49,46 @@ ARTISTS.forEach(a=>{
   const c={key:`a:${a.id}`,kind:"icone",alb:a.cover,ar:a.id,title:a.n,artist:a.n,country:a.c,streams:Math.round(a.tracks.reduce((s,t)=>s+t.streams,0)),vs:best.streams,ovr:Math.round(85+14*(Math.log10(a.tracks.reduce((s,t)=>s+t.streams,0))-TLO)/(THI-TLO)),tier:"legendaire"};
   ICONES.push(c);CARD[c.key]=c;a.icone=c.key;
 });
+// ---------- cartes spéciales : Album (album complété), TOTW (sons de la semaine, +2), Anniversaire d'album (+2) ----------
+const LV=typeof LIVE!=="undefined"?LIVE:{updated:"",totw:[],news:[]};
+const albOvr=al=>{const top=al.tr.map((_,i)=>CARD[`t:${al.id}:${i}`].ovr).sort((x,y)=>y-x).slice(0,5);return Math.min(99,Math.round(top.reduce((t,o)=>t+o,0)/top.length)+1)};
+ALBUMS.forEach(al=>{if(al.tr.length<4)return;const a=ART[al.ar];const c={key:`al:${al.id}`,kind:"album",alb:al.id,ar:a.id,title:al.t,artist:a.n,country:a.c,streams:Math.round(al.total*10)/10,vs:0,ovr:albOvr(al),tier:"legendaire"};CARD[c.key]=c;al.card=c.key});
+function totwCard(w,alb,i){
+  const k=`w:${w}:${alb}:${i}`;if(CARD[k])return CARD[k];
+  const b=CARD[`t:${alb}:${i}`];if(!b)return null;
+  const c={...b,key:k,kind:"totw",week:w,ovr:Math.min(99,b.ovr+2)};delete c._st;return CARD[k]=c;
+}
+function annivCard(y,alb){
+  const k=`y:${y}:${alb}`;if(CARD[k])return CARD[k];
+  const al=ALB[alb];if(!al||!al.card)return null;
+  const b=CARD[al.card],c={...b,key:k,song:k,kind:"anniv",years:y-al.y,ovr:Math.min(99,b.ovr+2)};delete c._st;return CARD[k]=c;
+}
+const weekNo=w=>+String(w).split("-W")[1];
+const TOTW_NOW=(LV.totw[0]?.tr||[]).map(([a,i])=>totwCard(LV.totw[0].w,a,i)).filter(Boolean);
+// anniversaires : les albums sortis à 3 jours près de la date du jour, les années précédentes
+const ANNIV_NOW=(()=>{
+  const now=new Date(),Y=now.getFullYear(),out=[];
+  for(const al of ALBUMS){
+    if(!al.d||!al.card)continue;const [y,m,d]=al.d.split("-").map(Number);if(!m||!d||Y-y<1)continue;
+    if(Math.abs(new Date(Y,m-1,d)-new Date(Y,now.getMonth(),now.getDate()))<=3*864e5)out.push(al);
+  }
+  return out.sort((x,y)=>y.total-x.total).slice(0,8).map(al=>annivCard(Y,al.id));
+})();
+const NEWS=(LV.news||[]).map(id=>ALB[id]).filter(Boolean);
+const LIVE_POOL=[...TOTW_NOW,...ANNIV_NOW];
 const holo = t => CARD["h"+t.key.slice(1)]; // undefined si le titre n'a pas de version Holo
 const drawHolo = f => any(f?HOLOS.filter(f):HOLOS);
 // la valeur vient des disques : 100 pièces + 800 par disque de platine (×2,5 en Holo, ×4 en Icône)
 // valeur au marché, comme les prix moyens de FIFA selon la note : ~400 à 75, ~1 000 à 81, ~9 000 à 86, ~55 000 à 90, plus d'un million à 99
 const FIFA={75:400,76:450,77:500,78:600,79:700,80:850,81:1000,82:1300,83:1800,84:3000,85:5000,86:9000,87:15000,88:24000,89:35000,90:55000,91:75000,92:100000,93:140000,94:200000,95:300000,96:450000,97:650000,98:900000,99:1300000};
 const baseValue = o => o>=75?FIFA[Math.min(99,o)]:o>=70?300+(o-70)*20:o>=65?200:o>=60?150:100;
-const value = c => Math.round(baseValue(c.ovr)*(c.kind==="holo"?1.5:c.kind==="icone"?2:1)/10)*10;
+const KMUL={holo:1.5,icone:2,totw:1.6,anniv:1.8,album:2.5};
+const value = c => Math.round(baseValue(c.ovr)*(KMUL[c.kind]||1)/10)*10;
 const quick = c => Math.max(10,Math.round(value(c)*.25/10)*10); // la vente rapide rapporte peu, comme sur FIFA
-const weight = c => c.ovr+(c.kind==="icone"?.2:c.kind==="holo"?.1:0); // on range par note, la couleur ne sert qu'à départager une égalité
-const walkout = c => c.kind==="icone"||(c.kind==="holo"?c.ovr>=83:c.ovr>=86); // walkout : 86+ (Holo 83+), et toujours pour une Icône
-const labelOf = c => c.kind==="icone"?"Icône":c.kind==="holo"?"Holo":TIER[c.tier];
+const KW={icone:.2,anniv:.18,totw:.15,album:.12,holo:.1};
+const weight = c => c.ovr+(KW[c.kind]||0); // on range par note, la couleur ne sert qu'à départager une égalité
+const walkout = c => c.kind==="icone"||c.kind==="anniv"||c.kind==="album"||(c.kind==="totw"?c.ovr>=84:c.kind==="holo"?c.ovr>=83:c.ovr>=86); // walkout : 86+ (Holo 83+), et toujours pour une Icône
+const labelOf = c => c.kind==="icone"?"Icône":c.kind==="holo"?"Holo":c.kind==="totw"?"TOTW":c.kind==="anniv"?`${c.years} ans`:c.kind==="album"?"Album":TIER[c.tier];
 
 const ODDS={commune:.62,rare:.27,epique:.09,legendaire:.02};
 const PACKS=[
@@ -140,7 +169,7 @@ function statsOf(c){
   if(c._st)return c._st;
   let h=0;for(const ch of c.key)h=(h*31+ch.charCodeAt(0))>>>0;
   const rnd=()=>{h=(h*1103515245+12345)>>>0;return h/4294967296},cl=v=>Math.max(40,Math.min(99,Math.round(v)));
-  const age=2026-ALB[c.alb].y,bump=c.kind==="icone"?3:c.kind==="holo"?1:0;
+  const age=2026-ALB[c.alb].y,bump=({icone:3,holo:1,totw:2,anniv:2,album:3})[c.kind]||0;
   const st=[0,1,2,3].map(()=>cl(c.ovr-9+rnd()*14+bump));
   st.push(cl(c.ovr-5+(age<=2?7:age<=6?2:-5)+rnd()*6+bump));
   st.push(cl(54+10*Math.log10(Math.max(.05,c.kind==="icone"?c.vs:c.streams))+bump));
@@ -149,7 +178,7 @@ function statsOf(c){
 function cardHTML(c,fresh,qty){
   return `<div class="card ${c.kind==="track"?"t-"+c.tier:"k-"+c.kind}">
     <div class="cart">${coverHTML(c.alb,"art")}${c.kind!=="track"?`<span class="kind">${labelOf(c).toUpperCase()}</span>`:""}</div>
-    <span class="ovr">${c.ovr}</span><span class="cc">${c.country}</span>
+    <span class="ovr">${c.ovr}</span><span class="cc">${c.country}</span>${c.kind==="totw"||c.kind==="anniv"?`<span class="plus">+2</span>`:""}
     ${fresh?`<span class="new">NEW</span>`:qty>1?`<span class="new dup">×${qty}</span>`:""}
     <div class="nm">${esc(c.kind==="icone"?"Icône":c.title)}</div>
     <div class="ar">${esc(c.artist)}</div>
@@ -186,10 +215,12 @@ const drawIcone = country => any(ICONES.filter(c=>!country||c.country===country)
 function drawPack(p){
   const f=p.country||p.before||p.after?c=>(!p.country||c.country===p.country)&&(!p.before||ALB[c.alb].y<p.before)&&(!p.after||ALB[c.alb].y>=p.after):null;
   // jamais deux fois la même carte (ni un titre et sa Holo) dans un même pack
-  const used=new Set(),songKey=c=>c.kind==="icone"?c.key:"s"+c.key.slice(1);
+  const used=new Set(),songKey=c=>c.song||c.key;
   const take1=gen=>{for(let k=0;k<40;k++){const c=gen();if(!used.has(songKey(c))){used.add(songKey(c));return c}}const c=gen();used.add(songKey(c));return c};
   const notUsed=()=>new Set([...used].map(k=>"t"+k.slice(1)));
+  const live=f?LIVE_POOL.filter(f):LIVE_POOL;
   const out=Array.from({length:p.size},()=>take1(()=>{
+    if(live.length&&Math.random()<.025)return any(live); // TOTW et anniversaires de la semaine
     if(!p.before&&Math.random()<.004)return drawIcone(p.country);
     return Math.random()<.03?drawHolo(f):drawTrack(pickTier(ODDS),f,notUsed());
   }));
@@ -207,7 +238,7 @@ function checkAlbums(){
   for(const al of ALBUMS){
     if(state.rewarded.includes(al.id)||al.tr.length<4)continue;
     if(!al.tr.every((_,i)=>has(`t:${al.id}:${i}`)||has(`h:${al.id}:${i}`)))continue;
-    const pr=albumPrize(al);state.rewarded.push(al.id);state.coins+=pr.coins;state.inbox.push(pr.pack);done.push({al,pr});
+    const pr=albumPrize(al);state.rewarded.push(al.id);(state.albGiven??=[]).push(al.id);if(al.card)give(al.card);state.coins+=pr.coins;state.inbox.push(pr.pack);done.push({al,pr});
   }
   if(done.length){save();wallet()}
   return done;
@@ -217,7 +248,7 @@ function announceAlbums(){
   const done=checkAlbums();if(!done.length)return;
   SFX.done();haptic([20,40,20,40,60]);
   const coins=done.reduce((t,d)=>t+d.pr.coins,0);
-  sheet(`<h2>${done.length>1?done.length+" albums complétés !":"Album complété !"}</h2>
+  sheet(`<h2>${done.length>1?done.length+" albums complétés !":"Album complété !"}</h2>${done[0].al.card?`<div class="albwin">${cw(CARD[done[0].al.card],{fresh:true})}</div><p class="note" style="margin:0;text-align:center">Carte album débloquée${done.length>1?` (+${done.length-1} autre${done.length>2?"s":""})`:""}</p>`:""}
     <div class="prizes">${done.slice(0,6).map(d=>`<div class="prize">${coverHTML(d.al.id)}<div><b>${esc(d.al.t)}</b><small>${esc(ART[d.al.ar].n)} · ${d.al.tr.length} titres</small><small><i class="coin"></i>+${fmt(d.pr.coins)} · ${PACKS.find(p=>p.key===d.pr.pack).label} offert</small></div></div>`).join("")}</div>
     <p class="note" style="text-align:center">+${fmt(coins)} pièces et ${done.length} pack${done.length>1?"s":""} offert${done.length>1?"s":""}, rangé${done.length>1?"s":""} dans Boutique › Mes packs.</p>
     <button class="btn" id="openGift">Continuer</button>`);
@@ -231,13 +262,43 @@ function cardOfDay(){
   const pool=[...POOL.legendaire,...ICONES];let h=0;for(const ch of today())h=(h*31+ch.charCodeAt(0))>>>0;
   return pool[h%pool.length];
 }
+const fmtDate=d=>new Date(d+"T12:00:00").toLocaleDateString("fr-FR",{day:"numeric",month:"short",year:"numeric"});
+function newsSlides(){
+  const sl=[];
+  if(TOTW_NOW.length){const c=[...TOTW_NOW].sort((x,y)=>y.ovr-x.ovr)[0];sl.push(`<div class="nslide" data-news="totw"><small>Actualité</small><h3>TOTW · Semaine ${weekNo(LV.totw[0].w)}</h3><p>Les ${TOTW_NOW.length} sons qui cartonnent · +2</p><div class="nvis">${cw(c)}</div></div>`)}
+  if(NEWS.length){const al=NEWS[0];sl.push(`<div class="nslide" data-news="sorties"><small>Actualité</small><h3>Sorties</h3><p>${esc(ART[al.ar].n)} · ${esc(al.t)}</p><div class="nvis ncov">${coverHTML(al.id)}<span class="ntag">Nouveau</span></div></div>`)}
+  if(ANNIV_NOW.length){const c=ANNIV_NOW[0];sl.push(`<div class="nslide" data-news="anniv"><small>Actualité</small><h3>Anniversaire</h3><p>${c.years} ans de ${esc(c.title)}</p><div class="nvis">${cw(c)}</div></div>`)}
+  if(!sl.length){const c=cardOfDay();sl.push(`<div class="nslide" data-k="${c.key}"><small>Actualité</small><h3>Carte du jour</h3><p>${esc(c.artist)}</p><div class="nvis">${cw(c,{lock:!has(c.key)})}</div></div>`)}
+  return sl;
+}
 function renderHub(){
-  const ready=SBC.filter(canDo).length,c=cardOfDay(),gifts=state.inbox.length;
+  const ready=SBC.filter(canDo).length,gifts=state.inbox.length;
   const main=gifts?{k:"À la une",t:"Mes packs",p:`${gifts} pack${gifts>1?"s":""} t’attend${gifts>1?"ent":""} : récompenses de SBC, de draft et d’albums.`,b:"Voir mes packs",go:"gift"}
     :ready?{k:"Central Beat",t:"SBC prêts",p:`${ready} défi${ready>1?"s":""} de cartes faisable${ready>1?"s":""} maintenant avec tes doublons.`,b:"Voir les SBC",go:"s-quests"}
     :{k:"Central Beat",t:"Primes d’album",p:"Finis un album pour gagner des pièces et un pack offert. Toutes les primes sont dans le Catalogue.",b:"Voir le catalogue",go:"s-club"};
+  const sl=newsSlides();
   $("hub").innerHTML=`<button class="hubmain" data-hub="${main.go}"><small>${main.k}</small><h3>${main.t}</h3><p>${main.p}</p><span class="hubgo">${main.b}</span>${packHTML(PACKS[2])}</button>
-    <button class="hubside" data-k="${c.key}"><h3>Carte du jour</h3><p>${esc(c.artist)}</p>${cw(c,{lock:!has(c.key)})}</button>`;
+    <div class="hubside news"><div class="ntrack" id="ntrack">${sl.join("")}</div>${sl.length>1?`<div class="ndots">${sl.map((_,i)=>`<i data-nd="${i}" class="${i?"":"on"}"></i>`).join("")}</div>`:""}</div>`;
+  const tr=$("ntrack");tr.onscroll=()=>{const i=Math.round(tr.scrollLeft/tr.clientWidth);$("hub").querySelectorAll("[data-nd]").forEach((d,j)=>d.classList.toggle("on",j===i))};
+}
+function totwSheet(){
+  const own=c=>has(c.key)?cw(c,{qty:state.owned[c.key],tap:true}):`<div data-k="${c.key}">${cw(c,{lock:true})}</div>`;
+  const prev=LV.totw.slice(1,4).map(x=>({w:x.w,cs:x.tr.map(([a,i])=>totwCard(x.w,a,i)).filter(Boolean)}));
+  sheet(`<div class="pickhead"><small>Actualité</small><h2>TOTW · Semaine ${weekNo(LV.totw[0].w)}</h2><p>Les ${TOTW_NOW.length} titres du jeu les plus écoutés cette semaine sur Spotify (France, États-Unis, Royaume-Uni). Leur carte TOTW a <b>+2</b> sur la note et tombe dans les packs toute la semaine.</p></div>
+    <div class="grid ngrid">${[...TOTW_NOW].sort((x,y)=>y.ovr-x.ovr).map(own).join("")}</div>
+    ${prev.map(p=>`<h2 style="font-size:16px;margin:10px 0 0;align-self:flex-start">Semaine ${weekNo(p.w)}</h2><div class="grid ngrid">${p.cs.map(own).join("")}</div>`).join("")}
+    <p class="note" style="margin:0">Streams mis à jour le ${LV.updated?fmtDate(LV.updated):"—"}.</p>`);
+  $("sheetIn").onclick=e=>{const c=e.target.closest("[data-k]");if(c)cardSheet(c.dataset.k)};
+}
+function sortiesSheet(){
+  sheet(`<div class="pickhead"><small>Actualité</small><h2>Sorties</h2><p>Les albums et EP sortis ces 4 dernières semaines par les artistes du jeu. Leurs titres sont déjà dans les packs.</p></div>
+    <div class="nlist">${NEWS.map(al=>`<button class="arow" data-nalb="${al.id}">${coverHTML(al.id)}<div class="at"><b>${esc(al.t)}</b><small>${esc(ART[al.ar].n)} · sorti le ${fmtDate(al.d)} · ${al.tr.length} titres</small></div></button>`).join("")}</div>`);
+  $("sheetIn").onclick=e=>{const b=e.target.closest("[data-nalb]");if(!b)return;const al=ALB[b.dataset.nalb];closeSheet();club.view="album";club.ar=al.ar;club.alb=al.id;TABS.forEach(t=>t.classList.toggle("on",t.dataset.go==="s-club"));pillTo(TABS.find(t=>t.dataset.go==="s-club"));show("s-club")};
+}
+function annivSheet(){
+  sheet(`<div class="pickhead"><small>Actualité</small><h2>Anniversaires</h2><p>Les albums qui fêtent leur sortie cette semaine. Leur carte anniversaire (+2 sur la carte album) tombe dans les packs jusqu’à la fin de la semaine.</p></div>
+    <div class="grid ngrid">${ANNIV_NOW.map(c=>`<div class="ncap">${has(c.key)?cw(c,{qty:state.owned[c.key],tap:true}):`<div data-k="${c.key}">${cw(c,{lock:true})}</div>`}<small>${esc(c.title)} · ${fmtDate(ALB[c.alb].d)}</small></div>`).join("")}</div>`);
+  $("sheetIn").onclick=e=>{const c=e.target.closest("[data-k]");if(c)cardSheet(c.dataset.k)};
 }
 function renderMenu(){
   renderHub();
@@ -254,6 +315,8 @@ $("mtiles").onclick=e=>{
 $("hub").onclick=e=>{
   const m=e.target.closest("[data-hub]");
   if(m){SFX.tap();let g=m.dataset.hub;if(g==="gift"){shopTab="mine";g="s-shop"}if(g==="s-club")club.view="artists";TABS.forEach(b=>b.classList.toggle("on",b.dataset.go===g));pillTo(TABS.find(b=>b.dataset.go===g));show(g);return}
+  const nd=e.target.closest("[data-nd]");if(nd){const tr=$("ntrack");tr.scrollTo({left:tr.clientWidth*+nd.dataset.nd,behavior:"smooth"});return}
+  const n=e.target.closest("[data-news]");if(n){SFX.tap();return ({totw:totwSheet,sorties:sortiesSheet,anniv:annivSheet})[n.dataset.news]()}
   const c=e.target.closest("[data-k]");if(c)cardSheet(c.dataset.k);
 };
 let shopTab="buy";
@@ -655,6 +718,7 @@ function renderClub(){
       html=`<button class="back" data-back="artist">‹ ${esc(a.n)}</button>
         <div class="ahero alb">${coverHTML(al.id)}<div><h1 style="font-size:26px">${esc(al.t)}</h1><small>${esc(a.n)} · ${al.y} · ${albumOwned(al)}/${al.tr.length} titres</small></div></div>
         ${pr?`<div class="aprize${got?" got":""}"><i class="coin"></i>${got?"Prime de l’album reçue ✓":`Finis l’album : +${fmt(pr.coins)} pièces et un ${PACKS.find(p=>p.key===pr.pack).label} offert`}</div>`:""}
+        ${al.card?`<h2 style="font-size:16px;margin:14px 0 8px">Carte album</h2><div class="grid">${has(al.card)?cw(CARD[al.card],{qty:state.owned[al.card],tap:true}):lock(CARD[al.card])}</div>`:""}
         ${sortBar}<h2 style="font-size:16px;margin:14px 0 8px">Titres</h2><div class="grid">${mine.join("")}${missHTML.join("")}</div>
         ${holos?`<h2 style="font-size:16px;margin:18px 0 8px">Holo de l’album</h2><div class="grid">${holos}</div>`:""}`;
     }
@@ -1137,6 +1201,8 @@ bar.addEventListener("click",e=>{const t=e.target.closest(".tab");if(t&&e.detail
 addEventListener("resize",()=>pillTo(bar.querySelector(".tab.on")));
 
 // ---------- démarrage ----------
+Object.keys(state.owned).forEach(k=>{if(CARD[k])return;const p=k.split(":");if(p[0]==="w")totwCard(p[1],p[2],+p[3]);else if(p[0]==="y")annivCard(+p[1],p[2]);if(!CARD[k])delete state.owned[k]});
+state.albGiven??=[];state.rewarded.forEach(id=>{if(state.albGiven.includes(id))return;state.albGiven.push(id);const al=ALB[id];if(al&&al.card)give(al.card)});
 wallet();renderPacks();renderMenu();badge();save();tickListings();
 setInterval(tickListings,3000);
 setInterval(()=>{if(!$("s-market").hidden)mktTimer()},1000);

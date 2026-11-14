@@ -119,6 +119,7 @@ const SPECIAL={
 const REWARD={...SPECIAL,p3:PACKS[0],p6:PACKS[1],p12:PACKS[2]};
 // la boutique : pack gratuit du jour, classiques, premium, thématiques, événements
 const FREE={key:"free",label:"Pack gratuit",size:3,price:0,desc:"3 cartes, une fois par jour"};
+const INF={key:"inf",label:"Pack infini",size:1,price:0,boost:.45,liveP:.002,holoP:.004,desc:"1 carte, gratuit et illimité"};
 // boost : plus le pack coûte cher, plus les Platine, Diamant, Holo, Icônes et cartes spéciales sont fréquents (rien n'est garanti)
 PACKS[0].boost=1;PACKS[1].boost=1.15;PACKS[2].boost=1.3;
 const SHOP=[
@@ -132,7 +133,7 @@ const SHOP=[
     ...(TOTW_NOW.length?[{key:"totw4",label:"Pack TOTW",size:4,price:150000,live:"totw",liveP:.07,boost:2,desc:`4 cartes, chances de TOTW ×6 (semaine ${weekNo(LV.totw[0].w)})`}]:[]),
     ...(PROMO_NOW.length?[{key:"promo5",label:"Pack "+PROMO.name,size:5,price:200000,live:"promo",liveP:.07,boost:2.2,desc:`5 cartes, chances de ${PROMO.name} ×6, jusqu’au ${PROMO.until.slice(8,10)}/${PROMO.until.slice(5,7)}`}]:[])]}
 ].filter(x=>x.ps.length);
-const SHOPPACKS=[FREE,...SHOP.flatMap(x=>x.ps)];
+const SHOPPACKS=[FREE,INF,...SHOP.flatMap(x=>x.ps)];
 const OBG={free:"#f6f3ff",gold6:"#ffe14d",plat3:"#e9eef3",holo6:"#c4b8ff",prime12:"#ff3b5c",dia1:"#62c7ff",ico1:"#ff9f45",fr6:"#62c7ff",us6:"#ff3b5c",uk6:"#c4b8ff",old6:"#34e3b0",new6:"#ffe14d",totw4:"#111111",promo5:"#34e3b0"};
 const rewardOf=k=>SHOPPACKS.find(p=>p.key===k)||REWARD[k];
 // ouvre une récompense : un pack, ou un choix de cartes
@@ -368,10 +369,11 @@ function renderPacks(){
       </div>
     </div>`};
     $("packs").innerHTML=`<div class="freepk${freeOk?"":" used"}">${packHTML(FREE)}<div><b>Pack gratuit du jour</b><small>${freeOk?"3 cartes offertes, reviens demain pour le suivant.":"Déjà ouvert aujourd’hui : reviens demain."}</small></div><button class="btn" data-k="free" ${freeOk?"":"disabled"}>${freeOk?"Ouvrir":"Demain"}</button></div>
+      <div class="freepk inf">${packHTML(INF)}<div><b>Pack infini</b><small>1 carte, gratuit, autant de fois que tu veux. Petites chances : ${(o=>`Platine ${(o.epique*100).toLocaleString("fr-FR",{maximumFractionDigits:1})} %, Diamant ${(o.legendaire*100).toLocaleString("fr-FR",{maximumFractionDigits:2})} %`)(oddsOf(INF))}.</small></div><button class="btn" data-k="inf">Ouvrir</button></div>
       ${SHOP.map(sec=>`<h2 class="shoph">${sec.t}</h2><p class="note" style="margin:-4px 0 10px">${sec.d}</p><div class="packs">${sec.ps.map(offer).join("")}</div>`).join("")}
       <p class="note">Les packs spéciaux se gagnent aussi dans les SBC et le Draft ; ils t’attendent dans « Mes packs ».</p>`;
   }
-  document.querySelectorAll(".freepk .btn").forEach(b=>b.onclick=()=>buyPack("free"));
+  document.querySelectorAll(".freepk .btn").forEach(b=>b.onclick=()=>buyPack(b.dataset.k));
   document.querySelectorAll(".offer .btn").forEach(b=>b.onclick=()=>buyPack(b.dataset.k));
   document.querySelectorAll("[data-inbox]").forEach(b=>b.onclick=()=>{SFX.tap();openInbox(+b.dataset.inbox)});
 }
@@ -389,7 +391,7 @@ function rewardScreen({title,sub="",coins=0,packs=[]}){
     if(e.target.closest("#rwLater")){closeSheet();renderMenu()}
   };
 }
-function buyPack(k){const p=SHOPPACKS.find(x=>x.key===k);if(!p)return;if(k==="free"){if(daily().free)return;daily().free=true}else{if(state.coins<p.price)return;state.coins-=p.price;SFX.cash()}openPack(p)}
+function buyPack(k){const p=SHOPPACKS.find(x=>x.key===k);if(!p)return;if(k==="inf"){}else if(k==="free"){if(daily().free)return;daily().free=true}else{if(state.coins<p.price)return;state.coins-=p.price;SFX.cash()}openPack(p)}
 
 // ---------- ouverture façon FIFA 21 : le pack, le tunnel, la walkout si grosse carte, la carte, puis les autres ----------
 let run=null;
@@ -444,7 +446,7 @@ const SFX={
 // ---------- extraits audio : 30 s de la carte révélée (le plus gros titre pour une Icône) ----------
 // l'extrait vient de l'album Deezer du titre (liens valables un moment seulement, donc pris à l'ouverture du pack) ;
 // à défaut, l'aperçu Apple Music
-// les extraits passent par Web Audio (et non une balise audio) : l'iPhone n'affiche pas de lecteur sur l'écran verrouillé
+const audio=new Audio();audio.preload="auto";
 const songOf=c=>c.kind==="icone"?ART[c.ar].tracks.reduce((x,y)=>y.streams>x.streams?y:x):c;
 const DZ={};
 function dzTracks(albId){
@@ -475,33 +477,20 @@ function previewUrl(c){
     return x&&x.preview?x.preview:itunesPreview(t);
   });
 }
-const BUF={};let SRC=null,GAIN=null,playTok=0;
-// décodage hors ligne : plus fiable (et l'AudioBuffer obtenu se joue dans n'importe quel contexte)
-function decode(b){const O=window.OfflineAudioContext||window.webkitOfflineAudioContext;if(!O)return new Promise((res,rej)=>ac().decodeAudioData(b,res,rej));const o=new O(2,44100,44100);return new Promise((res,rej)=>{const p=o.decodeAudioData(b,res,rej);if(p&&p.then)p.then(res,rej)})}
-function loadBuf(u){return BUF[u]??=fetch(u).then(r=>{if(!r.ok)throw new Error(r.status);return r.arrayBuffer()}).then(decode).catch(e=>{delete BUF[u];throw e})}
-function stopNow(){if(SRC){try{SRC.stop()}catch(e){}try{SRC.disconnect()}catch(e){}SRC=null}}
-// joue un extrait (avec un départ au choix) ; renvoie true s'il a démarré
-function playUrl(u,{offset=0,vol=.9,fade=600}={}){
-  const tok=++playTok;
-  return loadBuf(u).then(buf=>{
-    const C=ac();if(!C||tok!==playTok)return false;stopNow();
-    const g=C.createGain(),t=C.currentTime;g.gain.setValueAtTime(0,t);g.gain.linearRampToValueAtTime(vol,t+fade/1000);g.connect(C.destination);
-    const src=C.createBufferSource();src.buffer=buf;src.connect(g);src.start(0,Math.max(0,Math.min(offset,buf.duration-2)));SRC=src;GAIN=g;return true;
-  },()=>false);
-}
-function unlockAudio(){if(!state.sound)return;const C=ac();if(!C)return;try{const b=C.createBuffer(1,1,22050),x=C.createBufferSource();x.buffer=b;x.connect(C.destination);x.start(0)}catch(e){}}
-addEventListener("pointerdown",()=>{if(state.sound!==false)ac()},{passive:true});
+const SILENT="data:audio/wav;base64,UklGRiQAAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQAAAAA=";
+function unlockAudio(){if(!state.sound)return;try{audio.muted=true;if(!audio.src)audio.src=SILENT;audio.play().then(()=>{audio.pause();audio.muted=false},()=>{audio.muted=false})}catch(e){}}
+let fadeT=null;
+function fadeTo(v,ms,done){clearInterval(fadeT);const from=audio.volume,t0=performance.now();fadeT=setInterval(()=>{const k=Math.min(1,(performance.now()-t0)/ms);audio.volume=from+(v-from)*k;if(k>=1){clearInterval(fadeT);done&&done()}},40)}
 function playFor(c){
   if(!state.sound)return;
-  const tok=++playTok;
-  previewUrl(c).then(u=>{if(u&&tok===playTok)playUrl(u)});
+  const want=songOf(c).key;audio.dataset.want=want;
+  previewUrl(c).then(u=>{
+    if(!u||audio.dataset.want!==want)return;
+    audio.src=u;audio.currentTime=0;audio.volume=0;
+    audio.play().then(()=>fadeTo(.9,600),()=>{});
+  });
 }
-function stopAudio(){
-  playTok++;if(!SRC||!GAIN)return;
-  const C=ac(),src=SRC,g=GAIN,t=C.currentTime;SRC=null;GAIN=null;
-  try{g.gain.cancelScheduledValues(t);g.gain.setValueAtTime(g.gain.value,t);g.gain.linearRampToValueAtTime(0,t+.5)}catch(e){}
-  setTimeout(()=>{try{src.stop()}catch(e){}},550);
-}
+function stopAudio(){audio.dataset.want="";if(!audio.paused)fadeTo(0,500,()=>audio.pause())}
 
 function openPack(p){
   const cards=drawPack(p),fresh=new Set();
@@ -511,7 +500,7 @@ function openPack(p){
   // les deux meilleures cartes du pack ont leur walkout (double animation, comme sur FIFA)
   const wos=cards.filter(walkout).slice(0,2).reverse(); // 2 walkouts au plus, même en cas d'égalité
   run={cards,fresh,best:cards[0],wos,wi:0,phase:"pack",timers:[],step:0};
-  if(state.sound)[...wos,cards[0]].forEach(c=>previewUrl(c).then(u=>u&&loadBuf(u).catch(()=>{})));
+  if(state.sound)[...wos,cards[0]].forEach(c=>previewUrl(c));
   open.className="open";open.dataset.h="";open.dataset.fl="";$("burst").innerHTML="";
   // ce qui sort du sachet est un indice : 1 carte (pas de walkout), 3 cartes (walkout ou double walkout)
   const outsN=wos.length?3:1;
@@ -1004,7 +993,7 @@ function studioHTML(sl,{active,label,hue=280,tap=true}={}){
   const lines=LINKS.map(([a,b])=>{const v=sl[a]&&sl[b]?linkVal(CARD[sl[a]],CARD[sl[b]]):-1;return `<line x1="${P[a].x}" y1="${P[a].y+12}" x2="${P[b].x}" y2="${P[b].y+12}" class="lk lk${v}"/>`}).join("");
   return `<div class="studio" style="--h:${hue}"><div class="slab"><span class="slogo">${esc(initials(label))}</span><div><small>Maison de disque</small><b>${esc(label)}</b></div><span class="srat">${rosterRating(sl)||"–"}<small>note</small></span><span class="srat">${chemOf(sl)}<small>alchimie</small></span></div>
     <div class="sfloor"><svg viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true">${lines}</svg>
-    ${SLOTS.map(x=>`<div class="sslot${active===x.id?" act":""}" style="left:${x.x}%;top:${x.y}%">${sl[x.id]?cw(CARD[sl[x.id]],{tap}):`<div class="sempty">${active===x.id?"?":"+"}</div>`}<small>${x.n}<b>${STATN[x.st]}${sl[x.id]?" "+statsOf(CARD[sl[x.id]])[x.st]:""}</b></small></div>`).join("")}</div></div>`;
+    ${SLOTS.map(x=>`<div class="sslot${active===x.id?" act":""}"${active===x.id?` data-slotpick="1"`:""} style="left:${x.x}%;top:${x.y}%">${sl[x.id]?cw(CARD[sl[x.id]],{tap}):`<div class="sempty">${active===x.id?"?":"+"}</div>`}<small>${x.n}<b>${STATN[x.st]}${sl[x.id]?" "+statsOf(CARD[sl[x.id]])[x.st]:""}</b></small></div>`).join("")}</div></div>`;
 }
 function draftOffer(slot){
   const d=state.draft,used=new Set(Object.values(d.slots)),out=[];
@@ -1038,8 +1027,10 @@ function renderPlay(){
   if(d.step<5){
     const slot=SLOTS[d.step];
     $("play").innerHTML=`${back}${studioHTML(d.slots,{active:slot.id,label:d.name,hue:d.hue,tap:false})}
-      <h2>Poste ${d.step+1} sur 5 · ${slot.n}</h2><p class="note">Stat clé : <b style="color:var(--fut)">${STATN[slot.st]}</b>. Touche l’artiste à signer.</p>
-      <div class="doffer drows">${d.offer.map((k,i)=>{const c=CARD[k],tmp={...d.slots,[slot.id]:k},ch=cardChem(tmp,slot.id);return `<button class="drow" data-dpick="${k}" style="--i:${i}"><span class="drc">${cw(c)}</span><span class="dri"><small>${labelOf(c)} · ${c.country}</small><b>${esc(c.kind==="icone"?"Icône":cleanT(c.title)||c.title)}</b><span>${esc(c.artist)}</span><span class="drs"><em>${statsOf(c)[slot.st]}</em><i>${STATN[slot.st]}</i></span>${ch?`<u>+${ch} alchimie</u>`:""}</span></button>`}).join("")}</div>`;
+      <h2>Poste ${d.step+1} sur 5 · ${slot.n}</h2><p class="note">Stat clé : <b style="color:var(--fut)">${STATN[slot.st]}</b>. Touche le poste qui clignote pour voir les 5 artistes.</p>
+      <button class="btn" data-slotpick="1">Choisir le ${slot.n.toLowerCase()}</button>
+      <div class="dpickov" id="dpickov" hidden><div class="dpickin"><button class="back" id="dpClose">‹ Ma maison de disque</button><h2>Poste ${d.step+1} sur 5 · ${slot.n}</h2><p class="note">Stat clé : <b style="color:var(--fut)">${STATN[slot.st]}</b>. Touche l’artiste à signer.</p>
+      <div class="doffer drows">${d.offer.map((k,i)=>{const c=CARD[k],tmp={...d.slots,[slot.id]:k},ch=cardChem(tmp,slot.id);return `<button class="drow" data-dpick="${k}" style="--i:${i}"><span class="drc">${cw(c)}</span><span class="dri"><small>${labelOf(c)} · ${c.country}</small><b>${esc(c.kind==="icone"?"Icône":cleanT(c.title)||c.title)}</b><span>${esc(c.artist)}</span><span class="drs"><em>${statsOf(c)[slot.st]}</em><i>${STATN[slot.st]}</i></span>${ch?`<u>+${ch} alchimie</u>`:""}</span></button>`}).join("")}</div></div></div>`;
     return;
   }
   const dots=DRAFT_OPP.map((o,i)=>`<span class="${i<d.wins?"w":d.over&&i===d.round?"l":i===d.round&&!d.over?"cur":""}"><b>${o}</b><small>${esc(d.opps[i])}</small></span>`).join("");
@@ -1097,13 +1088,12 @@ function nextBlind(tries=0){
   previewUrl(c).then(u=>{
     if(blind!==me||blind.q!==q)return;
     if(!u)return tries<6?nextBlind(tries+1):(toast("Extraits indisponibles"),endBlind());
-    playUrl(u,{offset:6+Math.random()*12,fade:150}).then(ok=>{
-      if(blind!==me||blind.q!==q)return;
-      if(!ok)return tries<6?nextBlind(tries+1):(toast("Extraits indisponibles"),endBlind());
-      q.t0=performance.now();renderPlay();SFX.tick();
-      blind.iv=setInterval(()=>{const f=$("btFill");if(f)f.style.width=Math.max(0,100-(performance.now()-q.t0)/1000/BT_T*100)+"%"},100);
-      blind.to=setTimeout(()=>answerBlind(-1),BT_T*1000);
-    });
+    audio.dataset.want="blind";audio.src=u;audio.volume=.9;
+    const go=()=>{try{audio.currentTime=6+Math.random()*12}catch(e){}audio.play().catch(()=>{})};
+    if(audio.readyState>=1)go();else audio.addEventListener("loadedmetadata",go,{once:true});
+    q.t0=performance.now();renderPlay();SFX.tick();
+    blind.iv=setInterval(()=>{const f=$("btFill");if(f)f.style.width=Math.max(0,100-(performance.now()-q.t0)/1000/BT_T*100)+"%"},100);
+    blind.to=setTimeout(()=>answerBlind(-1),BT_T*1000);
   },()=>{if(blind===me)nextBlind(tries+1)});
 }
 function answerBlind(i){
@@ -1232,6 +1222,8 @@ $("play").onclick=e=>{
   if(e.target.closest("#btStart")||e.target.closest("#btAgain")){SFX.tap();return startBlind()}
   if(e.target.closest("#btMenu")){quitBlind();return show("s-menu")}
   if(e.target.closest("#dStart"))return startDraft();
+  if(e.target.closest("[data-slotpick]")){const o=$("dpickov");if(o){o.hidden=false;o.scrollTop=0;SFX.board();haptic(10)}return}
+  if(e.target.closest("#dpClose")){$("dpickov").hidden=true;SFX.tap();return}
   const dp=e.target.closest("[data-dpick]");if(dp){const d=state.draft;d.slots[SLOTS[d.step].id]=dp.dataset.dpick;d.step++;d.offer=d.step<5?draftOffer(SLOTS[d.step]):[];SFX.tick();haptic(8);save();renderPlay();return}
   if(e.target.closest("#dPlay")){const d=state.draft;return startBattle(d.slots,DRAFT_OPP[d.round],d.opps[d.round],d.name,won=>{if(won){d.wins++;d.round++;if(d.round>=4)d.over=true}else d.over=true;save();renderPlay()})}
   if(e.target.closest("#dClaim"))return claimDraft();

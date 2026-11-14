@@ -1285,3 +1285,14 @@ html{overflow-x:hidden}
 .k-totw .new,.k-promo .new{top:-1.1cqw;right:-1.1cqw;z-index:6}
 .k-totw .cart,.k-promo .cart{margin-bottom:-4cqw}
 .k-totw .nm,.k-promo .nm{margin-top:5cqw}
+
+/* ---------- patch 33 : NEW sur le coin de la pochette, choix du draft en plein écran, pack infini ---------- */
+.k-totw .new,.k-promo .new{top:-15.4cqw;right:-.4cqw;z-index:6;border-radius:0 5cqw 0 5cqw}
+.dpickov{position:fixed;inset:0;z-index:48;overflow:auto;background:#120a2e;padding:calc(14px + env(safe-area-inset-top)) 16px calc(30px + env(safe-area-inset-bottom));animation:fade .2s both}
+.dpickov::before{content:"";position:fixed;inset:0;z-index:-1;background-image:radial-gradient(rgba(255,255,255,.55) 1px,transparent 1.6px),radial-gradient(rgba(155,107,255,.35) 1.2px,transparent 1.8px);background-size:46px 46px,23px 23px;background-position:0 0,11px 17px}
+.dpickin{max-width:620px;margin:0 auto}
+.dpickin h2{margin:6px 0 2px}
+.sslot.act{cursor:pointer}
+.freepk.inf{background:#c4b8ff}
+.pack.k-inf{--pc:#c4b8ff}
+.freepk .btn{color:#ffe14d!important}.freepk .btn:disabled{color:#c4b8ff!important}

@@ -445,7 +445,8 @@ function tunnel(){
       open.dataset.fl=colorOf(run.wos[run.wos.length-1]);open.classList.add("board");SFX.board();if(two)later(SFX.reveal,350);
     },1150);
   }
-  later(()=>{open.classList.remove("board","bars");open.dataset.fl=colorOf(run.wos.length?run.wos[run.wos.length-1]:run.best);if(run.wos.length){run.phase="wo";open.classList.replace("run","wo");run.step=0;step()}else{run.cur=run.best;reveal()}},2100);
+  // walkout : le tunnel garde la même couleur et la même énergie pendant pays, artiste, album ; il ne change qu'à l'arrivée de la carte
+  later(()=>{if(run.wos.length){run.phase="wo";run.step=0;scene.querySelector(".tdisc")?.classList.add("dim");step()}else{open.classList.remove("board","bars");run.cur=run.best;reveal()}},2100);
 }
 // walkout : le pays, l'artiste, l'album, puis la carte
 function step(){
@@ -460,13 +461,13 @@ function step(){
     `<div class="wstep"><small>Album · ${a.y}</small><strong style="font-size:min(12vw,64px)">${esc(a.t)}</strong></div>`
   ];
   if(run.step>=steps.length){reveal();return}
-  scene.innerHTML=steps[run.step++];SFX.slam();
+  scene.querySelector(".wstep")?.remove();scene.insertAdjacentHTML("beforeend",steps[run.step++]);SFX.slam(); // le disque reste derrière, rien ne coupe
   hint("");haptic(10);
   later(step,1600);
 }
 function reveal(){
   const c=run.cur;
-  run.phase="card";open.classList.remove("run","board");open.classList.add("wo");
+  run.phase="card";open.classList.remove("run","board","bars");open.classList.add("wo");
   scene.innerHTML=`<div class="reveal">${cw(c,{fresh:run.fresh.has(c.key)})}</div>`;
   if(walkout(c)){burst();haptic([30,40,60]);SFX.bigReveal()}else SFX.reveal();
   hint("");playFor(c);
@@ -916,7 +917,7 @@ function startBattle(mySl,target,oppName,myName,onDone){
 }
 function renderBattle(){
   const b=battle,w=b.duels.slice(0,b.shown).filter(x=>x.win).length,l=b.shown-w,won=b.duels.filter(x=>x.win).length>=3;
-  $("play").innerHTML=`${b.done?"":`<div class="playtop"><span class="note" style="margin:0">Combat en direct</span><button class="quit" id="bQuit">Abandonner</button></div>`}<div class="board"><div><small>${esc(b.myName)}</small><b>${b.mine}</b></div><div class="score">${w}<em>–</em>${l}</div><div><small>${esc(b.oppName)}</small><b>${b.target}</b></div></div>
+  $("play").innerHTML=`${b.done?"":`<div class="playtop"><span class="note" style="margin:0">Combat en direct</span><button class="quit" id="bQuit">Abandonner</button></div>`}<div class="bboard"><div><small>${esc(b.myName)}</small><b>${b.mine}</b></div><div class="score">${w}<em>–</em>${l}</div><div><small>${esc(b.oppName)}</small><b>${b.target}</b></div></div>
     <div class="duels">${b.duels.map((x,i)=>i<b.shown?`<div class="duel${i===b.shown-1&&!b.done?" now":""}"><div class="dc${x.win?" w":""}">${cw(x.a)}</div><div class="dmid"><small>${x.x.n}</small><span>${STATN[x.x.st]}</span><b class="${x.win?"w":""}">${x.va}</b><b class="${x.win?"":"w"}">${x.vb}</b></div><div class="dc${x.win?"":" w"}">${cw(x.b)}</div></div>`:`<div class="duel wait"><span>${x.x.n} · ${STATN[x.x.st]}</span></div>`).join("")}</div>
     ${b.done?`<div class="dres ${won?"won":"lost"}">${won?"Victoire":"Défaite"} ${b.duels.filter(x=>x.win).length}–${b.duels.filter(x=>!x.win).length}</div><button class="btn" id="bDone">Continuer</button>`:`<p class="note" style="text-align:center">Combat en cours…</p>`}`;
 }

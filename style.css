@@ -758,13 +758,13 @@ input[type=search],input[type=text]{border-radius:0;clip-path:var(--cut);backgro
 .mlv span{font-size:12px;color:var(--dim);font-weight:600}
 .mlv em{font-style:normal;font:800 15px var(--cond);color:var(--lime)}
 /* combat */
-.board{display:grid;grid-template-columns:1fr auto 1fr;align-items:center;gap:10px;margin:8px 0 14px;padding:12px;background:linear-gradient(90deg,#3a1a8a,#1a1440 45%,#1a1440 55%,#7b1fa2);clip-path:var(--cut)}
-.board div{display:flex;flex-direction:column;min-width:0}
-.board div:last-child{align-items:flex-end;text-align:right}
-.board small{font:700 11px var(--cond);text-transform:uppercase;letter-spacing:.06em;color:#ddd8ff;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%}
-.board b{font:800 26px/1 var(--cond);color:var(--fut)}
-.board .score{flex-direction:row;align-items:center;gap:8px;font:800 40px/1 var(--cond)}
-.board .score em{font-style:normal;color:var(--dim);font-size:24px}
+.bboard{display:grid;grid-template-columns:1fr auto 1fr;align-items:center;gap:10px;margin:8px 0 14px;padding:12px;background:linear-gradient(90deg,#3a1a8a,#1a1440 45%,#1a1440 55%,#7b1fa2);clip-path:var(--cut)}
+.bboard div{display:flex;flex-direction:column;min-width:0}
+.bboard div:last-child{align-items:flex-end;text-align:right}
+.bboard small{font:700 11px var(--cond);text-transform:uppercase;letter-spacing:.06em;color:#ddd8ff;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%}
+.bboard b{font:800 26px/1 var(--cond);color:var(--fut)}
+.bboard .score{flex-direction:row;align-items:center;gap:8px;font:800 40px/1 var(--cond)}
+.bboard .score em{font-style:normal;color:var(--dim);font-size:24px}
 .duel{display:grid;grid-template-columns:1fr 90px 1fr;align-items:center;gap:8px;opacity:1;animation:duelin .4s both}
 .duel.wait{display:flex;justify-content:center;padding:14px;background:rgba(255,255,255,.04);clip-path:var(--cut);animation:none}
 .duel.wait span{font:700 13px var(--cond);text-transform:uppercase;letter-spacing:.06em;color:var(--dim)}
@@ -837,3 +837,8 @@ input[type=search],input[type=text]{border-radius:0;clip-path:var(--cut);backgro
 /* récap : la grille prend toute la largeur (iPad, ordi), plus de bords coupés */
 .open.recapmode .scene{max-width:none}
 .open.recapmode .recap{overflow:visible}
+
+/* walkout : le disque reste allumé derrière les étapes, en retrait */
+.tdisc{transition:opacity .5s}
+.tdisc.dim{opacity:.35!important}
+.wstep{position:relative;z-index:2}

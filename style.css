@@ -953,3 +953,31 @@ h1{color:var(--sun)}
 .open.recapmode{background:radial-gradient(rgba(255,255,255,.4) 1px,transparent 1.6px) 0 0/46px 46px,radial-gradient(ellipse 70% 55% at 50% 40%,#2a1a63,#0d0a24 80%)}
 .recapbar{background:linear-gradient(to top,#0d0a24 55%,transparent)}
 .recapbar .btn.go,.recap .btn.go{background:linear-gradient(100deg,var(--coral),var(--peach),var(--sun),var(--peach),var(--coral));background-size:300% 100%;color:var(--ink);box-shadow:0 5px 0 rgba(30,15,69,.9)}
+
+/* ---------- fond fixe comme Quizly : la trame ne bouge pas, on défile par-dessus ; couleurs pleines, sans dégradé ---------- */
+html{background:#120a2e!important}
+body{background:transparent!important}
+body::after{content:"";position:fixed;inset:-50px;z-index:-1;pointer-events:none;background-image:radial-gradient(rgba(255,255,255,.55) 1px,transparent 1.6px),radial-gradient(rgba(155,107,255,.35) 1.2px,transparent 1.8px);background-size:46px 46px,23px 23px;background-position:0 0,11px 17px}
+:root{--grad:var(--coral)}
+.btn{background:var(--coral)}
+.btn.light{background:#f6f3ff}
+.hubmain,.mt-set,.draftin,.pickpk,.rwi,.pickc{background:var(--paper)!important}
+.hubside{background:#3b1d8f}
+.mt-draft{background:var(--coral)} .mt-match{background:var(--sky)} .mt-sbc{background:var(--mint)}
+.mt-draft,.mt-match,.mt-sbc{color:var(--ink)}
+.mt-draft small,.mt-match small,.mt-sbc small,.mt-draft span,.mt-match span,.mt-sbc span{color:rgba(30,15,69,.75)}
+.offer.p-3{background:var(--sky)} .offer.p-5{background:var(--mint)} .offer.p-10{background:var(--peach)}
+.offer{color:var(--ink)} .offer::after{display:none}
+.odds span{background:rgba(30,15,69,.16);color:var(--ink)}
+.sth,.sbchead{background:var(--coral)!important;color:var(--ink)}
+.stile:nth-child(3n+2) .sth{background:var(--sky)!important}
+.stile:nth-child(3n) .sth{background:var(--mint)!important}
+.sbchead .rw{background:rgba(30,15,69,.18)}
+.rwb,.rwb-pick,.rwb-ico,.rwb-holo,.rwb-dia{background:var(--sun)}
+.studio{background:var(--paper)}
+.bboard{background:var(--paper)}
+.recapbar .btn.go,.recap .btn.go{background:var(--sun);animation:none}
+.recapbar{background:#0d0a24}
+.open,.open.recapmode{background:#120a2e}
+.btn.danger{background:var(--coral)}
+.btn:not(.light):not(.ghost){color:var(--ink)}

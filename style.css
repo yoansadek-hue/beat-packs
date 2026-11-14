@@ -1154,3 +1154,72 @@ html{overflow-x:hidden}
 .gpart b{font:800 16px var(--cond);text-transform:uppercase}
 .gpart small{font-size:12px;color:var(--dim)}
 .gpart em{font:800 11px var(--cond);font-style:normal;text-transform:uppercase;padding:3px 8px;background:#34e3b0;color:#1e0f45}
+
+/* ---------- patch 30 : décor incrusté, boutique refaite, iPad et ordinateur ---------- */
+.card .inlay{position:absolute;inset:0;z-index:0;overflow:hidden;border-radius:inherit;pointer-events:none}
+.card .inlay i{position:absolute;display:block}
+.k-totw .nm,.k-totw .ar,.k-totw .tl,.k-promo .nm,.k-promo .ar,.k-promo .tl{position:relative;z-index:1}
+/* TOTW : traits dorés en diagonale, incrustés dans le fond noir */
+.inlay-totw i{left:-40%;width:180%;height:1.2cqw;background:linear-gradient(90deg,transparent 5%,#b8860b 30%,#fff3b0 50%,#ffd23f 62%,transparent 92%);transform:rotate(-28deg);opacity:.8}
+.inlay-totw i:nth-child(1){top:16%;height:2cqw}
+.inlay-totw i:nth-child(2){top:28%;height:.8cqw;opacity:.55}
+.inlay-totw i:nth-child(3){top:62%;height:2.4cqw}
+.inlay-totw i:nth-child(4){top:76%;height:1cqw;opacity:.6}
+.inlay-totw i:nth-child(5){top:92%;height:1.6cqw;opacity:.7}
+/* Underdogs : éclairs néon incrustés dans le fond */
+.inlay-promo i{clip-path:polygon(40% 0,100% 0,60% 45%,95% 45%,10% 100%,35% 55%,0 55%);opacity:.7;filter:drop-shadow(0 0 2cqw currentColor)}
+.inlay-promo i:nth-child(1){left:2%;top:4%;width:22%;height:24%;background:#34e3b0;transform:rotate(-14deg)}
+.inlay-promo i:nth-child(2){right:3%;top:30%;width:20%;height:22%;background:#ff3b5c;transform:rotate(14deg)}
+.inlay-promo i:nth-child(3){left:4%;top:60%;width:18%;height:20%;background:#ffe14d;transform:rotate(8deg)}
+.inlay-promo i:nth-child(4){right:6%;top:74%;width:20%;height:22%;background:#34e3b0;transform:rotate(-10deg)}
+.inlay-promo i:nth-child(5){left:42%;top:84%;width:16%;height:16%;background:#c4b8ff;transform:rotate(18deg)}
+.cw.lock .inlay{opacity:.4;filter:grayscale(.7)}
+.grid:has(.inlay),.ngrid{row-gap:30px;padding:16px 8px 8px}
+.sheetin>.cw:has(.inlay){margin-top:26px;margin-bottom:10px}
+.recapgrid:has(.inlay){padding-top:14px}
+/* boutique */
+#packs.packs{display:block}
+.shoph{margin:20px 0 4px}
+.freepk{display:flex;align-items:center;gap:14px;margin:4px 0 6px;padding:12px 14px;background:#34e3b0;color:#1e0f45;clip-path:var(--cut)}
+.freepk .pack{width:56px;flex:none}
+.freepk>div{flex:1;min-width:0}
+.freepk b{display:block;font:800 19px/1 var(--cond);text-transform:uppercase}
+.freepk small{font-size:12px;font-weight:600}
+.freepk .btn{width:auto;flex:none;min-height:44px;padding:0 20px;font-size:16px;background:#1e0f45;color:#ffe14d}
+.freepk.used{opacity:.6}
+.pack.k-free{--pc:#f6f3ff} .pack.k-gold6{--pc:#ffd23f} .pack.k-plat3{--pc:#e3e6ef} .pack.k-holo6{--pc:#c77dff} .pack.k-prime12{--pc:#ff3b5c} .pack.k-dia1{--pc:#7af0ff} .pack.k-ico1{--pc:#ff4fd8}
+.pack.k-fr6{--pc:#2f6bff} .pack.k-us6{--pc:#ff4d6d} .pack.k-uk6{--pc:#3a7bff} .pack.k-old6{--pc:#b6ff3b} .pack.k-new6{--pc:#22e0ff} .pack.k-totw4{--pc:#ffd23f} .pack.k-promo5{--pc:#34e3b0}
+.offer .info .btn.light{background:#1e0f45;color:#fff}
+.offer.p-totw4 .info .btn.light{background:#ffe14d;color:#111}
+/* tablette (iPad en portrait) */
+@media (min-width:700px) and (max-width:899px){
+  main,#bar{max-width:780px}
+  .hub{grid-template-columns:1.7fr 1fr;gap:12px}
+  .hubmain,.hubside{min-height:250px}
+  .hubmain h3{font-size:32px}
+  .nvis .cw,.hubside .cw{width:min(100%,170px);margin:auto auto 0}
+  .mtiles{grid-template-columns:repeat(4,1fr)}
+  .mtile{min-height:140px}
+  .grid,.recapgrid{grid-template-columns:repeat(4,1fr)}
+  .agrid{grid-template-columns:repeat(5,1fr)}
+  .stiles{grid-template-columns:repeat(3,1fr)}
+  .packs{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+  .offer{margin:0}
+  .sheet{align-items:center}
+  .sheetin{max-width:660px;border-radius:0;clip-path:var(--cut)}
+  .sheetin>.cw{width:240px}
+  .picks{max-width:560px;margin:0 auto}
+  .studio{max-width:470px;margin-left:auto;margin-right:auto}
+  .reveal{width:320px}
+  .tabbar{width:420px}
+}
+/* ordinateur et iPad en paysage */
+@media (min-width:900px){
+  .hubmain,.hubside{min-height:300px;max-height:340px}
+  .nvis .cw,.hubside .cw{width:min(100%,180px);margin:auto auto 0}
+  .nslide{align-items:flex-start}
+  .nvis{display:flex;justify-content:center}
+  .ncov .cov{width:min(100%,190px);margin:0 auto}
+  .packs{grid-template-columns:repeat(3,1fr)}
+  .freepk{max-width:none}
+}

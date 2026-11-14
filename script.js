@@ -117,7 +117,30 @@ const SPECIAL={
 };
 // ce que peut rapporter un défi : un pack spécial ou un pack de la boutique
 const REWARD={...SPECIAL,p3:PACKS[0],p6:PACKS[1],p12:PACKS[2]};
-const rewardOf=k=>PACKS.find(p=>p.key===k)||REWARD[k];
+// la boutique : pack gratuit du jour, classiques, premium, thématiques, événements
+const FREE={key:"free",label:"Pack gratuit",size:3,price:0,desc:"3 cartes, une fois par jour"};
+const SHOP=[
+  {t:"Classiques",d:"Des cartes de toutes les discographies",ps:PACKS},
+  {t:"Premium",d:"Plus de chances de tomber sur une grosse carte",ps:[
+    {key:"gold6",label:"Pack Or",size:6,price:30000,floor:"rare",desc:"6 cartes Or ou mieux"},
+    {key:"plat3",label:"Pack Platine",size:3,price:45000,guarantee:"epique",desc:"3 cartes dont 1 Platine ou mieux"},
+    {key:"holo6",label:"Pack Holo",size:6,price:75000,holo:1,desc:"6 cartes dont 1 Holo"},
+    {key:"prime12",label:"Pack Prime",size:12,price:125000,floor:"rare",guarantee:"epique",gN:3,desc:"12 cartes Or ou mieux, dont 3 Platine ou mieux"},
+    {key:"dia1",label:"Pack Diamant",size:1,price:300000,guarantee:"legendaire",desc:"1 carte Diamant"},
+    {key:"ico1",label:"Pack Icône",size:1,price:500000,icon:true,desc:"1 carte Icône"}]},
+  {t:"Thématiques",d:"Choisis ton style",ps:[
+    {key:"fr6",label:"Pack Rap FR",size:6,price:22000,country:"FR",guarantee:"rare",desc:"6 cartes FR dont 1 Or ou mieux"},
+    {key:"us6",label:"Pack Rap US",size:6,price:22000,country:"US",guarantee:"rare",desc:"6 cartes US dont 1 Or ou mieux"},
+    {key:"uk6",label:"Pack Rap UK",size:6,price:22000,country:"UK",guarantee:"rare",desc:"6 cartes UK dont 1 Or ou mieux"},
+    {key:"old6",label:"Pack Old School",size:6,price:22000,before:2005,guarantee:"rare",desc:"6 cartes d’avant 2005 dont 1 Or ou mieux"},
+    {key:"new6",label:"Pack Nouvelle vague",size:6,price:22000,after:2023,guarantee:"rare",desc:"6 cartes sorties depuis 2023 dont 1 Or ou mieux"}]},
+  {t:"Événements",d:"Pour un temps limité",ps:[
+    ...(TOTW_NOW.length?[{key:"totw4",label:"Pack TOTW",size:4,price:150000,live:"totw",desc:`4 cartes dont 1 TOTW de la semaine ${weekNo(LV.totw[0].w)}`}]:[]),
+    ...(PROMO_NOW.length?[{key:"promo5",label:"Pack "+PROMO.name,size:5,price:200000,live:"promo",desc:`5 cartes dont 1 ${PROMO.name}, jusqu’au ${PROMO.until.slice(8,10)}/${PROMO.until.slice(5,7)}`}]:[])]}
+].filter(x=>x.ps.length);
+const SHOPPACKS=[FREE,...SHOP.flatMap(x=>x.ps)];
+const OBG={free:"#f6f3ff",gold6:"#ffe14d",plat3:"#e9eef3",holo6:"#c4b8ff",prime12:"#ff3b5c",dia1:"#62c7ff",ico1:"#ff9f45",fr6:"#62c7ff",us6:"#ff3b5c",uk6:"#c4b8ff",old6:"#34e3b0",new6:"#ffe14d",totw4:"#111111",promo5:"#34e3b0"};
+const rewardOf=k=>SHOPPACKS.find(p=>p.key===k)||REWARD[k];
 // ouvre une récompense : un pack, ou un choix de cartes
 function openReward(rw){if(rw.pick)pickSheet(rw);else openPack(rw)}
 function pickSheet(rw,onTake){
@@ -179,7 +202,7 @@ function statsOf(c){
   return c._st=st;
 }
 function cardHTML(c,fresh,qty){
-  return `<div class="card ${c.kind==="track"?"t-"+c.tier:"k-"+c.kind}">
+  return `<div class="card ${c.kind==="track"?"t-"+c.tier:"k-"+c.kind}">${POP[c.kind]||""}
     <div class="cart">${coverHTML(c.alb,"art")}${c.kind!=="track"&&!POP[c.kind]?`<span class="kind">${labelOf(c).toUpperCase()}</span>`:""}</div>
     <span class="ovr">${c.ovr}</span><span class="cc">${c.country}</span>${c.kind==="totw"?`<span class="rup">${TIER[c.from]} › ${TIER[c.tier]}</span>`:""}
     ${fresh?`<span class="new">NEW</span>`:qty>1?`<span class="new dup">×${qty}</span>`:""}
@@ -187,10 +210,11 @@ function cardHTML(c,fresh,qty){
     <div class="ar${c.artist.length>16?" xs":c.artist.length>11?" sm":""}">${esc(c.artist)}</div>
     <div class="tl"><span>${labelOf(c)}</span><span>${PLAY}${fmtStreams(c.streams)}</span></div>
     <div class="glare"></div>
-  </div>${POP[c.kind]||""}`;
+  </div>`;
 }
 // décor qui dépasse de la carte (TOTW et équipe du mois)
-const POP={totw:`<span class="pop pop-totw" aria-hidden="true"><i></i><i></i><i></i><i></i></span>`,promo:`<span class="pop pop-promo" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i></span>`};
+// décor incrusté dans le fond de la carte : il suit la carte quand elle bouge
+const POP={totw:`<span class="inlay inlay-totw" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i></span>`,promo:`<span class="inlay inlay-promo" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i></span>`};
 const cw=(c,{fresh=false,qty=0,tap=false,i,lock=false}={})=>`<div class="cw${lock?" lock":""}"${tap?` data-k="${c.key}"`:""}${i!=null?` style="--i:${i}"`:""}>${cardHTML(c,fresh,qty)}</div>`;
 // les pochettes des packs : les albums de rap les plus streamés au monde, trois par pack
 const WORLD=[["Views","beerbongs & bentleys","The Eminem Show"],["ASTROWORLD","Goodbye & Good Riddance","DAMN."],["Certified Lover Boy","My Beautiful Dark Twisted Fantasy","Rodeo"]]
@@ -201,11 +225,12 @@ PACKS.forEach((p,i)=>{if(WORLD[i]&&WORLD[i].length===3)COVS[p.label]=WORLD[i]});
 // packs spéciaux : les plus gros albums du catalogue (du pays du pack s'il en a un)
 function packCovers(p){
   const id=p.label;if(COVS[id])return COVS[id];
-  const pool=TOPALB.filter(a=>!p.country||ART[a.ar].c===p.country).filter(a=>!p.before||a.y<p.before).slice(0,90),out=[];
+  const pool=TOPALB.filter(a=>!p.country||ART[a.ar].c===p.country).filter(a=>!p.before||a.y<p.before).filter(a=>!p.after||a.y>=p.after).slice(0,90),out=[];
   while(out.length<3&&pool.length){const a=pool.splice(Math.floor(Math.random()*pool.length),1)[0];if(!out.some(x=>x.ar===a.ar))out.push(a)}
   return COVS[id]=out;
 }
 const packHTML=p=>`<div class="pack k-${p.key}"><div class="foil"></div><div class="pcovs">${packCovers(p).map(a=>`<img src="${a.cv}" alt="">`).join("")}</div><i class="crimp t"></i><i class="crimp b"></i><div class="shine"></div></div>`;
+function floorOdds(t){const i=ORDER.indexOf(t),o={};let sum=0;ORDER.forEach((r,j)=>{o[r]=j>=i?ODDS[r]:0;sum+=o[r]});ORDER.forEach(r=>o[r]/=sum);return o}
 function pickTier(odds){let x=Math.random(),acc=0;for(const r of ORDER){acc+=odds[r];if(x<acc)return r}return "commune"}
 // tirage par note : dans une rareté, chaque point de note en plus rend la carte ~30 % plus rare
 function byNote(p){
@@ -227,11 +252,13 @@ function drawPack(p){
   const out=Array.from({length:p.size},()=>take1(()=>{
     if(live.length&&Math.random()<.012)return byNote(live); // TOTW et équipe du mois
     if(!p.before&&Math.random()<.0015)return drawIcone(p.country);
-    return Math.random()<.015?drawHolo(f):drawTrack(pickTier(ODDS),f,notUsed());
+    return Math.random()<.015?drawHolo(f):drawTrack(pickTier(p.floor?floorOdds(p.floor):ODDS),f,notUsed());
   }));
   const swap=(i,gen)=>{used.delete(songKey(out[i]));out[i]=take1(gen)};
   if(p.guarantee&&!out.some(c=>c.kind!=="track"||ORDER.indexOf(c.tier)>=ORDER.indexOf(p.guarantee)))swap(0,()=>drawTrack(p.guarantee,f,notUsed()));
   if(p.icon&&!out.some(c=>c.kind==="icone"))swap(out.length-1,()=>drawIcone());
+  if(p.gN){const meets=c=>c.kind!=="track"||ORDER.indexOf(c.tier)>=ORDER.indexOf(p.guarantee);let have=out.filter(meets).length;for(let i=out.length-1;i>=0&&have<p.gN;i--)if(!meets(out[i])){swap(i,()=>drawTrack(p.guarantee,f,notUsed()));have++}}
+  if(p.live){const L=p.live==="totw"?TOTW_NOW:PROMO_NOW;if(L.length&&!out.some(c=>c.kind===p.live))swap(out.length-1,()=>byNote(L))}
   for(let i=0,n=0;n<(p.holo||0)&&i<out.length;i++)if(out[i].kind==="track"){swap(i,()=>drawHolo(f));n++}
   return out.sort((a,b)=>packRank(b)-packRank(a)); // la carte spéciale, puis la meilleure, en premier
 }
@@ -332,15 +359,20 @@ function renderPacks(){
     $("packs").innerHTML=n?`<p class="note" style="margin-top:0">Tes récompenses de SBC, de draft et d’albums. Ouvre-les quand tu veux.</p><div class="mypacks">${state.inbox.map((k,i)=>{const p=rewardOf(k);return `<button class="mypack" data-inbox="${i}">${p.pick?`<div class="pickpk">${rwBadge(p)}</div>`:packHTML(p)}<b>${p.label}</b><small>${p.desc||p.size+" cartes"}</small><span>Ouvrir</span></button>`}).join("")}</div>`
       :`<p class="empty">Aucun pack en attente. Gagne-en avec les SBC, le Draft et les albums complétés.</p>`;
   }else{
-    $("packs").innerHTML=PACKS.map(p=>`<div class="offer p-${p.key}">
-    ${packHTML(p)}
-    <div class="info">
-      <h3>${p.label}</h3><p>${p.size} cartes tirées dans toutes les discographies</p>
-      <div class="odds">${ORDER.slice().reverse().map(r=>`<span><i style="background:${TCOLOR[r]}"></i>${TIER[r]} ${Math.round(ODDS[r]*100)}%</span>`).join("")}</div>
-      <button class="btn light" data-k="${p.key}" ${state.coins<p.price?"disabled":""}><i class="coin"></i>${fmt(p.price)}</button>
-    </div>
-  </div>`).join("")+`<p class="note">Les packs spéciaux se gagnent dans les SBC (onglet Défis) et le Draft. Ils t’attendent dans « Mes packs ».</p>`;
+    const freeOk=!daily().free;
+    const offer=p=>{const dark=p.key==="totw4";return `<div class="offer p-${p.key}"${OBG[p.key]?` style="background:${OBG[p.key]};color:${dark?"#ffe14d":"#1e0f45"}"`:""}>
+      ${packHTML(p)}
+      <div class="info">
+        <h3>${p.label}</h3><p>${p.desc||p.size+" cartes tirées dans toutes les discographies"}</p>
+        ${PACKS.includes(p)?`<div class="odds">${ORDER.slice().reverse().map(r=>`<span><i style="background:${TCOLOR[r]}"></i>${TIER[r]} ${(ODDS[r]*100).toLocaleString("fr-FR",{maximumFractionDigits:1})}%</span>`).join("")}</div>`:`<div class="odds"><span>${p.size} carte${p.size>1?"s":""}</span></div>`}
+        <button class="btn light" data-k="${p.key}" ${state.coins<p.price?"disabled":""}><i class="coin"></i>${fmt(p.price)}</button>
+      </div>
+    </div>`};
+    $("packs").innerHTML=`<div class="freepk${freeOk?"":" used"}">${packHTML(FREE)}<div><b>Pack gratuit du jour</b><small>${freeOk?"3 cartes offertes, reviens demain pour le suivant.":"Déjà ouvert aujourd’hui : reviens demain."}</small></div><button class="btn" data-k="free" ${freeOk?"":"disabled"}>${freeOk?"Ouvrir":"Demain"}</button></div>
+      ${SHOP.map(sec=>`<h2 class="shoph">${sec.t}</h2><p class="note" style="margin:-4px 0 10px">${sec.d}</p><div class="packs">${sec.ps.map(offer).join("")}</div>`).join("")}
+      <p class="note">Les packs spéciaux se gagnent aussi dans les SBC et le Draft ; ils t’attendent dans « Mes packs ».</p>`;
   }
+  document.querySelectorAll(".freepk .btn").forEach(b=>b.onclick=()=>buyPack("free"));
   document.querySelectorAll(".offer .btn").forEach(b=>b.onclick=()=>buyPack(b.dataset.k));
   document.querySelectorAll("[data-inbox]").forEach(b=>b.onclick=()=>{SFX.tap();openInbox(+b.dataset.inbox)});
 }
@@ -358,7 +390,7 @@ function rewardScreen({title,sub="",coins=0,packs=[]}){
     if(e.target.closest("#rwLater")){closeSheet();renderMenu()}
   };
 }
-function buyPack(k){const p=PACKS.find(x=>x.key===k);if(state.coins<p.price)return;state.coins-=p.price;SFX.cash();openPack(p)}
+function buyPack(k){const p=SHOPPACKS.find(x=>x.key===k);if(!p)return;if(k==="free"){if(daily().free)return;daily().free=true}else{if(state.coins<p.price)return;state.coins-=p.price;SFX.cash()}openPack(p)}
 
 // ---------- ouverture façon FIFA 21 : le pack, le tunnel, la walkout si grosse carte, la carte, puis les autres ----------
 let run=null;

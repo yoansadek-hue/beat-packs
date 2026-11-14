@@ -870,82 +870,86 @@ input[type=search],input[type=text]{border-radius:0;clip-path:var(--cut);backgro
 #pkGo{width:100%;max-width:360px}
 
 /* =========================================================================
-   Palette de l'app : marine #20223A · ardoise #7D879E · neige #E9EEF3 · rouge #E6002D · rouge foncé #C80026
-   (les couleurs des raretés de cartes et la pièce ne changent pas : ce sont des infos de jeu)
+   Palette Quizly (mode sombre « cosmos ») : fond #120A2E avec trame de points,
+   citron #FFE14D · menthe #34E3B0 · pamplemousse #FF3B5C · ciel #62C7FF · abricot #FF9F45 · lilas #C4B8FF
+   (les raretés de cartes et la pièce ne changent pas ; le NEW reste rouge)
    ========================================================================= */
 :root{
-  --ink:#20223a;--ink2:#2a2d4a;--ink3:#353958;--deep:#16172a;
-  --slate:#7d879e;--snow:#e9eef3;--red:#e6002d;--red2:#c80026;
-  --bg:var(--deep);--text:#e9eef3;--dim:#9aa3b8;
-  --pink:var(--red);--orange:var(--red2);--cyan:var(--snow);--lime:var(--snow);
-  --grad:linear-gradient(100deg,var(--red),var(--red2));
-  --fut:var(--red);--futv:var(--red2);--pan:var(--ink);--pan2:var(--ink2);
-  --surface:rgba(233,238,243,.06);--surface-2:rgba(233,238,243,.11);--line:rgba(233,238,243,.12);
+  --qbg:#120a2e;--qdeep:#1f1252;--ink:#1e0f45;--paper:#241d3b;--paper2:#2c2450;--paper3:#372d63;
+  --sun:#ffe14d;--mint:#34e3b0;--coral:#ff3b5c;--sky:#62c7ff;--peach:#ff9f45;--lilac:#c4b8ff;
+  --bg:var(--qbg);--text:#f6f3ff;--dim:#b6aadb;
+  --pink:var(--coral);--orange:var(--peach);--cyan:var(--sky);--lime:var(--mint);--gold:var(--sun);
+  --grad:linear-gradient(100deg,var(--coral),var(--peach));
+  --fut:var(--sun);--futv:var(--coral);--pan:var(--paper);--pan2:var(--paper2);
+  --surface:rgba(196,184,255,.08);--surface-2:rgba(196,184,255,.14);--line:rgba(196,184,255,.16);
 }
+html{background:var(--qbg)}
 body{background:
-  radial-gradient(70vmax 40vmax at 0% -5%,rgba(230,0,45,.16),transparent 60%),
-  radial-gradient(60vmax 35vmax at 100% 0%,rgba(125,135,158,.16),transparent 60%),
-  linear-gradient(180deg,#1b1c31,var(--deep) 60%,#131424);background-attachment:fixed}
-h1{color:var(--snow)}
-h1::after{content:"";display:block;width:44px;height:4px;margin-top:8px;background:var(--red)}
-.qcat{color:var(--red)}
-/* textes sur fond rouge : blanc ; sur fond neige : marine */
-.crest{background:linear-gradient(160deg,var(--red),var(--red2));color:#fff}
-.hubgo,.mypack span{background:var(--red);color:#fff}
-.btn{box-shadow:0 10px 24px -12px var(--red)}
-.btn.light,.toast{background:var(--snow);color:var(--ink)}
-.btn.ghost{background:var(--ink3);color:var(--snow)}
-.card .new,.picker .qty,.gift span,.pickc .pnew,.sbcf .ok,.srr .ok,.stf .ok{color:var(--ink)}
-.card .new{background:var(--red);color:#fff}
-.seg button[aria-pressed=true],.chips button[aria-pressed=true],.chipbtn.on{background:var(--red);color:#fff}
-.iconbtn{background:var(--ink3)}
-.nbadge,.qdot,.segn{background:var(--red)}
-.tabbar{background:rgba(22,23,42,.86)}
-.tab.on,.tab[aria-current]{color:#fff}
-.tabpill i{background:var(--red);box-shadow:0 6px 16px -6px var(--red)}
+  radial-gradient(rgba(255,255,255,.55) 1px,transparent 1.6px) 0 0/46px 46px,
+  radial-gradient(rgba(155,107,255,.35) 1.2px,transparent 1.8px) 11px 17px/23px 23px,
+  linear-gradient(180deg,var(--qbg),var(--qdeep));background-attachment:fixed}
+h1{color:var(--sun)}
+.qcat{color:var(--mint)}
+.crest{background:linear-gradient(160deg,var(--sun),var(--peach));color:var(--ink)}
+.hubgo{background:var(--sun);color:var(--ink)}
+.mypack span{background:var(--mint);color:var(--ink)}
+.btn{box-shadow:0 5px 0 rgba(30,15,69,.9)}
+.btn.light,.toast{background:#f6f3ff;color:var(--ink)}
+.btn.ghost{background:var(--paper3);color:#f6f3ff}
+.card .new{background:#e6002d;color:#fff}
+.picker .qty,.gift span,.pickc .pnew,.sbcf .ok,.srr .ok,.stf .ok{color:var(--ink)}
+.seg button[aria-pressed=true],.chips button[aria-pressed=true],.chipbtn.on{background:var(--sun);color:var(--ink)}
+.iconbtn{background:var(--paper3)}
+.nbadge,.qdot,.segn{background:var(--coral)}
+.tabbar{background:rgba(18,10,46,.88)}
+.tabpill i{background:var(--sun);box-shadow:0 4px 0 rgba(30,15,69,.9)}
+.tab.on{color:var(--ink)}
 /* boutique */
-.offer.p-3{background:linear-gradient(135deg,#7d879e,#4a5268 65%,#2a2d4a)}
-.offer.p-5{background:linear-gradient(135deg,#353958,#20223a 70%)}
-.offer.p-10{background:linear-gradient(135deg,#e6002d,#c80026 55%,#7a0018)}
-.pack.k-3{--pc:#7d879e} .pack.k-5{--pc:#e9eef3} .pack.k-10{--pc:#e6002d} .pack.k-sp{--pc:#c80026}
-.bigpack .outs i{background:linear-gradient(160deg,#fff,#e9eef3 40%,#7d879e)}
+.offer.p-3{background:linear-gradient(135deg,#3a9fe6,#2456b8 70%)}
+.offer.p-5{background:linear-gradient(135deg,#1fbf92,#0d7a62 70%)}
+.offer.p-10{background:linear-gradient(135deg,var(--peach),var(--coral) 60%,#b51e45)}
+.pack.k-3{--pc:#62c7ff} .pack.k-5{--pc:#34e3b0} .pack.k-10{--pc:#ff9f45} .pack.k-sp{--pc:#c4b8ff}
+.bigpack .outs i{background:linear-gradient(160deg,#fff,#efeaff 40%,#c4b8ff)}
 /* accueil et menu */
-.hubmain{background:linear-gradient(135deg,var(--ink3),var(--ink) 60%)}
-.hubside{background:linear-gradient(160deg,var(--red),var(--red2) 55%,#7a0018)}
-.mtile span{color:#d4dae3}
-.mt-draft{background:linear-gradient(135deg,var(--red),var(--red2) 60%,#7a0018)}
-.mt-match{background:linear-gradient(135deg,var(--slate),#4a5268)}
-.mt-sbc{background:linear-gradient(135deg,var(--ink3),var(--ink))}
-.mt-set{background:linear-gradient(135deg,#2a2d4a,#191a2e)}
+.hubmain{background:linear-gradient(135deg,var(--paper3),var(--paper) 60%)}
+.hubside{background:linear-gradient(160deg,#7b4dff,#3b1d8f 70%)}
+.hubside h3{color:var(--sun)}
+.mtile span{color:#efeaff}
+.mt-draft{background:linear-gradient(135deg,var(--coral),#b51e45)}
+.mt-match{background:linear-gradient(135deg,#3a9fe6,#2456b8)}
+.mt-sbc{background:linear-gradient(135deg,#1fbf92,#0d7a62)}
+.mt-set{background:linear-gradient(135deg,var(--paper3),var(--paper))}
 /* défis */
-.sth,.sbchead{background:linear-gradient(135deg,var(--red),var(--red2))!important}
-.stile:nth-child(3n+2) .sth{background:linear-gradient(135deg,var(--slate),#4a5268)!important}
-.stile:nth-child(3n) .sth{background:linear-gradient(135deg,var(--ink3),#252840)!important}
-.stile.ready{box-shadow:inset 0 0 0 2px rgba(233,238,243,.35)}
-.srq i,.req b,.quest .bar i,.arow .bar i{background:var(--red)!important}
-.req.ok i{background:var(--snow);color:var(--ink)}
-.rwb,.rwb-pick,.rwb-ico,.rwb-holo{background:linear-gradient(150deg,var(--red),var(--red2))}
+.sth,.sbchead{background:linear-gradient(135deg,var(--coral),#b51e45)!important}
+.stile:nth-child(3n+2) .sth{background:linear-gradient(135deg,#3a9fe6,#2456b8)!important}
+.stile:nth-child(3n) .sth{background:linear-gradient(135deg,#1fbf92,#0d7a62)!important}
+.stile.ready{box-shadow:inset 0 0 0 2px rgba(52,227,176,.6)}
+.srq i,.quest .bar i,.arow .bar i{background:var(--mint)!important}
+.req b{background:var(--mint)!important}
+.req.ok i{background:var(--mint);color:var(--ink)}
+.rwb,.rwb-pick{background:linear-gradient(150deg,var(--sun),var(--peach))}
+.rwb b{color:var(--ink);text-shadow:none}
 /* draft, match, combats */
-.draftin{background:linear-gradient(135deg,var(--ink3),var(--ink))}
-.draftin h3,.srat,.dprize b,.dinfo b{color:var(--red)}
-.draftin p{color:#d4dae3}
-.studio{background:radial-gradient(ellipse at 50% 40%,rgba(230,0,45,.16),transparent 70%),linear-gradient(160deg,var(--ink2),#181a2e)}
-.slogo{box-shadow:inset 0 0 0 9px rgba(22,23,42,.88)}
-.sslot.act .sempty{border-color:var(--red);color:var(--red);box-shadow:0 0 18px rgba(230,0,45,.35)}
-.bboard{background:linear-gradient(90deg,var(--red2),var(--ink) 42%,var(--ink) 58%,#4a5268)}
-.bboard small{color:#d4dae3}
-.bboard b{color:var(--snow)}
-.pickpk{background:linear-gradient(160deg,var(--ink3),var(--deep))}
-.rwi{background:radial-gradient(ellipse at 50% 30%,rgba(230,0,45,.2),transparent 70%),var(--ink)}
-.rws h2,.pickhead h2{color:var(--snow)}
-.pickhead p{color:#d4dae3}
-.pickc{background:radial-gradient(ellipse at 50% 20%,rgba(125,135,158,.28),transparent 70%),var(--ink)}
-.pickc.sel{box-shadow:inset 0 0 0 3px var(--red);filter:drop-shadow(0 0 14px rgba(230,0,45,.45))}
-.quit{border-color:rgba(230,0,45,.6);background:rgba(230,0,45,.12);color:#ff6b84}
-.btn.danger{background:linear-gradient(90deg,var(--red),var(--red2))}
-/* ouverture de pack : fonds marine, les lumières restent à la couleur de la carte */
-.open.recapmode{background:radial-gradient(ellipse 70% 55% at 50% 40%,#2a2d4a,#111222 80%)}
-.recapbar{background:linear-gradient(to top,#111222 55%,transparent)}
-.recapbar .btn.go,.recap .btn.go{background:linear-gradient(100deg,var(--red),var(--red2),#ff2a55,var(--red2),var(--red));background-size:300% 100%;box-shadow:0 0 0 3px rgba(233,238,243,.2),0 12px 34px -6px var(--red)}
-.open{background:radial-gradient(ellipse 40% 50% at 50% 44%,#2a2d4a,#111222 75%)}
-.hubside h3{color:#fff}.hubside p{color:#ffe3e8}
+.draftin{background:linear-gradient(135deg,var(--paper3),var(--paper))}
+.draftin h3,.srat,.dprize b,.dinfo b{color:var(--sun)}
+.draftin p{color:#efeaff}
+.studio{background:radial-gradient(ellipse at 50% 40%,hsl(var(--h) 60% 30% / .45),transparent 70%),linear-gradient(160deg,var(--paper2),var(--qbg))}
+.slogo{box-shadow:inset 0 0 0 9px rgba(18,10,46,.88)}
+.sslot.act .sempty{border-color:var(--sun);color:var(--sun);box-shadow:0 0 18px rgba(255,225,77,.35)}
+.bboard{background:linear-gradient(90deg,#7b4dff,var(--paper) 42%,var(--paper) 58%,#b51e45)}
+.bboard small{color:#efeaff}
+.bboard b{color:var(--sun)}
+.pickpk{background:linear-gradient(160deg,var(--paper3),var(--qbg))}
+.rwi{background:radial-gradient(ellipse at 50% 30%,rgba(255,225,77,.16),transparent 70%),var(--paper)}
+.rws h2,.pickhead h2{color:var(--sun)}
+.rwk{background:var(--coral)}
+.pickhead p{color:#efeaff}
+.pickc{background:radial-gradient(ellipse at 50% 20%,rgba(123,77,255,.32),transparent 70%),var(--paper)}
+.pickc.sel{box-shadow:inset 0 0 0 3px var(--sun);filter:drop-shadow(0 0 14px rgba(255,225,77,.45))}
+.quit{border-color:rgba(255,59,92,.6);background:rgba(255,59,92,.12);color:#ff8fa3}
+.btn.danger{background:linear-gradient(90deg,var(--coral),#b51e45)}
+/* ouverture de pack : fond cosmos, les lumières restent à la couleur de la carte */
+.open{background:radial-gradient(ellipse 40% 50% at 50% 44%,#2a1a63,#0d0a24 75%)}
+.open.recapmode{background:radial-gradient(rgba(255,255,255,.4) 1px,transparent 1.6px) 0 0/46px 46px,radial-gradient(ellipse 70% 55% at 50% 40%,#2a1a63,#0d0a24 80%)}
+.recapbar{background:linear-gradient(to top,#0d0a24 55%,transparent)}
+.recapbar .btn.go,.recap .btn.go{background:linear-gradient(100deg,var(--coral),var(--peach),var(--sun),var(--peach),var(--coral));background-size:300% 100%;color:var(--ink);box-shadow:0 5px 0 rgba(30,15,69,.9)}

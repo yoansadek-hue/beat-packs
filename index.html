@@ -16,13 +16,14 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800;900&family=Saira+Condensed:wght@600;700;800&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="style.css?v=1794679878">
+<link rel="stylesheet" href="style.css?v=1794681342">
 </head>
 <body>
 <header id="bar">
   <div class="club"><span class="crest">BP</span><div><b id="clubName">Beat Packs</b><small><i class="coin"></i><span id="wallet">0</span></small></div></div>
   <div class="barR">
-    <button class="iconbtn" id="btnFriends" aria-label="Amis"><svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true"><path fill="currentColor" d="M9 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8zm0 2c-3.3 0-7 1.7-7 4.5V20h14v-2.5C16 14.7 12.3 13 9 13zm8-2a3.5 3.5 0 1 0-2.1-6.3 5.9 5.9 0 0 1 0 5.6A3.5 3.5 0 0 0 17 11zm1.2 2.1c1.6 1 2.8 2.5 2.8 4.4V20h3v-2.5c0-2.1-2.6-3.8-5.8-4.4z"/></svg><span>Amis</span></button>
+    <button class="iconbtn bell" id="btnBell" aria-label="Notifications"><svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true"><path fill="currentColor" d="M12 22a2.5 2.5 0 0 0 2.45-2h-4.9A2.5 2.5 0 0 0 12 22zm7-6V11a7 7 0 0 0-5.5-6.84V3.5a1.5 1.5 0 0 0-3 0v.66A7 7 0 0 0 5 11v5l-2 2v1h18v-1l-2-2z"/></svg><span class="bbadge" id="bellBadge" hidden></span></button>
+    <button class="avbtn" id="btnProfile" aria-label="Profil"></button>
   </div>
 </header>
 
@@ -76,13 +77,14 @@
   </section>
 
   <section id="s-settings" class="screen" hidden>
-    <button class="back" id="setBack">‹ Menu</button>
+    <button class="back" id="setBack">‹ Retour</button>
     <h1>Paramètres</h1>
     <div class="list">
       <label class="row"><span>Pseudo</span><input type="text" id="optPseudo" maxlength="16" autocomplete="off"></label>
       <label class="row"><span>Vibrations</span><input type="checkbox" class="switch" id="optVibrate" checked></label>
       <label class="row"><span>Bruitages</span><input type="checkbox" class="switch" id="optSfx" checked></label>
       <label class="row"><span>Extraits audio</span><input type="checkbox" class="switch" id="optSound" checked></label>
+      <label class="row"><span>Notifications sur l’appareil</span><input type="checkbox" class="switch" id="optPush"></label>
       <div class="row"><span>Recommencer à zéro</span><button class="btn danger sm" id="reset">Réinitialiser</button></div>
     </div>
     <p class="foot" id="foot"></p>
@@ -120,8 +122,8 @@
 </nav>
 <div class="toast" id="toast" role="status"></div>
 
-<script src="data.js?v=1794679878"></script>
-<script src="live.js?v=1794679878"></script>
-<script src="script.js?v=1794679878"></script>
+<script src="data.js?v=1794681342"></script>
+<script src="live.js?v=1794681342"></script>
+<script src="script.js?v=1794681342"></script>
 </body>
 </html>

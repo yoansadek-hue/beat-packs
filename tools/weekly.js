@@ -2,7 +2,7 @@
 // 1) streams Spotify de tous les titres (pages publiques kworb.net)
 // 2) nouveautés : albums et EP sortis ces 4 dernières semaines par les artistes du jeu (Deezer)
 // 3) dates de sortie des albums (Deezer), pour les cartes anniversaire
-// 4) TOTW : les 10 titres du jeu les plus écoutés de la semaine (classements Spotify France, États-Unis, Royaume-Uni)
+// 4) TOTW : les titres dont la carte monte de rang cette semaine (Vinyle → Or → Platine → Diamant), les plus écoutés de la semaine d'abord
 // Étapes au choix : STEPS=streams,news,dates,totw (toutes par défaut)
 const fs=require("fs"),path=require("path");
 const ROOT=path.join(__dirname,".."),DATA=path.join(ROOT,"data.js"),LIVEF=path.join(ROOT,"live.js");
@@ -12,6 +12,15 @@ const DZ=fs.existsSync(DZF)?JSON.parse(fs.readFileSync(DZF,"utf8")):{};
 eval(fs.readFileSync(DATA,"utf8").replace("const ARTISTS","global.ARTISTS").replace("const ALBUMS","global.ALBUMS"));
 let LIVE={updated:"",totw:[],news:[]};
 if(fs.existsSync(LIVEF)){try{LIVE=JSON.parse(fs.readFileSync(LIVEF,"utf8").replace(/^[\s\S]*?const LIVE = /,"").replace(/;\s*$/,""))}catch(e){console.log("live.js illisible, on repart de zéro")}}
+// mêmes règles de note que le jeu (script.js)
+const CERT={US:{or:75,pl:150,dia:1500},UK:{ar:20,or:40,pl:60},FR:{or:15,pl:30,dia:50}};
+const ovrOf=(c,m)=>Math.max(50,Math.min(99,Math.round(60+8*(Math.log10(Math.max(.05,m))+1)+Math.min(4,m/CERT[c].pl*.5))));
+const tierOf=o=>o>=90?3:o>=83?2:o>=75?1:0;
+const COUNTRY={};ARTISTS.forEach(a=>COUNTRY[a.id]=a.c);
+// notes avant la mise à jour (ou d'après un ancien data.js : BEFORE=chemin)
+const BEFORE={};
+{const src=process.env.BEFORE?fs.readFileSync(process.env.BEFORE,"utf8"):null;const OLD=src?(new Function(src.replace("const ARTISTS","var ARTISTS").replace("const ALBUMS","var ALBUMS")+";return ALBUMS"))():ALBUMS;
+ OLD.forEach(al=>al.tr.forEach((t,i)=>BEFORE[al.id+":"+i]=ovrOf(COUNTRY[al.ar]||"US",t[1])));}
 const STEPS=new Set((process.env.STEPS||"streams,news,dates,totw").split(","));
 
 const slug=s=>String(s).normalize("NFD").replace(/[̀-ͯ]/g,"").toLowerCase().replace(/[^a-z0-9]+/g,"-").replace(/^-|-$/g,"");
@@ -85,15 +94,19 @@ function kworbSongs(h){
         for(const al of byArtist[id]||[])al.tr.forEach((t,i)=>{if(clean(t[0])===clean(dec(tt))){const k=al.id+":"+i;score[k]=Math.max(score[k]||0,st/top)}});
       }
     }
-    // une seule version par titre, au plus 2 titres par artiste
+    // les cartes qui montent de rang ; les plus écoutées de la semaine d'abord, puis la plus forte hausse
+    const ups=[];
+    ALBUMS.forEach(al=>al.tr.forEach((t,i)=>{const k=al.id+":"+i,o0=BEFORE[k];if(o0==null)return;const o1=ovrOf(COUNTRY[al.ar],t[1]);if(tierOf(o1)>tierOf(o0))ups.push({k,al,i,o0,o1,s:score[k]||0})}));
+    ups.sort((x,y)=>y.s-x.s||(y.o1-y.o0)-(x.o1-x.o0)||y.o1-x.o1);
     const seen=new Set(),per={},pick=[];
-    for(const [k,s] of Object.entries(score).sort((x,y)=>y[1]-x[1])){
-      const [alb,i]=k.split(":"),al=ALBUMS.find(a=>String(a.id)===alb),key=al.ar+"|"+clean(al.tr[i][0]);
-      if(seen.has(key)||(per[al.ar]||0)>=2)continue;seen.add(key);per[al.ar]=(per[al.ar]||0)+1;pick.push([alb,+i]);if(pick.length>=10)break;
+    for(const u of ups){
+      const key=u.al.ar+"|"+clean(u.al.tr[u.i][0]);
+      if(seen.has(key)||(per[u.al.ar]||0)>=2)continue;seen.add(key);per[u.al.ar]=(per[u.al.ar]||0)+1;pick.push([u.al.id,u.i,u.o0,u.o1]);if(pick.length>=10)break;
     }
+    console.log(`cartes qui montent de rang : ${ups.length}`);
     const w=isoWeek(today);
-    if(pick.length>=5){LIVE.totw=[{w,tr:pick},...LIVE.totw.filter(x=>x.w!==w)].slice(0,52);console.log(`TOTW ${w} :`,pick.map(([a,i])=>{const al=ALBUMS.find(x=>String(x.id)===a);return al.tr[i][0]}).join(" | "))}
-    else console.log("TOTW : pas assez de titres trouvés, on garde la précédente");
+    if(pick.length>=1){LIVE.totw=[{w,tr:pick},...LIVE.totw.filter(x=>x.w!==w)].slice(0,52);console.log(`TOTW ${w} :`,pick.map(([a,i])=>{const al=ALBUMS.find(x=>String(x.id)===a);return al.tr[i][0]}).join(" | "))}
+    else console.log("TOTW : aucune carte n'a changé de rang, on garde la précédente");
   }
   LIVE.updated=iso(today);
   const src=fs.readFileSync(DATA,"utf8").split("\n");

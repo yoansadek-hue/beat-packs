@@ -49,46 +49,45 @@ ARTISTS.forEach(a=>{
   const c={key:`a:${a.id}`,kind:"icone",alb:a.cover,ar:a.id,title:a.n,artist:a.n,country:a.c,streams:Math.round(a.tracks.reduce((s,t)=>s+t.streams,0)),vs:best.streams,ovr:Math.round(85+14*(Math.log10(a.tracks.reduce((s,t)=>s+t.streams,0))-TLO)/(THI-TLO)),tier:"legendaire"};
   ICONES.push(c);CARD[c.key]=c;a.icone=c.key;
 });
-// ---------- cartes spéciales : Album (album complété), TOTW (sons de la semaine, +2), Anniversaire d'album (+2) ----------
-const LV=typeof LIVE!=="undefined"?LIVE:{updated:"",totw:[],news:[]};
+// ---------- cartes spéciales : Album (album complété), TOTW (la carte monte de rang cette semaine), promos (équipe du mois) ----------
+const LV=typeof LIVE!=="undefined"?LIVE:{updated:"",totw:[],news:[],promos:[]};
+LV.totw??=[];LV.news??=[];LV.promos??=[];
 const albOvr=al=>{const top=al.tr.map((_,i)=>CARD[`t:${al.id}:${i}`].ovr).sort((x,y)=>y-x).slice(0,5);return Math.min(99,Math.round(top.reduce((t,o)=>t+o,0)/top.length)+1)};
 ALBUMS.forEach(al=>{if(al.tr.length<4)return;const a=ART[al.ar];const c={key:`al:${al.id}`,kind:"album",alb:al.id,ar:a.id,title:al.t,artist:a.n,country:a.c,streams:Math.round(al.total*10)/10,vs:0,ovr:albOvr(al),tier:"legendaire"};CARD[c.key]=c;al.card=c.key});
+const TOTW_INFO={};LV.totw.forEach(x=>x.tr.forEach(([a,i,o0,o1])=>TOTW_INFO[`w:${x.w}:${a}:${i}`]={o0,o1}));
 function totwCard(w,alb,i){
   const k=`w:${w}:${alb}:${i}`;if(CARD[k])return CARD[k];
   const b=CARD[`t:${alb}:${i}`];if(!b)return null;
-  const c={...b,key:k,kind:"totw",week:w,ovr:Math.min(99,b.ovr+2)};delete c._st;return CARD[k]=c;
+  const inf=TOTW_INFO[k]||{},ovr=Math.max(b.ovr,inf.o1||0);
+  const c={...b,key:k,kind:"totw",week:w,ovr,tier:tierOf(ovr),from:tierOf(inf.o0??ovr-1)};delete c._st;return CARD[k]=c;
 }
-function annivCard(y,alb){
-  const k=`y:${y}:${alb}`;if(CARD[k])return CARD[k];
-  const al=ALB[alb];if(!al||!al.card)return null;
-  const b=CARD[al.card],c={...b,key:k,song:k,kind:"anniv",years:y-al.y,ovr:Math.min(99,b.ovr+2)};delete c._st;return CARD[k]=c;
+const PROMO_INFO={};LV.promos.forEach(p=>p.tr.forEach(([a,i,o])=>PROMO_INFO[`p:${p.id}:${a}:${i}`]={o,p}));
+function promoCard(pid,alb,i){
+  const k=`p:${pid}:${alb}:${i}`;if(CARD[k])return CARD[k];
+  const b=CARD[`t:${alb}:${i}`],inf=PROMO_INFO[k];if(!b||!inf)return null;
+  const c={...b,key:k,kind:"promo",promo:inf.p.name,ovr:inf.o,tier:tierOf(inf.o)};delete c._st;return CARD[k]=c;
 }
 const weekNo=w=>+String(w).split("-W")[1];
 const TOTW_NOW=(LV.totw[0]?.tr||[]).map(([a,i])=>totwCard(LV.totw[0].w,a,i)).filter(Boolean);
-// anniversaires : les albums sortis à 3 jours près de la date du jour, les années précédentes
-const ANNIV_NOW=(()=>{
-  const now=new Date(),Y=now.getFullYear(),out=[];
-  for(const al of ALBUMS){
-    if(!al.d||!al.card)continue;const [y,m,d]=al.d.split("-").map(Number);if(!m||!d||Y-y<1)continue;
-    if(Math.abs(new Date(Y,m-1,d)-new Date(Y,now.getMonth(),now.getDate()))<=3*864e5)out.push(al);
-  }
-  return out.sort((x,y)=>y.total-x.total).slice(0,8).map(al=>annivCard(Y,al.id));
-})();
-const NEWS=(LV.news||[]).map(id=>ALB[id]).filter(Boolean);
-const LIVE_POOL=[...TOTW_NOW,...ANNIV_NOW];
+const PROMO=LV.promos.find(p=>p.until>=new Date().toLocaleDateString("sv"))||null;
+const PROMO_NOW=PROMO?PROMO.tr.map(([a,i])=>promoCard(PROMO.id,a,i)).filter(Boolean):[];
+const ALL_TOTW=LV.totw.map(x=>({w:x.w,cs:x.tr.map(([a,i])=>totwCard(x.w,a,i)).filter(Boolean)}));
+const ALL_PROMO=LV.promos.map(p=>({p,cs:p.tr.map(([a,i])=>promoCard(p.id,a,i)).filter(Boolean)}));
+const NEWS=LV.news.map(id=>ALB[id]).filter(Boolean);
+const LIVE_POOL=[...TOTW_NOW,...PROMO_NOW];
 const holo = t => CARD["h"+t.key.slice(1)]; // undefined si le titre n'a pas de version Holo
 const drawHolo = f => any(f?HOLOS.filter(f):HOLOS);
 // la valeur vient des disques : 100 pièces + 800 par disque de platine (×2,5 en Holo, ×4 en Icône)
 // valeur au marché, comme les prix moyens de FIFA selon la note : ~400 à 75, ~1 000 à 81, ~9 000 à 86, ~55 000 à 90, plus d'un million à 99
 const FIFA={75:400,76:450,77:500,78:600,79:700,80:850,81:1000,82:1300,83:1800,84:3000,85:5000,86:9000,87:15000,88:24000,89:35000,90:55000,91:75000,92:100000,93:140000,94:200000,95:300000,96:450000,97:650000,98:900000,99:1300000};
 const baseValue = o => o>=75?FIFA[Math.min(99,o)]:o>=70?300+(o-70)*20:o>=65?200:o>=60?150:100;
-const KMUL={holo:1.5,icone:2,totw:1.6,anniv:1.8,album:2.5};
+const KMUL={holo:1.5,icone:2,totw:1.3,promo:2,album:2.5};
 const value = c => Math.round(baseValue(c.ovr)*(KMUL[c.kind]||1)/10)*10;
 const quick = c => Math.max(10,Math.round(value(c)*.25/10)*10); // la vente rapide rapporte peu, comme sur FIFA
-const KW={icone:.2,anniv:.18,totw:.15,album:.12,holo:.1};
+const KW={icone:.2,promo:.18,totw:.15,album:.12,holo:.1};
 const weight = c => c.ovr+(KW[c.kind]||0); // on range par note, la couleur ne sert qu'à départager une égalité
-const walkout = c => c.kind==="icone"||c.kind==="anniv"||c.kind==="album"||(c.kind==="totw"?c.ovr>=84:c.kind==="holo"?c.ovr>=83:c.ovr>=86); // walkout : 86+ (Holo 83+), et toujours pour une Icône
-const labelOf = c => c.kind==="icone"?"Icône":c.kind==="holo"?"Holo":c.kind==="totw"?"TOTW":c.kind==="anniv"?`${c.years} ans`:c.kind==="album"?"Album":TIER[c.tier];
+const walkout = c => c.kind==="icone"||c.kind==="promo"||c.kind==="album"||(c.kind==="totw"||c.kind==="holo"?c.ovr>=83:c.ovr>=86); // walkout : 86+ (Holo 83+), et toujours pour une Icône
+const labelOf = c => c.kind==="icone"?"Icône":c.kind==="holo"?"Holo":c.kind==="totw"?"TOTW":c.kind==="promo"?c.promo:c.kind==="album"?"Album":TIER[c.tier];
 
 const ODDS={commune:.62,rare:.27,epique:.09,legendaire:.02};
 const PACKS=[
@@ -110,7 +109,8 @@ const SPECIAL={
   // choix de cartes : on en voit 3, on en garde 1
   pickDia:{key:"sp",label:"Choix Diamant",desc:"Choisis 1 Diamant parmi 3",pick:"legendaire"},
   pickIco:{key:"sp",label:"Choix Icône",desc:"Choisis 1 Icône parmi 3",pick:"icone"},
-  pickHolo:{key:"sp",label:"Choix Holo",desc:"Choisis 1 Holo parmi 3",pick:"holo"}
+  pickHolo:{key:"sp",label:"Choix Holo",desc:"Choisis 1 Holo parmi 3",pick:"holo"},
+  pickPromo:{key:"sp",label:"Choix "+(PROMO?PROMO.name:"spécial"),desc:"Choisis 1 carte "+(PROMO?PROMO.name:"spéciale")+" parmi 3",pick:"promo"}
 };
 // ce que peut rapporter un défi : un pack spécial ou un pack de la boutique
 const REWARD={...SPECIAL,p3:PACKS[0],p6:PACKS[1],p12:PACKS[2]};
@@ -118,7 +118,7 @@ const rewardOf=k=>PACKS.find(p=>p.key===k)||REWARD[k];
 // ouvre une récompense : un pack, ou un choix de cartes
 function openReward(rw){if(rw.pick)pickSheet(rw);else openPack(rw)}
 function pickSheet(rw,onTake){
-  const pool=rw.pick==="icone"?ICONES:rw.pick==="holo"?HOLOS:POOL.legendaire,ch=[];
+  const pool=rw.pick==="promo"?(PROMO_NOW.length>=3?PROMO_NOW:HOLOS):rw.pick==="icone"?ICONES:rw.pick==="holo"?HOLOS:POOL.legendaire,ch=[];
   while(ch.length<3){const c=any(pool);if(!ch.includes(c))ch.push(c)}
   SFX.board();haptic([30,40,30]);let sel=null;
   sheet(`<div class="pickhead"><small>Choix de carte</small><h2>${rw.label}</h2><p>Touche la carte que tu veux garder, puis confirme.</p></div>
@@ -142,7 +142,7 @@ if(state.draft&&!state.draft.slots)state.draft=null;
 if(!state.bonus2){state.coins+=400000;state.bonus2=1} // cadeau unique pour les parties déjà commencées
 for(const k in state.owned)if(!CARD[k])delete state.owned[k]; // un titre retiré du catalogue
 state.inbox??=[];state.rewarded??=[];state.sbcDone??={};
-function save(){try{localStorage.setItem("beatpacks3",JSON.stringify(state))}catch(e){}try{const b=document.getElementById("shopBadge");b.hidden=!state.inbox.length;b.textContent=state.inbox.length>9?"9+":state.inbox.length}catch(e){}}
+function save(){state.at=Date.now();try{localStorage.setItem("beatpacks3",JSON.stringify(state))}catch(e){}try{if(state.google)cloudPush()}catch(e){}try{const b=document.getElementById("shopBadge");b.hidden=!state.inbox.length;b.textContent=state.inbox.length>9?"9+":state.inbox.length}catch(e){}}
 function daily(){if(!state.daily||state.daily.date!==today())state.daily={date:today(),packs:0,sold:0,bought:0,hi:0,sbc:0,claimed:[]};return state.daily}
 const has = k => (state.owned[k]||0)>0;
 const give = k => state.owned[k]=(state.owned[k]||0)+1;
@@ -169,7 +169,7 @@ function statsOf(c){
   if(c._st)return c._st;
   let h=0;for(const ch of c.key)h=(h*31+ch.charCodeAt(0))>>>0;
   const rnd=()=>{h=(h*1103515245+12345)>>>0;return h/4294967296},cl=v=>Math.max(40,Math.min(99,Math.round(v)));
-  const age=2026-ALB[c.alb].y,bump=({icone:3,holo:1,totw:2,anniv:2,album:3})[c.kind]||0;
+  const age=2026-ALB[c.alb].y,bump=({icone:3,holo:1,totw:1,promo:4,album:3})[c.kind]||0;
   const st=[0,1,2,3].map(()=>cl(c.ovr-9+rnd()*14+bump));
   st.push(cl(c.ovr-5+(age<=2?7:age<=6?2:-5)+rnd()*6+bump));
   st.push(cl(54+10*Math.log10(Math.max(.05,c.kind==="icone"?c.vs:c.streams))+bump));
@@ -178,14 +178,16 @@ function statsOf(c){
 function cardHTML(c,fresh,qty){
   return `<div class="card ${c.kind==="track"?"t-"+c.tier:"k-"+c.kind}">
     <div class="cart">${coverHTML(c.alb,"art")}${c.kind!=="track"?`<span class="kind">${labelOf(c).toUpperCase()}</span>`:""}</div>
-    <span class="ovr">${c.ovr}</span><span class="cc">${c.country}</span>${c.kind==="totw"||c.kind==="anniv"?`<span class="plus">+2</span>`:""}
+    <span class="ovr">${c.ovr}</span><span class="cc">${c.country}</span>${c.kind==="totw"?`<span class="rup">${TIER[c.from]} › ${TIER[c.tier]}</span>`:""}
     ${fresh?`<span class="new">NEW</span>`:qty>1?`<span class="new dup">×${qty}</span>`:""}
     <div class="nm">${esc(c.kind==="icone"?"Icône":c.title)}</div>
     <div class="ar">${esc(c.artist)}</div>
     <div class="tl"><span>${labelOf(c)}</span><span>${PLAY}${fmtStreams(c.streams)}</span></div>
     <div class="glare"></div>
-  </div>`;
+  </div>${POP[c.kind]||""}`;
 }
+// décor qui dépasse de la carte (TOTW et équipe du mois)
+const POP={totw:`<span class="pop pop-totw" aria-hidden="true"><i></i><i></i><i></i><i></i><b>TOTW</b></span>`,promo:`<span class="pop pop-promo" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i><b>★</b></span>`};
 const cw=(c,{fresh=false,qty=0,tap=false,i,lock=false}={})=>`<div class="cw${lock?" lock":""}"${tap?` data-k="${c.key}"`:""}${i!=null?` style="--i:${i}"`:""}>${cardHTML(c,fresh,qty)}</div>`;
 // les pochettes des packs : les albums de rap les plus streamés au monde, trois par pack
 const WORLD=[["Views","beerbongs & bentleys","The Eminem Show"],["ASTROWORLD","Goodbye & Good Riddance","DAMN."],["Certified Lover Boy","My Beautiful Dark Twisted Fantasy","Rodeo"]]
@@ -246,6 +248,7 @@ function checkAlbums(){
 // annonce les albums terminés (après un pack, un achat ou un cadeau)
 function announceAlbums(){
   const done=checkAlbums();if(!done.length)return;
+  done.forEach(d=>notify("Album complété",`${d.al.t} · carte album et pack offert`,"shop"));
   SFX.done();haptic([20,40,20,40,60]);
   const coins=done.reduce((t,d)=>t+d.pr.coins,0);
   sheet(`<h2>${done.length>1?done.length+" albums complétés !":"Album complété !"}</h2>${done[0].al.card?`<div class="albwin">${cw(CARD[done[0].al.card],{fresh:true})}</div><p class="note" style="margin:0;text-align:center">Carte album débloquée${done.length>1?` (+${done.length-1} autre${done.length>2?"s":""})`:""}</p>`:""}
@@ -265,9 +268,9 @@ function cardOfDay(){
 const fmtDate=d=>new Date(d+"T12:00:00").toLocaleDateString("fr-FR",{day:"numeric",month:"short",year:"numeric"});
 function newsSlides(){
   const sl=[];
-  if(TOTW_NOW.length){const c=[...TOTW_NOW].sort((x,y)=>y.ovr-x.ovr)[0];sl.push(`<div class="nslide" data-news="totw"><small>Actualité</small><h3>TOTW · Semaine ${weekNo(LV.totw[0].w)}</h3><p>Les ${TOTW_NOW.length} sons qui cartonnent · +2</p><div class="nvis">${cw(c)}</div></div>`)}
+  if(TOTW_NOW.length){const c=[...TOTW_NOW].sort((x,y)=>y.ovr-x.ovr)[0];sl.push(`<div class="nslide" data-news="totw"><small>Actualité</small><h3>TOTW · Semaine ${weekNo(LV.totw[0].w)}</h3><p>${TOTW_NOW.length} carte${TOTW_NOW.length>1?"s":""} monte${TOTW_NOW.length>1?"nt":""} de rang</p><div class="nvis">${cw(c)}</div></div>`)}
+  if(PROMO_NOW.length){const c=[...PROMO_NOW].sort((x,y)=>y.ovr-x.ovr)[0];sl.push(`<div class="nslide" data-news="promo"><small>Équipe du mois</small><h3>${esc(PROMO.name)}</h3><p>${PROMO_NOW.length} cartes · jusqu’au ${fmtDate(PROMO.until)}</p><div class="nvis">${cw(c)}</div></div>`)}
   if(NEWS.length){const al=NEWS[0];sl.push(`<div class="nslide" data-news="sorties"><small>Actualité</small><h3>Sorties</h3><p>${esc(ART[al.ar].n)} · ${esc(al.t)}</p><div class="nvis ncov">${coverHTML(al.id)}<span class="ntag">Nouveau</span></div></div>`)}
-  if(ANNIV_NOW.length){const c=ANNIV_NOW[0];sl.push(`<div class="nslide" data-news="anniv"><small>Actualité</small><h3>Anniversaire</h3><p>${c.years} ans de ${esc(c.title)}</p><div class="nvis">${cw(c)}</div></div>`)}
   if(!sl.length){const c=cardOfDay();sl.push(`<div class="nslide" data-k="${c.key}"><small>Actualité</small><h3>Carte du jour</h3><p>${esc(c.artist)}</p><div class="nvis">${cw(c,{lock:!has(c.key)})}</div></div>`)}
   return sl;
 }
@@ -281,13 +284,17 @@ function renderHub(){
     <div class="hubside news"><div class="ntrack" id="ntrack">${sl.join("")}</div>${sl.length>1?`<div class="ndots">${sl.map((_,i)=>`<i data-nd="${i}" class="${i?"":"on"}"></i>`).join("")}</div>`:""}</div>`;
   const tr=$("ntrack");tr.onscroll=()=>{const i=Math.round(tr.scrollLeft/tr.clientWidth);$("hub").querySelectorAll("[data-nd]").forEach((d,j)=>d.classList.toggle("on",j===i))};
 }
+const ownOrLock=c=>has(c.key)?cw(c,{qty:state.owned[c.key],tap:true}):`<div data-k="${c.key}">${cw(c,{lock:true})}</div>`;
 function totwSheet(){
-  const own=c=>has(c.key)?cw(c,{qty:state.owned[c.key],tap:true}):`<div data-k="${c.key}">${cw(c,{lock:true})}</div>`;
-  const prev=LV.totw.slice(1,4).map(x=>({w:x.w,cs:x.tr.map(([a,i])=>totwCard(x.w,a,i)).filter(Boolean)}));
-  sheet(`<div class="pickhead"><small>Actualité</small><h2>TOTW · Semaine ${weekNo(LV.totw[0].w)}</h2><p>Les ${TOTW_NOW.length} titres du jeu les plus écoutés cette semaine sur Spotify (France, États-Unis, Royaume-Uni). Leur carte TOTW a <b>+2</b> sur la note et tombe dans les packs toute la semaine.</p></div>
-    <div class="grid ngrid">${[...TOTW_NOW].sort((x,y)=>y.ovr-x.ovr).map(own).join("")}</div>
-    ${prev.map(p=>`<h2 style="font-size:16px;margin:10px 0 0;align-self:flex-start">Semaine ${weekNo(p.w)}</h2><div class="grid ngrid">${p.cs.map(own).join("")}</div>`).join("")}
-    <p class="note" style="margin:0">Streams mis à jour le ${LV.updated?fmtDate(LV.updated):"—"}.</p>`);
+  sheet(`<div class="pickhead"><small>Actualité</small><h2>TOTW · Semaine ${weekNo(LV.totw[0].w)}</h2><p>Les cartes qui ont <b>changé de rang</b> cette semaine grâce à leurs streams (Vinyle › Or › Platine › Diamant). Les plus écoutées de la semaine en premier. Elles tombent dans les packs toute la semaine.</p></div>
+    <div class="grid ngrid">${TOTW_NOW.map(c=>`<div class="ncap">${ownOrLock(c)}<small>${TIER[c.from]} › ${TIER[c.tier]}</small></div>`).join("")}</div>
+    <p class="note" style="margin:0">Streams mis à jour le ${LV.updated?fmtDate(LV.updated):"—"}. Les anciennes TOTW sont dans le Catalogue › Cartes spéciales.</p>`);
+  $("sheetIn").onclick=e=>{const c=e.target.closest("[data-k]");if(c)cardSheet(c.dataset.k)};
+}
+function promoSheet(){
+  if(!PROMO)return;
+  sheet(`<div class="pickhead"><small>Équipe du mois</small><h2>${esc(PROMO.name)}</h2><p>${esc(PROMO.desc||"")}. ${PROMO_NOW.length} cartes notées de 83 à 89, dans les packs jusqu’au ${fmtDate(PROMO.until)}, et en choix avec le SBC « ${esc(PROMO.name)} ».</p></div>
+    <div class="grid ngrid">${[...PROMO_NOW].sort((x,y)=>y.ovr-x.ovr).map(ownOrLock).join("")}</div>`);
   $("sheetIn").onclick=e=>{const c=e.target.closest("[data-k]");if(c)cardSheet(c.dataset.k)};
 }
 function sortiesSheet(){
@@ -295,18 +302,13 @@ function sortiesSheet(){
     <div class="nlist">${NEWS.map(al=>`<button class="arow" data-nalb="${al.id}">${coverHTML(al.id)}<div class="at"><b>${esc(al.t)}</b><small>${esc(ART[al.ar].n)} · sorti le ${fmtDate(al.d)} · ${al.tr.length} titres</small></div></button>`).join("")}</div>`);
   $("sheetIn").onclick=e=>{const b=e.target.closest("[data-nalb]");if(!b)return;const al=ALB[b.dataset.nalb];closeSheet();club.view="album";club.ar=al.ar;club.alb=al.id;TABS.forEach(t=>t.classList.toggle("on",t.dataset.go==="s-club"));pillTo(TABS.find(t=>t.dataset.go==="s-club"));show("s-club")};
 }
-function annivSheet(){
-  sheet(`<div class="pickhead"><small>Actualité</small><h2>Anniversaires</h2><p>Les albums qui fêtent leur sortie cette semaine. Leur carte anniversaire (+2 sur la carte album) tombe dans les packs jusqu’à la fin de la semaine.</p></div>
-    <div class="grid ngrid">${ANNIV_NOW.map(c=>`<div class="ncap">${has(c.key)?cw(c,{qty:state.owned[c.key],tap:true}):`<div data-k="${c.key}">${cw(c,{lock:true})}</div>`}<small>${esc(c.title)} · ${fmtDate(ALB[c.alb].d)}</small></div>`).join("")}</div>`);
-  $("sheetIn").onclick=e=>{const c=e.target.closest("[data-k]");if(c)cardSheet(c.dataset.k)};
-}
 function renderMenu(){
   renderHub();
   const ready=SBC.filter(canDo).length,d=state.draft;
   $("mtiles").innerHTML=`<button class="mtile mt-draft" data-play="draft"><small>Jouer</small><b>Draft</b><span>${d?(d.over?"Récompense à récupérer":d.step<5?`Choix ${d.step+1} sur 5 en cours`:`Combat ${d.round+1} sur 4`):"Monte ta maison de disque, puis 4 combats"}</span><i class="mic">♫</i></button>
     <button class="mtile mt-match" data-play="match"><small>Jouer</small><b>Match</b><span>Ton meilleur label contre l’ordinateur</span><i class="mic">⚔</i></button>
     <button class="mtile mt-sbc" data-go2="s-quests"><small>Objectifs</small><b>SBC</b><span>${ready} défi${ready>1?"s":""} prêt${ready>1?"s":""}</span><i class="mic">◆</i></button>
-    <button class="mtile mt-set" data-go2="s-settings"><small>Options</small><b>Paramètres</b><span>Son, vibrations, pseudo</span><i class="mic">⚙</i></button>`;
+    <button class="mtile mt-blind" data-play="blind"><small>Jouer</small><b>Blind test</b><span>Devine le son en 15 secondes</span><i class="mic">♪</i></button>`;
 }
 $("mtiles").onclick=e=>{
   const p=e.target.closest("[data-play]");if(p){SFX.tap();playView=p.dataset.play;show("s-play");return}
@@ -316,7 +318,7 @@ $("hub").onclick=e=>{
   const m=e.target.closest("[data-hub]");
   if(m){SFX.tap();let g=m.dataset.hub;if(g==="gift"){shopTab="mine";g="s-shop"}if(g==="s-club")club.view="artists";TABS.forEach(b=>b.classList.toggle("on",b.dataset.go===g));pillTo(TABS.find(b=>b.dataset.go===g));show(g);return}
   const nd=e.target.closest("[data-nd]");if(nd){const tr=$("ntrack");tr.scrollTo({left:tr.clientWidth*+nd.dataset.nd,behavior:"smooth"});return}
-  const n=e.target.closest("[data-news]");if(n){SFX.tap();return ({totw:totwSheet,sorties:sortiesSheet,anniv:annivSheet})[n.dataset.news]()}
+  const n=e.target.closest("[data-news]");if(n){SFX.tap();return ({totw:totwSheet,sorties:sortiesSheet,promo:promoSheet})[n.dataset.news]()}
   const c=e.target.closest("[data-k]");if(c)cardSheet(c.dataset.k);
 };
 let shopTab="buy";
@@ -692,8 +694,15 @@ function renderClub(){
     const list=ARTISTS.filter(a=>a.tracks.length&&(!q||slug(a.n).includes(q))&&(!["FR","US","UK"].includes(club.asort)||a.c===club.asort)).sort(AS[club.asort][1]||AS.own[1]);
     html=`<div class="titlerow"><h1>Catalogue</h1><span class="count-big"><b>${uniq()}</b> / ${fmt(TRACKS.length)}</span></div>${seg}
       <input type="search" id="search" class="search" placeholder="Rechercher un artiste" value="${esc(club.q)}" autocomplete="off">
+      <button class="spbtn" data-sp="1"><span><b>Cartes spéciales</b><small>${PROMO?esc(PROMO.name)+" · ":""}TOTW · ${[...ALL_PROMO.flatMap(x=>x.cs),...ALL_TOTW.flatMap(x=>x.cs)].filter(c=>has(c.key)).length}/${ALL_PROMO.reduce((t,x)=>t+x.cs.length,0)+ALL_TOTW.reduce((t,x)=>t+x.cs.length,0)} obtenues</small></span><i>›</i></button>
       <div class="chips" id="asortBar">${Object.entries(AS).map(([k,[l]])=>`<button aria-pressed="${club.asort===k}" data-asort="${k}">${l}</button>`).join("")}</div>
       ${list.length?`<div class="agrid">${list.map(a=>{const o=a.tracks.filter(t=>has(t.key)||has(holo(t)?.key)).length;return `<button class="atile${o?"":" none"}" data-ar="${a.id}">${coverHTML(a.cover)}<b>${esc(a.n)}</b><small>${o}/${a.tracks.length} · Icône ${CARD[a.icone].ovr}</small></button>`}).join("")}</div>`:`<p class="empty">Aucun artiste ne correspond.</p>`}`;
+  }else if(club.view==="special"){
+    const lk=c=>has(c.key)?cw(c,{qty:state.owned[c.key],tap:true}):lock(c);
+    html=`<button class="back" data-back="artists">‹ Catalogue</button><h1>Cartes spéciales</h1>
+      ${ALL_PROMO.map(({p,cs})=>`<h2 style="margin:16px 0 4px">${esc(p.name)}</h2><p class="note" style="margin:0 0 10px">${esc(p.desc||"")} · ${p.until>=new Date().toLocaleDateString("sv")?`jusqu’au ${fmtDate(p.until)}`:"terminée"}</p><div class="grid">${[...cs].sort((x,y)=>y.ovr-x.ovr).map(lk).join("")}</div>`).join("")}
+      ${ALL_TOTW.map(({w,cs})=>`<h2 style="margin:18px 0 10px">TOTW · Semaine ${weekNo(w)}</h2><div class="grid">${cs.map(lk).join("")}</div>`).join("")}
+      ${!ALL_PROMO.length&&!ALL_TOTW.length?`<p class="empty">Pas encore de cartes spéciales.</p>`:""}`;
   }else if(club.view==="artist"){
     const a=ART[club.ar],own=a.tracks.filter(t=>has(t.key)||has(holo(t)?.key)).length,ic=CARD[a.icone];
     html=`<button class="back" data-back="artists">‹ Catalogue</button>
@@ -720,7 +729,8 @@ function renderClub(){
         ${pr?`<div class="aprize${got?" got":""}"><i class="coin"></i>${got?"Prime de l’album reçue ✓":`Finis l’album : +${fmt(pr.coins)} pièces et un ${PACKS.find(p=>p.key===pr.pack).label} offert`}</div>`:""}
         ${al.card?`<h2 style="font-size:16px;margin:14px 0 8px">Carte album</h2><div class="grid">${has(al.card)?cw(CARD[al.card],{qty:state.owned[al.card],tap:true}):lock(CARD[al.card])}</div>`:""}
         ${sortBar}<h2 style="font-size:16px;margin:14px 0 8px">Titres</h2><div class="grid">${mine.join("")}${missHTML.join("")}</div>
-        ${holos?`<h2 style="font-size:16px;margin:18px 0 8px">Holo de l’album</h2><div class="grid">${holos}</div>`:""}`;
+        ${holos?`<h2 style="font-size:16px;margin:18px 0 8px">Holo de l’album</h2><div class="grid">${holos}</div>`:""}
+        ${(()=>{const sp=[...ALL_PROMO.flatMap(x=>x.cs),...ALL_TOTW.flatMap(x=>x.cs)].filter(c=>c.alb===al.id);return sp.length?`<h2 style="font-size:16px;margin:18px 0 8px">Cartes spéciales</h2><div class="grid">${sp.map(c=>has(c.key)?cw(c,{qty:state.owned[c.key],tap:true}):lock(c)).join("")}</div>`:""})()}`;
     }
   }
   el.innerHTML=html;
@@ -732,6 +742,7 @@ $("club").onclick=e=>{
   const so=t.closest("#sortBar [data-sort]");if(so){club.sort=so.dataset.sort;renderClub();haptic(6);return}
   const as=t.closest("#asortBar [data-asort]");if(as){club.asort=as.dataset.asort;renderClub();haptic(6);return}
   const b=t.closest("[data-back]");if(b){club.view=b.dataset.back;renderClub();scrollTo(0,0);return}
+  if(t.closest("[data-sp]")){club.view="special";renderClub();scrollTo(0,0);haptic();return}
   const ar=t.closest("[data-ar]");if(ar){club.view="artist";club.ar=ar.dataset.ar;renderClub();scrollTo(0,0);haptic();return}
   const al=t.closest("[data-alb]");if(al){club.view="album";club.alb=al.dataset.alb;renderClub();markSeen();scrollTo(0,0);haptic();return}
   if(t.closest("[data-icone]")){club.view="album";club.alb="icone";renderClub();markSeen();scrollTo(0,0);return}
@@ -786,6 +797,7 @@ function tickListings(){
     const g=sold.reduce((s,l)=>s+Math.round(l.price*.95),0);
     daily().sold+=sold.length;
     earn(g,sold.length>1?`${sold.length} cartes vendues`:`${CARD[sold[0].k].title} vendue`);
+    notify(sold.length>1?`${sold.length} cartes vendues`:"Carte vendue",`${sold.length>1?"":CARD[sold[0].k].title+" · "}+${fmt(g)} pièces au marché`,"market");
     renderMarket();badge();
   }else save();
 }
@@ -829,6 +841,7 @@ const SBC=[
   {id:"old",cat:"Époques",t:"Old School",d:"5 cartes d’avant 2005, moyenne 76",b:"5 cartes d’albums sortis avant 2005",n:5,ok:c=>yr(c)<2005,reqs:[R.avg(76)],rw:"old",c1:"#b6ff3b",c2:"#0b5e4a"},
   {id:"newgen",cat:"Époques",t:"Nouvelle vague",d:"5 cartes depuis 2023, 3 artistes",b:"5 cartes d’albums sortis depuis 2023",n:5,ok:c=>yr(c)>=2023,reqs:[R.arts(3)],rw:"newgen",c1:"#22e0ff",c2:"#ff3d8b"}
 ];
+if(PROMO)SBC.unshift({id:"promo",cat:"Équipe du mois",t:PROMO.name,d:"8 cartes Vinyle de 4 artistes",b:"8 cartes Vinyle",n:8,ok:isT("commune"),reqs:[R.arts(4)],rw:"pickPromo",c1:"#34e3b0",c2:"#7b4dff"});
 function reqState(r,cs){
   if(r.type==="min"){const n=cs.filter(r.f).length;return {v:`${Math.min(n,r.k)}/${r.k}`,p:n/r.k,ok:n>=r.k}}
   if(r.type==="max"){const n=cs.filter(r.f).length;return {v:`${n}/${r.k}`,p:n<=r.k?1:0,ok:n<=r.k}}
@@ -938,6 +951,7 @@ function renderPlay(){
   if(battle)return renderBattle();
   let back=`<button class="back" id="playBack">‹ Menu</button>`;
   if(playView==="match")return renderMatch(back);
+  if(playView==="blind")return renderBlind(back);
   const d=state.draft;
   if(d&&!d.over)back=`<div class="playtop"><button class="back" id="playBack">‹ Menu</button><button class="quit" id="dQuit">Abandonner le draft</button></div>`;
   if(!d){
@@ -959,6 +973,72 @@ function renderPlay(){
   $("play").innerHTML=`${back}${studioHTML(d.slots,{label:d.name,hue:d.hue})}<div class="dpath">${dots}</div>
     ${d.over?`<div class="draftin"><h3>${d.wins} victoire${d.wins>1?"s":""}</h3><p>Récompense : ${prizeTxt(DRAFT_PRIZE[d.wins])}</p><button class="btn" id="dClaim">Récupérer</button></div>`
       :`<button class="btn" id="dPlay">Combat ${d.round+1} sur 4 · ${esc(d.opps[d.round])} (${DRAFT_OPP[d.round]})</button>`}`;
+}
+// ---------- blind test : 10 extraits, 4 titres au choix, plus on répond vite plus on marque ----------
+const BT_N=10,BT_T=15,BT_COINS=300,BT_DAILY=5;
+let blind=null,btScope="all";
+const btPool=()=>TRACKS.filter(c=>c.streams>=40&&(btScope==="all"||c.country===btScope));
+function btClear(){if(!blind)return;clearTimeout(blind.to);clearInterval(blind.iv);clearTimeout(blind.nx)}
+function quitBlind(){btClear();blind=null;stopAudio()}
+function renderBlind(back){
+  const d=daily();d.blind??=0;
+  if(!blind){
+    $("play").innerHTML=`${back}<h1>Blind test</h1><div class="draftin"><small>Mode de jeu</small><h3>Devine le son</h3>
+      <p>${BT_N} extraits des plus gros sons du jeu. Trouve le bon titre parmi 4 en moins de ${BT_T} secondes : plus tu réponds vite, plus tu marques.</p>
+      <p>${BT_COINS} pièces par bonne réponse · ${Math.max(0,BT_DAILY-d.blind)} partie${BT_DAILY-d.blind>1?"s":""} récompensée${BT_DAILY-d.blind>1?"s":""} aujourd’hui${state.btBest?` · record : ${fmt(state.btBest)} pts`:""}</p>
+      <div class="chips" id="btScope">${[["all","Tout"],["FR","Rap FR"],["US","Rap US"],["UK","Rap UK"]].map(([k,l])=>`<button aria-pressed="${btScope===k}" data-btsc="${k}">${l}</button>`).join("")}</div>
+      ${state.sound===false?`<p class="note" style="color:#ff8fa3">Active « Extraits audio » dans les paramètres pour jouer.</p>`:""}
+      <button class="btn" id="btStart" ${state.sound===false?"disabled":""}>Lancer le blind test</button></div>`;
+    return;
+  }
+  if(blind.over){
+    $("play").innerHTML=`${back}<h1>Blind test</h1><div class="draftin bt-end"><small>Résultat</small><h3>${blind.good}/${BT_N} bonnes réponses</h3><p class="btpts">${fmt(blind.score)} points${blind.best?" · nouveau record !":""}</p>
+      <div class="btrecap">${blind.hist.map(h=>`<div class="${h.ok?"ok":"ko"}">${coverHTML(h.c.alb)}<span><b>${esc(h.c.title)}</b><small>${esc(h.c.artist)}</small></span><em>${h.ok?"+"+h.pts:"✕"}</em></div>`).join("")}</div>
+      <div class="two"><button class="btn ghost" id="btMenu">Menu</button><button class="btn" id="btAgain">Rejouer</button></div></div>`;
+    return;
+  }
+  const q=blind.q,el=q&&q.t0?Math.min(BT_T,(performance.now()-q.t0)/1000):0,ans=q&&q.ans!=null;
+  $("play").innerHTML=`${back}<div class="bttop"><span>Manche <b>${blind.round+1}</b>/${BT_N}</span><span><b>${fmt(blind.score)}</b> pts</span></div>
+    <div class="btdisc${ans?" open":""}">${ans?coverHTML(q.c.alb):`<i class="coin"></i>`}</div>
+    <div class="btbar"><i id="btFill" style="width:${q&&q.t0?100-el/BT_T*100:100}%"></i></div>
+    ${!q||!q.t0?`<p class="note" style="text-align:center">Chargement de l’extrait…</p>`:ans?`<p class="btres ${q.ans===q.right?"ok":"ko"}">${q.ans===q.right?`Bien joué ! +${q.pts}`:q.ans<0?"Temps écoulé":"Raté"}<small>${esc(q.c.title)} · ${esc(q.c.artist)}</small></p>`:`<p class="note" style="text-align:center">Quel est ce son ?</p>`}
+    <div class="btopts">${q&&q.t0?q.opts.map((c,i)=>`<button data-bt="${i}" class="${ans?(i===q.right?"right":i===q.ans?"wrong":"off"):""}" ${ans?"disabled":""}><b>${esc(c.title)}</b><small>${esc(c.artist)}</small></button>`).join(""):""}</div>`;
+}
+function startBlind(){
+  if(btPool().length<20)return toast("Pas assez de sons pour ce choix");
+  unlockAudio();blind={round:0,score:0,good:0,used:new Set(),hist:[],q:null,over:false};nextBlind();
+}
+function nextBlind(tries=0){
+  if(!blind)return;btClear();
+  if(blind.round>=BT_N)return endBlind();
+  const pool=btPool();let c;do{c=any(pool)}while(blind.used.has(c.song)&&tries<50&&++tries);
+  blind.used.add(c.song);
+  const same=pool.filter(x=>x.song!==c.song&&x.title!==c.title&&x.country===c.country),opts=[c];
+  while(opts.length<4){const x=any(same.length>8?same:pool);if(!opts.some(o=>o.title===x.title||o.song===x.song))opts.push(x)}
+  opts.sort(()=>Math.random()-.5);
+  const q=blind.q={c,opts,right:opts.indexOf(c),t0:0,ans:null,pts:0},me=blind;
+  renderPlay();
+  previewUrl(c).then(u=>{
+    if(blind!==me||blind.q!==q)return;
+    if(!u)return tries<6?nextBlind(tries+1):(toast("Extraits indisponibles"),endBlind());
+    audio.dataset.want="blind";audio.src=u;audio.currentTime=0;audio.volume=.9;audio.play().catch(()=>{});
+    q.t0=performance.now();renderPlay();SFX.tick();
+    blind.iv=setInterval(()=>{const f=$("btFill");if(f)f.style.width=Math.max(0,100-(performance.now()-q.t0)/1000/BT_T*100)+"%"},100);
+    blind.to=setTimeout(()=>answerBlind(-1),BT_T*1000);
+  },()=>{if(blind===me)nextBlind(tries+1)});
+}
+function answerBlind(i){
+  const q=blind&&blind.q;if(!q||q.ans!=null||!q.t0)return;
+  btClear();q.ans=i;const ok=i===q.right,el=(performance.now()-q.t0)/1000;
+  if(ok){q.pts=100+Math.round(Math.max(0,BT_T-el)/BT_T*100);blind.score+=q.pts;blind.good++;SFX.reveal();haptic([10,30,10])}else{SFX.slam();haptic(25)}
+  blind.hist.push({c:q.c,ok,pts:q.pts});renderPlay();
+  blind.nx=setTimeout(()=>{if(!blind)return;blind.round++;nextBlind()},2300);
+}
+function endBlind(){
+  btClear();stopAudio();const d=daily();d.blind??=0;
+  blind.over=true;blind.best=blind.score>(state.btBest||0);if(blind.best)state.btBest=blind.score;
+  const coins=d.blind<BT_DAILY?blind.good*BT_COINS:0;d.blind++;save();renderPlay();
+  if(coins)rewardScreen({title:"Blind test",sub:`${blind.good}/${BT_N} · ${fmt(blind.score)} points`,coins});else SFX.done();
 }
 // le label du joueur pour un Match : ses meilleures cartes, chacune au poste où sa stat clé est la plus forte
 function bestRoster(){
@@ -1062,7 +1142,11 @@ $("play").onclick=e=>{
     else if(e.target.closest("#bQuit"))confirmSheet("Abandonner le combat ?","Le combat compte comme une défaite.","Abandonner",()=>{if(!battle)return;const b=battle;battle=null;b.onDone(false,true)});
     return}
   if(e.target.closest("#dQuit")){const d=state.draft;return confirmSheet("Abandonner le draft ?",`Tu récupères la récompense de ${d.wins} victoire${d.wins>1?"s":""} : ${prizeTxt(DRAFT_PRIZE[d.wins])}.`,"Abandonner",()=>{if(state.draft){state.draft.over=true;claimDraft()}})}
-  if(e.target.closest("#playBack")){SFX.tap();return show("s-menu")}
+  if(e.target.closest("#playBack")){SFX.tap();if(blind)quitBlind();return show("s-menu")}
+  const bo=e.target.closest("[data-bt]");if(bo)return answerBlind(+bo.dataset.bt);
+  const bsc=e.target.closest("[data-btsc]");if(bsc){btScope=bsc.dataset.btsc;SFX.tap();return renderPlay()}
+  if(e.target.closest("#btStart")||e.target.closest("#btAgain")){SFX.tap();return startBlind()}
+  if(e.target.closest("#btMenu")){quitBlind();return show("s-menu")}
   if(e.target.closest("#dStart"))return startDraft();
   const dp=e.target.closest("[data-dpick]");if(dp){const d=state.draft;d.slots[SLOTS[d.step].id]=dp.dataset.dpick;d.step++;d.offer=d.step<5?draftOffer(SLOTS[d.step]):[];SFX.tick();haptic(8);save();renderPlay();return}
   if(e.target.closest("#dPlay")){const d=state.draft;return startBattle(d.slots,DRAFT_OPP[d.round],d.opps[d.round],d.name,won=>{if(won){d.wins++;d.round++;if(d.round>=4)d.over=true}else d.over=true;save();renderPlay()})}
@@ -1079,7 +1163,7 @@ function confirmSheet(title,txt,yes,go){
   sheet(`<h2>${esc(title)}</h2><p class="note" style="margin:0">${esc(txt)}</p><div class="acts"><div class="two"><button class="btn ghost" id="cfNo">Annuler</button><button class="btn danger" id="cfYes">${esc(yes)}</button></div></div>`);
   $("sheetIn").onclick=e=>{if(e.target.closest("#cfNo"))closeSheet();else if(e.target.closest("#cfYes")){closeSheet();SFX.tap();go()}};
 }
-$("setBack").onclick=()=>{SFX.tap();show("s-menu")};
+$("setBack").onclick=()=>{SFX.tap();show("s-menu");setTimeout(profileSheet,80)};
 
 // ---------- amis : offrir et recevoir des cartes par code ----------
 function renderFriends(){
@@ -1106,6 +1190,13 @@ $("optVibrate").checked=state.vibrate;
 $("optVibrate").onchange=e=>{state.vibrate=e.target.checked;save()};
 $("optSfx").checked=state.sfx!==false;
 $("optSfx").onchange=e=>{state.sfx=e.target.checked;save();if(state.sfx){ac();SFX.tap()}};
+$("optPush").checked=!!state.push&&"Notification" in window&&Notification.permission==="granted";
+$("optPush").onchange=async e=>{
+  if(!e.target.checked){state.push=false;save();return}
+  if(!("Notification" in window)){e.target.checked=false;return toast("Notifications non disponibles sur cet appareil (sur iPhone : ajoute le jeu à l’écran d’accueil)")}
+  const p=await Notification.requestPermission();state.push=p==="granted";e.target.checked=state.push;save();
+  toast(state.push?"Notifications activées":"Notifications refusées");
+};
 $("optSound").checked=state.sound!==false;
 $("optSound").onchange=e=>{state.sound=e.target.checked;save();if(!state.sound)stopAudio()};
 $("reset").onclick=()=>{
@@ -1118,14 +1209,95 @@ $("foot").textContent=`${ARTISTS.length} artistes · ${fmt(ALBUMS.length)} album
 const SCREENS=["s-market","s-friends","s-shop","s-quests","s-settings","s-club","s-menu","s-play"];
 const TABOF={"s-play":"s-menu","s-settings":"s-menu"}; // l'onglet allumé pour chaque écran
 function show(id){
+  if(id!=="s-play"&&blind)quitBlind();
   SCREENS.forEach(s=>$(s).hidden=s!==id);
-  $("btnFriends").classList.toggle("on",id==="s-friends");
+  
   const t=TABS.find(b=>b.dataset.go===(TABOF[id]||id));
   if(!t||!t.classList.contains("on")){TABS.forEach(b=>b.classList.toggle("on",b===t));pillTo(t||null)}
   ({"s-shop":renderPacks,"s-club":renderClub,"s-market":renderMarket,"s-quests":renderQuests,"s-friends":renderFriends,"s-menu":renderMenu,"s-play":renderPlay})[id]?.();
   scrollTo(0,0);
 }
-$("btnFriends").onclick=()=>{haptic();SFX.tab();show("s-friends")};
+// ---------- notifications : dans le jeu (cloche) et, si on l'autorise, sur l'appareil ----------
+function notify(t,body,go){
+  (state.notifs??=[]).unshift({id:rid(),t,body,go,at:Date.now(),read:false});state.notifs=state.notifs.slice(0,40);save();bellBadge();
+  if(state.push&&"Notification" in window&&Notification.permission==="granted"){try{new Notification(t,{body,icon:"icons/icon-192.png",tag:go||"bp"})}catch(e){}}
+}
+function bellBadge(){const n=(state.notifs||[]).filter(x=>!x.read).length,b=$("bellBadge");b.hidden=!n;b.textContent=n>9?"9+":n}
+const ago=t=>{const m=Math.round((Date.now()-t)/6e4);return m<1?"à l’instant":m<60?`il y a ${m} min`:m<1440?`il y a ${Math.round(m/60)} h`:`il y a ${Math.round(m/1440)} j`};
+const GO={totw:()=>totwSheet(),promo:()=>promoSheet(),sorties:()=>sortiesSheet(),shop:()=>{shopTab="mine";show("s-shop")},market:()=>{mkt="sell";show("s-market")},club:()=>show("s-club")};
+function notifSheet(){
+  const L=state.notifs||[];
+  sheet(`<h2>Notifications</h2>${L.length?`<div class="nlist">${L.map(n=>`<button class="notif${n.read?"":" unread"}" data-go="${n.go||""}"><i></i><span><b>${esc(n.t)}</b><small>${esc(n.body||"")}</small></span><em>${ago(n.at)}</em></button>`).join("")}</div><button class="btn ghost" id="nClear">Tout effacer</button>`:`<p class="empty">Aucune notification pour l’instant.</p>`}`);
+  L.forEach(n=>n.read=true);save();bellBadge();
+  $("sheetIn").onclick=e=>{
+    if(e.target.closest("#nClear")){state.notifs=[];save();bellBadge();closeSheet();return}
+    const b=e.target.closest("[data-go]");if(b&&GO[b.dataset.go]){closeSheet();setTimeout(GO[b.dataset.go],60)}
+  };
+}
+$("btnBell").onclick=()=>{haptic();notifSheet()};
+// les nouveautés depuis la dernière visite
+function checkNews(){
+  if(LV.totw[0]&&state.lastTotw!==LV.totw[0].w){notify(`TOTW · Semaine ${weekNo(LV.totw[0].w)}`,`${TOTW_NOW.length} carte${TOTW_NOW.length>1?"s montent":" monte"} de rang cette semaine`,"totw");state.lastTotw=LV.totw[0].w}
+  if(PROMO&&state.lastPromo!==PROMO.id){notify(`${PROMO.name} : l’équipe du mois`,`${PROMO_NOW.length} cartes de 83 à 89, jusqu’au ${fmtDate(PROMO.until)}`,"promo");state.lastPromo=PROMO.id}
+  const seen=new Set(state.seenNews||[]),fresh=NEWS.filter(al=>!seen.has(al.id));
+  fresh.slice(0,state.seenNews?3:1).forEach(al=>notify("Nouvelle sortie",`${ART[al.ar].n} · ${al.t}`,"sorties"));
+  state.seenNews=NEWS.map(al=>al.id);save();
+}
+
+// ---------- profil : avatar, paramètres, amis, connexion Google ----------
+function renderAvatar(){const g=state.google,b=$("btnProfile");b.innerHTML=g&&g.photo?`<img src="${g.photo}" alt="" referrerpolicy="no-referrer">`:esc((state.pseudo[0]||"?").toUpperCase())}
+function profileSheet(){
+  const g=state.google,total=Object.values(state.owned).reduce((t,n)=>t+n,0);
+  const best=Object.keys(state.owned).map(k=>CARD[k]).sort((a,b)=>weight(b)-weight(a))[0];
+  sheet(`<div class="prof"><span class="avbig">${g&&g.photo?`<img src="${g.photo}" alt="" referrerpolicy="no-referrer">`:esc((state.pseudo[0]||"?").toUpperCase())}</span><h2>${esc(state.pseudo)}</h2>
+    <small>${fmt(total)} cartes · ${state.rewarded.length} albums complétés${state.btBest?` · blind test ${fmt(state.btBest)} pts`:""}</small>${best?`<small>Meilleure carte : ${esc(best.title)} (${best.ovr})</small>`:""}</div>
+    <div class="gacc">${g?`<span class="gdot"></span><div><b>Connecté avec Google</b><small>${esc(g.email||g.name||"")} · ${state.cloudErr?"sauvegarde en ligne indisponible":"partie sauvegardée en ligne"}</small></div><button class="btn ghost sm" id="gOut">Déconnexion</button>`
+      :`<div><b>Compte Google</b><small>Connecte-toi pour sauvegarder ta partie en ligne et la retrouver sur tous tes appareils.</small></div><button class="gbtn" id="gIn"><svg viewBox="0 0 48 48" width="20" height="20" aria-hidden="true"><path fill="#FFC107" d="M43.6 20.5H42V20H24v8h11.3C33.7 32.7 29.2 36 24 36c-6.6 0-12-5.4-12-12s5.4-12 12-12c3.1 0 5.8 1.2 7.9 3l5.7-5.7C34 6 29.3 4 24 4 12.9 4 4 12.9 4 24s8.9 20 20 20 20-8.9 20-20c0-1.3-.1-2.4-.4-3.5z"/><path fill="#FF3D00" d="M6.3 14.7l6.6 4.8C14.7 15.1 19 12 24 12c3.1 0 5.8 1.2 7.9 3l5.7-5.7C34 6 29.3 4 24 4 16.3 4 9.7 8.3 6.3 14.7z"/><path fill="#4CAF50" d="M24 44c5.2 0 9.9-2 13.4-5.2l-6.2-5.2C29.2 35.1 26.7 36 24 36c-5.2 0-9.6-3.3-11.3-8l-6.5 5C9.5 39.6 16.2 44 24 44z"/><path fill="#1976D2" d="M43.6 20.5H42V20H24v8h11.3c-.8 2.2-2.2 4.2-4.1 5.6l6.2 5.2C37 39.2 44 34 44 24c0-1.3-.1-2.4-.4-3.5z"/></svg>Se connecter avec Google</button>`}</div>
+    <div class="plinks"><button data-pl="s-friends"><b>Amis</b><small>Offrir et recevoir des cartes</small><i>›</i></button><button data-pl="s-settings"><b>Paramètres</b><small>Pseudo, son, vibrations, notifications</small><i>›</i></button><button data-pl="notifs"><b>Notifications</b><small>${(state.notifs||[]).filter(x=>!x.read).length} non lue(s)</small><i>›</i></button></div>`);
+  $("sheetIn").onclick=e=>{
+    if(e.target.closest("#gIn"))return googleSignIn();
+    if(e.target.closest("#gOut"))return googleSignOut();
+    const p=e.target.closest("[data-pl]");if(!p)return;closeSheet();
+    if(p.dataset.pl==="notifs")return setTimeout(notifSheet,60);
+    show(p.dataset.pl);
+  };
+}
+$("btnProfile").onclick=()=>{haptic();SFX.tab();profileSheet()};
+// connexion Google (Firebase, le même projet que Quizly) et sauvegarde en ligne
+const FB={apiKey:"AIzaSyDJzyZdd-X9RG2DDnsLpZR8ifCf85N6lRE",authDomain:"quizly-ca5c1.firebaseapp.com",projectId:"quizly-ca5c1",appId:"1:553958488595:web:438e99694e0af8c2525de6"};
+const FBV="https://www.gstatic.com/firebasejs/10.12.2/";
+let fbm=null;
+async function fb(){
+  if(fbm)return fbm;
+  const [app,auth,fs]=await Promise.all([import(FBV+"firebase-app.js"),import(FBV+"firebase-auth.js"),import(FBV+"firebase-firestore.js")]);
+  const a=app.initializeApp(FB,"beatpacks"),au=auth.getAuth(a);
+  fbm={auth,fs,au,db:fs.getFirestore(a)};
+  auth.onAuthStateChanged(au,u=>{state.google=u?{uid:u.uid,name:u.displayName,email:u.email,photo:u.photoURL}:null;save();renderAvatar();if(u)cloudPull()});
+  return fbm;
+}
+async function googleSignIn(){
+  try{const m=await fb();await m.auth.signInWithPopup(m.au,new m.auth.GoogleAuthProvider());closeSheet();toast("Connecté avec Google")}
+  catch(e){console.error(e);toast(e&&e.code==="auth/unauthorized-domain"?"Connexion Google pas encore autorisée sur ce site":e&&e.code==="auth/popup-closed-by-user"?"Connexion annulée":"Connexion impossible pour l’instant")}
+}
+async function googleSignOut(){try{const m=await fb();await m.auth.signOut(m.au)}catch(e){}state.google=null;save();renderAvatar();closeSheet();toast("Déconnecté")}
+const cloudRefs=m=>[m.fs.doc(m.db,"beatpacks",state.google.uid),m.fs.doc(m.db,"users",state.google.uid)];
+async function cloudPull(){
+  try{
+    const m=await fb();if(!state.google)return;let remote=null;
+    for(const r of cloudRefs(m)){try{const snap=await m.fs.getDoc(r);const d=snap.exists()?snap.data():null;const v=d&&(d.save?d:d.beatpacks);if(v&&v.save){remote=v;break}}catch(e){}}
+    if(remote&&remote.at>(state.at||0)+5000){localStorage.setItem("beatpacks3",remote.save);toast("Partie récupérée depuis ton compte");setTimeout(()=>location.reload(),900);return}
+    cloudPush(true);
+  }catch(e){console.error(e)}
+}
+let cloudT=null;
+function cloudPush(now){
+  if(!state.google)return;clearTimeout(cloudT);
+  cloudT=setTimeout(async()=>{
+    try{const m=await fb();const data={save:JSON.stringify(state),at:state.at||Date.now()},[r1,r2]=cloudRefs(m);
+      try{await m.fs.setDoc(r1,data);state.cloudErr=false}catch(e){try{await m.fs.setDoc(r2,{beatpacks:data},{merge:true});state.cloudErr=false}catch(e2){state.cloudErr=true;console.warn("sauvegarde en ligne refusée",e2)}}
+    }catch(e){state.cloudErr=true}
+  },now?50:15000);
+}
 
 // ---------- barre d'onglets du bas : la bulle de verre s'étire en glissant d'un onglet à l'autre,
 // grossit comme une loupe sous le doigt et suit le doigt quand on la fait glisser ----------
@@ -1201,9 +1373,9 @@ bar.addEventListener("click",e=>{const t=e.target.closest(".tab");if(t&&e.detail
 addEventListener("resize",()=>pillTo(bar.querySelector(".tab.on")));
 
 // ---------- démarrage ----------
-Object.keys(state.owned).forEach(k=>{if(CARD[k])return;const p=k.split(":");if(p[0]==="w")totwCard(p[1],p[2],+p[3]);else if(p[0]==="y")annivCard(+p[1],p[2]);if(!CARD[k])delete state.owned[k]});
+Object.keys(state.owned).forEach(k=>{if(CARD[k])return;const p=k.split(":");if(p[0]==="w")totwCard(p[1],p[2],+p[3]);else if(p[0]==="p")promoCard(p[1],p[2],+p[3]);if(!CARD[k])delete state.owned[k]});
 state.albGiven??=[];state.rewarded.forEach(id=>{if(state.albGiven.includes(id))return;state.albGiven.push(id);const al=ALB[id];if(al&&al.card)give(al.card)});
-wallet();renderPacks();renderMenu();badge();save();tickListings();
+wallet();renderPacks();renderMenu();badge();save();renderAvatar();bellBadge();checkNews();if(state.google)fb().catch(()=>{});tickListings();
 setInterval(tickListings,3000);
 setInterval(()=>{if(!$("s-market").hidden)mktTimer()},1000);
 setInterval(()=>{if(state.daily&&state.daily.date!==today()){badge();renderQuests()}},60e3);

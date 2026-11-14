@@ -15,10 +15,14 @@ Ouvre `index.html` dans ton navigateur (ou utilise l'extension Live Server dans 
   - Raretés, au code couleur des disques : **Vinyle** (noir), **Or**, **Platine**, **Diamant**. Spéciales : **Icône** (la carte d'un artiste, de 85 à 99) et **Holo** (version brillante, +1, des 5 titres les plus streamés de chaque album, en plus de leur carte normale).
 - **Barre du bas** : Boutique, Marché, Menu, Défis, Classeur.
 - **Menu** (écran d'accueil) : panneau « à la une », **Actualité** (à faire glisser de gauche à droite) et les tuiles Draft, Match, SBC et Paramètres.
-- **Actualité** :
-  - **TOTW** (titres de la semaine) : les 10 titres du jeu les plus écoutés de la semaine sur Spotify (classements France, États-Unis, Royaume-Uni). Leur carte TOTW (noire et or) a +2 sur la note et peut tomber dans les packs toute la semaine.
-  - **Sorties** : les albums et EP sortis ces 4 dernières semaines par les artistes du jeu, ajoutés automatiquement au catalogue.
-  - **Anniversaires** : les albums qui fêtent leur sortie cette semaine. Leur carte anniversaire (+2 sur la carte album) peut tomber dans les packs.
+- **Actualité** (à faire glisser) :
+  - **TOTW** : les cartes qui **changent de rang** dans la semaine grâce à leurs streams (Vinyle › Or › Platine › Diamant), les plus écoutées de la semaine en premier (classements Spotify FR, US, UK). Carte noire et or avec des éclats qui sortent du cadre ; tunnel noir sur fond or. Dans les packs toute la semaine.
+  - **Équipe du mois** : en novembre, les **Underdogs**, les 20 titres les moins écoutés des 60 plus grands artistes, notés de 83 à 89 (carte néon avec éclairs et pochette qui dépasse). Dans les packs jusqu'au 30 novembre et en choix 1 parmi 3 avec le SBC « Underdogs ».
+  - **Sorties** : les albums et EP sortis ces 4 dernières semaines par les artistes du jeu.
+- **Catalogue › Cartes spéciales** : toutes les TOTW (semaine par semaine) et les équipes du mois, obtenues ou non ; elles apparaissent aussi dans la page de leur album.
+- **Blind test** (Menu) : 10 extraits des plus gros sons, 4 titres au choix, 15 s par manche ; plus on répond vite, plus on marque. 300 pièces par bonne réponse, 5 parties récompensées par jour. Filtre Tout, Rap FR, US, UK.
+- **Notifications** (cloche en haut) : nouvelle TOTW, équipe du mois, sorties, cartes vendues, albums complétés. Option « Notifications sur l'appareil » dans les paramètres.
+- **Profil** (rond en haut à droite) : stats, Amis, Paramètres, notifications et **connexion Google** (Firebase, même projet que Quizly) avec sauvegarde de la partie en ligne.
 - **Carte album** : compléter un album d'au moins 4 titres donne sa carte album (note selon ses meilleurs titres), en plus de la prime.
 - **Mise à jour chaque vendredi** (GitHub Actions, `tools/weekly.js`) : streams Spotify de tous les titres, nouvelles sorties, dates de sortie, TOTW. Le fichier `live.js` garde la TOTW et l'historique des semaines.
 - **Draft** (15 000 pièces) : on fonde sa **maison de disque** et on signe un artiste par poste (Tête d'affiche HYP, Plume TXT, Flow FLO, Beatmaker PRD, Refrain VOX), en choisissant 1 carte parmi 5. Les postes voisins sont reliés : même artiste ou même pays donne de l'**alchimie**, qui augmente les stats. Puis 4 combats contre des labels de plus en plus forts (76, 82, 87, 92) : 5 duels poste contre poste. On peut abandonner à tout moment (on garde la récompense des victoires déjà gagnées). Récompenses : de 1 000 pièces (0 victoire) à 12 000 pièces + Pack 12 + Pack Spécial (4 victoires), affichées sur un écran de récompenses.

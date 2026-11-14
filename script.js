@@ -88,12 +88,20 @@ const REWARD={...SPECIAL,p3:PACKS[0],p6:PACKS[1],p12:PACKS[2]};
 const rewardOf=k=>PACKS.find(p=>p.key===k)||REWARD[k];
 // ouvre une récompense : un pack, ou un choix de cartes
 function openReward(rw){if(rw.pick)pickSheet(rw);else openPack(rw)}
-function pickSheet(rw){
+function pickSheet(rw,onTake){
   const pool=rw.pick==="icone"?ICONES:rw.pick==="holo"?HOLOS:POOL.legendaire,ch=[];
   while(ch.length<3){const c=any(pool);if(!ch.includes(c))ch.push(c)}
-  SFX.board();haptic([30,40,30]);
-  sheet(`<h2>${rw.label}</h2><p class="note" style="margin:-6px 0 0">Touche la carte que tu veux garder.</p><div class="picks">${ch.map((c,i)=>`<div class="pickc" style="--i:${i}" data-pk="${c.key}">${cw(c,{fresh:!has(c.key)})}<small>${fmt(value(c))} pièces</small></div>`).join("")}</div>`);
-  $("sheetIn").onclick=e=>{const p=e.target.closest("[data-pk]");if(!p)return;const c=CARD[p.dataset.pk];give(c.key);save();SFX.bigReveal();closeSheet();toast(`${c.kind==="icone"?"Icône "+c.artist:c.title} rejoint ta collection`);setTimeout(announceAlbums,400)};
+  SFX.board();haptic([30,40,30]);let sel=null;
+  sheet(`<div class="pickhead"><small>Choix de carte</small><h2>${rw.label}</h2><p>Touche la carte que tu veux garder, puis confirme.</p></div>
+    <div class="picks">${ch.map((c,i)=>`<button class="pickc" style="--i:${i}" data-pk="${c.key}">${cw(c,{fresh:!has(c.key)})}
+      <b>${esc(c.kind==="icone"?c.artist:c.title)}</b><small>${c.kind==="icone"?`Icône · ${c.country}`:`${esc(c.artist)} · ${labelOf(c)}`}</small>
+      <em><i class="coin"></i>${fmt(value(c))}</em>${has(c.key)?`<span class="pown">Déjà ×${state.owned[c.key]}</span>`:`<span class="pnew">Nouvelle</span>`}</button>`).join("")}</div>
+    <button class="btn" id="pkGo" disabled>Choisis une carte</button>`);
+  $("sheetIn").onclick=e=>{
+    const p=e.target.closest("[data-pk]");
+    if(p){sel=CARD[p.dataset.pk];SFX.tick();haptic(8);$("sheetIn").querySelectorAll(".pickc").forEach(x=>{x.classList.toggle("sel",x===p);x.classList.toggle("off",x!==p)});const g=$("pkGo");g.disabled=false;g.textContent=`Garder ${sel.kind==="icone"?sel.artist:sel.title}`;return}
+    if(e.target.closest("#pkGo")&&sel){give(sel.key);onTake&&onTake();save();SFX.bigReveal();closeSheet();toast(`${sel.kind==="icone"?"Icône "+sel.artist:sel.title} rejoint ta collection`);setTimeout(announceAlbums,400)}
+  };
 }
 
 // ---------- sauvegarde ----------
@@ -105,7 +113,7 @@ if(state.draft&&!state.draft.slots)state.draft=null;
 if(!state.bonus2){state.coins+=400000;state.bonus2=1} // cadeau unique pour les parties déjà commencées
 for(const k in state.owned)if(!CARD[k])delete state.owned[k]; // un titre retiré du catalogue
 state.inbox??=[];state.rewarded??=[];state.sbcDone??={};
-function save(){try{localStorage.setItem("beatpacks3",JSON.stringify(state))}catch(e){}try{document.getElementById("shopBadge").hidden=!state.inbox.length}catch(e){}}
+function save(){try{localStorage.setItem("beatpacks3",JSON.stringify(state))}catch(e){}try{const b=document.getElementById("shopBadge");b.hidden=!state.inbox.length;b.textContent=state.inbox.length>9?"9+":state.inbox.length}catch(e){}}
 function daily(){if(!state.daily||state.daily.date!==today())state.daily={date:today(),packs:0,sold:0,bought:0,hi:0,sbc:0,claimed:[]};return state.daily}
 const has = k => (state.owned[k]||0)>0;
 const give = k => state.owned[k]=(state.owned[k]||0)+1;
@@ -211,11 +219,11 @@ function announceAlbums(){
   const coins=done.reduce((t,d)=>t+d.pr.coins,0);
   sheet(`<h2>${done.length>1?done.length+" albums complétés !":"Album complété !"}</h2>
     <div class="prizes">${done.slice(0,6).map(d=>`<div class="prize">${coverHTML(d.al.id)}<div><b>${esc(d.al.t)}</b><small>${esc(ART[d.al.ar].n)} · ${d.al.tr.length} titres</small><small><i class="coin"></i>+${fmt(d.pr.coins)} · ${PACKS.find(p=>p.key===d.pr.pack).label} offert</small></div></div>`).join("")}</div>
-    <p class="note" style="text-align:center">+${fmt(coins)} pièces et ${done.length} pack${done.length>1?"s":""} offert${done.length>1?"s":""}, à ouvrir dans la Boutique.</p>
-    <button class="btn" id="openGift">Ouvrir mon pack</button>`);
-  $("openGift").onclick=()=>{closeSheet();openInbox(0)};
+    <p class="note" style="text-align:center">+${fmt(coins)} pièces et ${done.length} pack${done.length>1?"s":""} offert${done.length>1?"s":""}, rangé${done.length>1?"s":""} dans Boutique › Mes packs.</p>
+    <button class="btn" id="openGift">Continuer</button>`);
+  $("openGift").onclick=()=>closeSheet();
 }
-function openInbox(i){const k=state.inbox[i];if(k==null)return;state.inbox.splice(i,1);save();openReward(rewardOf(k))}
+function openInbox(i){const k=state.inbox[i];if(k==null)return;const rw=rewardOf(k);if(rw.pick)return pickSheet(rw,()=>{state.inbox.splice(i,1);save();renderPacks()});state.inbox.splice(i,1);save();openPack(rw)}
 
 // ---------- boutique : 3 packs, seul le nombre de cartes change ----------
 // la carte du jour : une grosse carte du jeu, la même pour toute la journée
@@ -277,10 +285,9 @@ function rewardScreen({title,sub="",coins=0,packs=[]}){
   const items=[coins?`<div class="rwi rwc" style="--i:0"><i class="coin"></i><b>+${fmt(coins)}</b><small>pièces</small></div>`:"",...packs.map((k,i)=>{const p=rewardOf(k);return `<div class="rwi" style="--i:${i+1}">${p.pick?`<div class="pickpk">${rwBadge(p)}</div>`:packHTML(p)}<b>${p.label}</b><small>${p.desc||p.size+" cartes"}</small></div>`})].join("");
   sheet(`<div class="rws"><small>${esc(sub)}</small><h2>${esc(title)}</h2><p class="rwk">Récompenses</p>
     <div class="rwgrid">${items||`<p class="empty">Pas de récompense cette fois.</p>`}</div>
-    ${packs.length?`<p class="note" style="text-align:center;margin:0">${packs.length>1?"Les packs sont rangés":"Le pack est rangé"} dans Boutique › Mes packs.</p><div class="two"><button class="btn ghost" id="rwLater">Plus tard</button><button class="btn" id="rwOpen">Ouvrir maintenant</button></div>`:`<button class="btn" id="rwLater">Continuer</button>`}</div>`);
+    ${packs.length?`<p class="note" style="text-align:center;margin:0">${packs.length>1?"Envoyés":"Envoyé"} dans Boutique › Mes packs.</p><button class="btn" id="rwLater">Continuer</button>`:`<button class="btn" id="rwLater">Continuer</button>`}</div>`);
   $("sheetIn").onclick=e=>{
-    if(e.target.closest("#rwOpen")){closeSheet();openInbox(first)}
-    else if(e.target.closest("#rwLater")){closeSheet();renderMenu()}
+    if(e.target.closest("#rwLater")){closeSheet();renderMenu()}
   };
 }
 function buyPack(k){const p=PACKS.find(x=>x.key===k);if(state.coins<p.price)return;state.coins-=p.price;SFX.cash();openPack(p)}
@@ -776,7 +783,7 @@ function drawSbc(id){
   const reqs=[[s.b,`${cs.length}/${s.n}`,cs.length/s.n,full],...(s.reqs||[]).map(r=>{const st=reqState(r,cs);return [r.t,st.v,st.p,st.ok&&cs.length>0]})];
   const el=eligible(s).filter(c=>!sbcOnlyDup||state.owned[c.key]>1),cnt={};sbcSel.forEach(k=>cnt[k]=(cnt[k]||0)+1);
   const lost=cs.reduce((t,c)=>t+value(c),0);
-  sheet(`<div class="sbchead" style="--c1:${s.c1};--c2:${s.c2}"><div><small>${esc(s.cat)}</small><h2>${esc(s.t)}</h2><p>${esc(s.d)}</p><span class="rw">Récompense · ${rw.label}</span><small style="display:block;margin-top:6px;letter-spacing:0;text-transform:none;font:600 12px var(--font)">${rw.desc||rw.size+" cartes"}</small></div>${rwBadge(rw)}</div>
+  sheet(`<div class="sbchead" style="--c1:${s.c1};--c2:${s.c2}"><div><small>${esc(s.cat)}</small><h2>${esc(s.t)}</h2><p>${esc(s.d)}</p><span class="rw">Récompense · ${rw.label}</span><small style="display:block;margin-top:6px;letter-spacing:0;text-transform:none;font:600 12px var(--font)">${rw.desc||rw.size+" cartes"}</small></div>${sfan(s,true)}</div>
     <div class="reqs">${reqs.map(([t,v,p,okk])=>`<div class="req${okk?" ok":""}"><i>${okk?"✓":""}</i><span>${esc(t)}</span><em>${v}</em><b style="width:${Math.min(1,p)*100}%"></b></div>`).join("")}</div>
     <div class="slots" style="grid-template-columns:repeat(${Math.min(s.n,5)},1fr)">${Array.from({length:s.n},(_,i)=>sbcSel[i]?`<div data-un="${i}">${cw(CARD[sbcSel[i]])}</div>`:`<div class="slot">${i+1}</div>`).join("")}</div>
     ${cs.length?`<p class="note" style="margin:0;align-self:center">Valeur des cartes données : <b style="color:#fff">${fmt(lost)}</b> pièces</p>`:""}
@@ -947,9 +954,9 @@ function renderQuests(){
     $("quests").innerHTML=`<div class="qstats two"><div><b>${done}</b><small>SBC réussis</small></div><div><b>${readyN}</b><small>faisables maintenant</small></div></div>
       <p class="note" style="margin-top:12px">Donne des cartes pour gagner un pack. On les refait autant qu’on veut ; « Remplir auto » prend tes doublons en premier.</p>
       ${cats.map(cat=>`<h3 class="qcat">${cat}</h3><div class="stiles">${SBC.filter(s=>s.cat===cat).map(s=>{const rw=REWARD[s.rw],n=state.sbcDone[s.id]||0,r=canDo(s),el=eligible(s).reduce((t,c)=>t+state.owned[c.key],0);return `<button class="stile${r?" ready":""}" data-sbc="${s.id}" style="--c1:${s.c1};--c2:${s.c2}">
-        <div class="sth">${rwBadge(rw)}<div><span>${rw.label}</span><small>${rw.desc||rw.size+" cartes"}</small></div></div>
+        <div class="sth">${sfan(s)}<div><span>${rw.label}</span><small>${rw.desc||rw.size+" cartes"}</small></div></div>
         <div class="stb"><b>${esc(s.t)}</b><small>${esc(s.d)}</small>${(s.reqs||[]).length>1?`<span class="nreq">${s.reqs.length+1} conditions</span>`:""}<span class="srq"><i style="width:${Math.min(1,el/s.n)*100}%"></i></span>
-        <div class="stf"><em>${Math.min(el,s.n)}/${s.n} cartes</em>${r?`<span class="ok">Prêt</span>`:""}${n?`<span class="cnt">×${n}</span>`:""}</div></div></button>`}).join("")}</div>`).join("")}`;
+        <div class="stf"><em>${Math.min(el,s.n)}/${s.n} cartes</em>${n?`<span class="cnt">×${n}</span>`:""}</div></div></button>`}).join("")}</div>`).join("")}`;
   }else{
     const albums=state.rewarded.length,near=ALBUMS.filter(al=>albumPrize(al)&&!state.rewarded.includes(al.id)).map(al=>({al,o:albumOwned(al)})).filter(x=>x.o).sort((a,b)=>(b.o/b.al.tr.length)-(a.o/a.al.tr.length)).slice(0,5);
     $("quests").innerHTML=`${all.some(ready)?`<button class="btn" id="claimAll">Tout récupérer · <i class="coin"></i>${fmt(all.filter(ready).reduce((t,q)=>t+q.r,0))}</button>`:""}
@@ -959,6 +966,15 @@ function renderQuests(){
   }
 }
 // le badge de la récompense : ◆ Diamant, ★ Icône, prisme Holo, 1/3 pour un choix, le nombre de cartes sinon
+const SCOV={};
+function sbcCovers(s){
+  if(SCOV[s.id])return SCOV[s.id];
+  const fits=al=>al.tr.some((_,i)=>{const c=CARD[`t:${al.id}:${i}`];return c&&s.ok(c)});
+  const pool=TOPALB.filter(fits).slice(0,40),out=[];let h=hue(s.id);
+  while(out.length<3&&pool.length){const a=pool.splice(h%pool.length,1)[0];h=h*7+3;if(!out.some(x=>x.ar===a.ar))out.push(a)}
+  return SCOV[s.id]=out;
+}
+const sfan=(s,big)=>`<div class="sfan${big?" big":""}">${sbcCovers(s).map(a=>`<img src="${a.cv}" alt="" loading="lazy">`).join("")}</div>`;
 function rwBadge(rw){
   const k=rw.pick?"pick":rw.icon?"ico":rw.holo?"holo":rw.guarantee==="legendaire"?"dia":rw.country?"cty":"pk";
   const t=rw.pick?"1/3":rw.icon?"★":rw.holo?"✦":rw.guarantee==="legendaire"?"◆":rw.country||rw.size;

@@ -463,7 +463,7 @@ html::-webkit-scrollbar,body::-webkit-scrollbar,.sheetin::-webkit-scrollbar,.rec
 .open.wo .rays{animation-duration:9s}
 @keyframes spin{to{transform:rotate(360deg)}}
 /* les égaliseurs des côtés : ce sont eux qui donnent l'indice */
-.eq{position:absolute;top:12%;bottom:24%;width:30%;display:flex;flex-direction:column;justify-content:space-between}
+.eq{position:absolute;top:12%;bottom:24%;width:15%;display:flex;flex-direction:column;justify-content:space-between}
 .eq.l{left:0} .eq.r{right:0}
 .eq i{display:block;height:5.2%;border-radius:0 8px 8px 0;background:linear-gradient(90deg,var(--eq),transparent 115%);transform-origin:left center;transform:scaleX(var(--lo));animation:eq .9s ease-in-out infinite alternate;opacity:.55;transition:opacity .2s}
 .eq.r i{border-radius:8px 0 0 8px;background:linear-gradient(270deg,var(--eq),transparent 115%);transform-origin:right center}
@@ -838,3 +838,33 @@ input[type=search],input[type=text]{border-radius:0;clip-path:var(--cut);backgro
 .open.recapmode .scene{max-width:none}
 .open.recapmode .recap{overflow:visible}
 .wstep{position:relative;z-index:2}
+
+/* ---------- patch 25 : pastille Mes packs, pochettes des SBC, choix de cartes ---------- */
+#shopBadge{display:grid;place-items:center;min-width:17px;height:17px;top:4px;right:calc(50% - 22px);padding:0 4px;font:800 10px/1 var(--font);color:#fff}
+#shopBadge[hidden]{display:none}
+.sfan{position:relative;width:62px;height:50px;flex:none}
+.sfan img{position:absolute;top:4px;width:40px;height:40px;object-fit:cover;border-radius:4px;box-shadow:0 4px 10px rgba(0,0,0,.45)}
+.sfan img:nth-child(1){left:0;transform:rotate(-12deg)}
+.sfan img:nth-child(2){left:11px;z-index:1;top:1px}
+.sfan img:nth-child(3){left:22px;z-index:2;transform:rotate(12deg)}
+.sfan.big{width:96px;height:80px}
+.sfan.big img{width:62px;height:62px;top:8px}
+.sfan.big img:nth-child(2){left:17px;top:3px}
+.sfan.big img:nth-child(3){left:34px}
+.pickhead{width:100%;text-align:center}
+.pickhead small{font:700 12px var(--cond);text-transform:uppercase;letter-spacing:.16em;color:var(--dim)}
+.pickhead h2{margin:2px 0 4px;font:800 32px/1 var(--cond);text-transform:uppercase;color:var(--fut)}
+.pickhead p{margin:0;font-size:14px;color:#ddd8ff}
+.picks{gap:12px;margin:6px 0 4px}
+.pickc{position:relative;padding:10px 8px 12px;border:0;background:radial-gradient(ellipse at 50% 20%,rgba(139,61,255,.3),transparent 70%),var(--pan);color:#fff;font:inherit;clip-path:var(--cut);transition:transform .2s,opacity .2s,filter .2s}
+.pickc b{max-width:100%;font:800 14px/1.1 var(--cond);text-transform:uppercase;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.pickc small{max-width:100%;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-size:11px}
+.pickc em{display:flex;align-items:center;gap:4px;font:700 13px var(--cond);font-style:normal;color:#ffd23f}
+.pickc em .coin{width:13px;height:13px}
+.pickc .pnew,.pickc .pown{padding:2px 8px;font:800 10px var(--cond);text-transform:uppercase;letter-spacing:.06em}
+.pickc .pnew{background:var(--lime);color:#14122e}
+.pickc .pown{background:rgba(255,255,255,.14);color:var(--dim)}
+.pickc.sel{transform:translateY(-6px) scale(1.04);box-shadow:inset 0 0 0 3px var(--fut);filter:drop-shadow(0 0 14px rgba(62,240,208,.5))}
+.pickc.off{filter:brightness(.45) saturate(.5)}
+.pickc{animation-fill-mode:backwards}
+#pkGo{width:100%;max-width:360px}

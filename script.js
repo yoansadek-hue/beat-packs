@@ -85,6 +85,9 @@ const KMUL={holo:1.5,icone:2,totw:1.3,promo:2,album:2.5};
 const value = c => Math.round(baseValue(c.ovr)*(KMUL[c.kind]||1)/10)*10;
 const quick = c => Math.max(10,Math.round(value(c)*.25/10)*10); // la vente rapide rapporte peu, comme sur FIFA
 const KW={icone:.2,promo:.18,totw:.15,album:.12,holo:.1};
+// dans un pack, une carte spéciale passe devant les cartes normales (elle a le dernier mot en double animation)
+const SPK={icone:1,promo:1,totw:1,album:1};
+const packRank = c => (SPK[c.kind]?1000:0)+weight(c);
 const weight = c => c.ovr+(KW[c.kind]||0); // on range par note, la couleur ne sert qu'à départager une égalité
 const walkout = c => c.kind==="icone"||c.kind==="promo"||c.kind==="album"||(c.kind==="totw"||c.kind==="holo"?c.ovr>=83:c.ovr>=86); // walkout : 86+ (Holo 83+), et toujours pour une Icône
 const labelOf = c => c.kind==="icone"?"Icône":c.kind==="holo"?"Holo":c.kind==="totw"?"TOTW":c.kind==="promo"?c.promo:c.kind==="album"?"Album":TIER[c.tier];
@@ -230,7 +233,7 @@ function drawPack(p){
   if(p.guarantee&&!out.some(c=>c.kind!=="track"||ORDER.indexOf(c.tier)>=ORDER.indexOf(p.guarantee)))swap(0,()=>drawTrack(p.guarantee,f,notUsed()));
   if(p.icon&&!out.some(c=>c.kind==="icone"))swap(out.length-1,()=>drawIcone());
   for(let i=0,n=0;n<(p.holo||0)&&i<out.length;i++)if(out[i].kind==="track"){swap(i,()=>drawHolo(f));n++}
-  return out.sort((a,b)=>weight(b)-weight(a)); // la meilleure carte en premier
+  return out.sort((a,b)=>packRank(b)-packRank(a)); // la carte spéciale, puis la meilleure, en premier
 }
 
 // ---------- prime d'album : finir un album rapporte des pièces et un pack offert ----------
@@ -287,7 +290,7 @@ function renderHub(){
 const ownOrLock=c=>has(c.key)?cw(c,{qty:state.owned[c.key],tap:true}):`<div data-k="${c.key}">${cw(c,{lock:true})}</div>`;
 function totwSheet(){
   sheet(`<div class="pickhead"><small>Actualité</small><h2>TOTW · Semaine ${weekNo(LV.totw[0].w)}</h2><p>Les cartes qui ont <b>changé de rang</b> cette semaine grâce à leurs streams (Vinyle › Or › Platine › Diamant). Les plus écoutées de la semaine en premier. Elles tombent dans les packs toute la semaine.</p></div>
-    <div class="grid ngrid">${TOTW_NOW.map(c=>`<div class="ncap">${ownOrLock(c)}<small>${TIER[c.from]} › ${TIER[c.tier]}</small></div>`).join("")}</div>
+    <div class="grid ngrid">${TOTW_NOW.map(ownOrLock).join("")}</div>
     <p class="note" style="margin:0">Streams mis à jour le ${LV.updated?fmtDate(LV.updated):"—"}. Les anciennes TOTW sont dans le Catalogue › Cartes spéciales.</p>`);
   $("sheetIn").onclick=e=>{const c=e.target.closest("[data-k]");if(c)cardSheet(c.dataset.k)};
 }
@@ -466,8 +469,8 @@ function openPack(p){
   run={cards,fresh,best:cards[0],wos,wi:0,phase:"pack",timers:[],step:0};
   if(state.sound)[...wos,cards[0]].forEach(c=>previewUrl(c));
   open.className="open";open.dataset.h="";open.dataset.fl="";$("burst").innerHTML="";
-  // ce qui sort du sachet est un indice : 1 carte (pas de walkout), 3 cartes (walkout 86+), 2 cartes (double walkout)
-  const outsN=wos.length===2?2:wos.length===1?3:1;
+  // ce qui sort du sachet est un indice : 1 carte (pas de walkout), 3 cartes (walkout ou double walkout)
+  const outsN=wos.length?3:1;
   scene.innerHTML=`<div class="bigpack"><div class="outs n${outsN}">${"<i></i>".repeat(outsN)}</div><div class="mouth"></div><div class="pk body">${packHTML(p)}</div><div class="pk cap">${packHTML(p)}</div><div class="tearline"></div></div><b class="plabel">${esc(p.label)}</b>`;
   hint("Touche le pack pour l’ouvrir");
   open.hidden=false;
@@ -579,7 +582,7 @@ function recap(){
   $("done").onclick=()=>{SFX.tap();closePack()};
   requestAnimationFrame(()=>{
     const grid=scene.querySelector(".recapgrid"),bar=document.querySelector(".recapbar");if(!grid||!bar)return;
-    const H2=bar.getBoundingClientRect().top-grid.getBoundingClientRect().top-12;
+    const H2=bar.getBoundingClientRect().top-grid.getBoundingClientRect().top-34; // marge pour le décor des cartes spéciales
     const fit=c=>{const r=Math.ceil(n/c);return Math.floor(Math.min((W-gap*(c-1))/c,((H2-gap*(r-1))/r)*.72,CAP))};
     let c2=1;for(let c=2;c<=Math.min(n,MAXC);c++)if(fit(c)>fit(c2))c2=c;
     grid.style.gridTemplateColumns=`repeat(${c2},${fit(c2)}px)`;

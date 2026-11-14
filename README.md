@@ -6,7 +6,7 @@ Un jeu de packs de cartes de rap US, UK et FR, inspiré de FIFA Ultimate Team.
 Ouvre `index.html` dans ton navigateur (ou utilise l'extension Live Server dans VS Code).
 
 ## Le jeu
-- **Cartes** : une carte par titre, pour **toute la discographie** de 69 artistes de rap US, UK et FR (770 albums, environ 11 500 titres). Sur la carte : la note, la pochette (Apple Music), le titre, l'artiste et les streams.
+- **Cartes** : une carte par titre, pour **toute la discographie** de 172 artistes de rap US, UK et FR (1 904 albums, environ 27 800 titres). Sur la carte : la note, la pochette (Apple Music), le titre, l'artiste et les streams.
   - **Disques** : chaque titre reçoit un disque (Or, Platine, Diamant) selon ses streams et les seuils de certification de son pays.
   - **Note** : selon les streams (1 M → 68, 10 M → 76, 100 M → 84, 1 Md → 92), plus un bonus de disques de platine. Une Icône vaut de 85 à 99 selon le total des streams de l'artiste.
   - **Valeur** au marché : comme les prix moyens de FIFA selon la note (~400 à 75, ~9 000 à 86, ~55 000 à 90, ~1,3 M à 99) ; Holo ×1,5, Icône ×2. La vente rapide rapporte 25 % de la valeur.

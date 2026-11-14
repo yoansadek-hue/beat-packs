@@ -76,16 +76,20 @@ const SPECIAL={
   legend:{key:"sp",label:"Pack Diamant",desc:"5 cartes · 1 Diamant garanti",size:5,guarantee:"legendaire"},
   icone:{key:"sp",label:"Pack Icône",desc:"5 cartes · 1 Icône garantie",size:5,guarantee:"epique",icon:true},
   holo:{key:"sp",label:"Pack Holo",desc:"5 cartes · 2 Holo garanties",size:5,holo:2},
-  old:{key:"sp",label:"Pack Old School",desc:"5 cartes d’avant 2005 · 1 Platine minimum",size:5,before:2005,guarantee:"epique"}
+  old:{key:"sp",label:"Pack Old School",desc:"5 cartes d’avant 2005 · 1 Platine minimum",size:5,before:2005,guarantee:"epique"},
+  newgen:{key:"sp",label:"Pack Nouvelle vague",desc:"5 cartes sorties depuis 2023 · 1 Platine minimum",size:5,after:2023,guarantee:"epique"}
 };
+// ce que peut rapporter un défi : un pack spécial ou un pack de la boutique
+const REWARD={...SPECIAL,p3:PACKS[0],p6:PACKS[1],p12:PACKS[2]};
 
 // ---------- sauvegarde ----------
 const today = () => new Date().toLocaleDateString("sv");
-const START = () => ({coins:500000,bonus2:1,owned:{},seen:{},vibrate:true,sound:true,sfx:true,skipWO:false,pseudo:"Joueur"+Math.floor(1000+Math.random()*9000),listings:[],market:null,daily:null,claimed:[],friends:[],usedGifts:[],tick:Date.now()});
+const START = () => ({coins:500000,bonus2:1,owned:{},seen:{},vibrate:true,sound:true,sfx:true,skipWO:false,pseudo:"Joueur"+Math.floor(1000+Math.random()*9000),inbox:[],rewarded:[],sbcDone:{},listings:[],market:null,daily:null,claimed:[],friends:[],usedGifts:[],tick:Date.now()});
 let state=START();
 try{const s=JSON.parse(localStorage.getItem("beatpacks3"));if(s&&typeof s.coins==="number")state={...state,bonus2:0,...s}}catch(e){}
 if(!state.bonus2){state.coins+=400000;state.bonus2=1} // cadeau unique pour les parties déjà commencées
 for(const k in state.owned)if(!CARD[k])delete state.owned[k]; // un titre retiré du catalogue
+state.inbox??=[];state.rewarded??=[];state.sbcDone??={};
 function save(){try{localStorage.setItem("beatpacks3",JSON.stringify(state))}catch(e){}}
 function daily(){if(!state.daily||state.daily.date!==today())state.daily={date:today(),packs:0,sold:0,bought:0,hi:0,sbc:0,claimed:[]};return state.daily}
 const has = k => (state.owned[k]||0)>0;
@@ -118,7 +122,7 @@ function cardHTML(c,fresh,qty){
     <div class="glare"></div>
   </div>`;
 }
-const cw=(c,{fresh=false,qty=0,tap=false,i}={})=>`<div class="cw"${tap?` data-k="${c.key}"`:""}${i!=null?` style="--i:${i}"`:""}>${cardHTML(c,fresh,qty)}</div>`;
+const cw=(c,{fresh=false,qty=0,tap=false,i,lock=false}={})=>`<div class="cw${lock?" lock":""}"${tap?` data-k="${c.key}"`:""}${i!=null?` style="--i:${i}"`:""}>${cardHTML(c,fresh,qty)}</div>`;
 // les pochettes des packs : les albums de rap les plus streamés au monde, trois par pack
 const WORLD=[["Views","beerbongs & bentleys","The Eminem Show"],["ASTROWORLD","Goodbye & Good Riddance","DAMN."],["Certified Lover Boy","My Beautiful Dark Twisted Fantasy","Rodeo"]]
   .map(g=>g.map(t=>ALBUMS.find(a=>a.t.toLowerCase().startsWith(t.toLowerCase()))).filter(Boolean));
@@ -145,7 +149,7 @@ function drawTrack(t,f,not){
 }
 const drawIcone = country => any(ICONES.filter(c=>!country||c.country===country));
 function drawPack(p){
-  const f=p.country||p.before?c=>(!p.country||c.country===p.country)&&(!p.before||ALB[c.alb].y<p.before):null;
+  const f=p.country||p.before||p.after?c=>(!p.country||c.country===p.country)&&(!p.before||ALB[c.alb].y<p.before)&&(!p.after||ALB[c.alb].y>=p.after):null;
   // jamais deux fois la même carte (ni un titre et sa Holo) dans un même pack
   const used=new Set(),songKey=c=>c.kind==="icone"?c.key:"s"+c.key.slice(1);
   const take1=gen=>{for(let k=0;k<40;k++){const c=gen();if(!used.has(songKey(c))){used.add(songKey(c));return c}}const c=gen();used.add(songKey(c));return c};
@@ -161,9 +165,35 @@ function drawPack(p){
   return out.sort((a,b)=>weight(b)-weight(a)); // la meilleure carte en premier
 }
 
+// ---------- prime d'album : finir un album rapporte des pièces et un pack offert ----------
+const albumPrize=al=>al.tr.length<4?null:({coins:10000+2500*al.tr.length,pack:al.tr.length<=10?"3":al.tr.length<=18?"5":"10"}); // pas de prime pour les EP de moins de 4 titres
+function checkAlbums(){
+  const done=[];
+  for(const al of ALBUMS){
+    if(state.rewarded.includes(al.id)||al.tr.length<4)continue;
+    if(!al.tr.every((_,i)=>has(`t:${al.id}:${i}`)||has(`h:${al.id}:${i}`)))continue;
+    const pr=albumPrize(al);state.rewarded.push(al.id);state.coins+=pr.coins;state.inbox.push(pr.pack);done.push({al,pr});
+  }
+  if(done.length){save();wallet()}
+  return done;
+}
+// annonce les albums terminés (après un pack, un achat ou un cadeau)
+function announceAlbums(){
+  const done=checkAlbums();if(!done.length)return;
+  SFX.done();haptic([20,40,20,40,60]);
+  const coins=done.reduce((t,d)=>t+d.pr.coins,0);
+  sheet(`<h2>${done.length>1?done.length+" albums complétés !":"Album complété !"}</h2>
+    <div class="prizes">${done.slice(0,6).map(d=>`<div class="prize">${coverHTML(d.al.id)}<div><b>${esc(d.al.t)}</b><small>${esc(ART[d.al.ar].n)} · ${d.al.tr.length} titres</small><small><i class="coin"></i>+${fmt(d.pr.coins)} · ${PACKS.find(p=>p.key===d.pr.pack).label} offert</small></div></div>`).join("")}</div>
+    <p class="note" style="text-align:center">+${fmt(coins)} pièces et ${done.length} pack${done.length>1?"s":""} offert${done.length>1?"s":""}, à ouvrir dans la Boutique.</p>
+    <button class="btn" id="openGift">Ouvrir mon pack</button>`);
+  $("openGift").onclick=()=>{closeSheet();openInbox(0)};
+}
+function openInbox(i){const k=state.inbox[i];if(k==null)return;state.inbox.splice(i,1);save();openPack(PACKS.find(p=>p.key===k))}
+
 // ---------- boutique : 3 packs, seul le nombre de cartes change ----------
 function renderPacks(){
-  $("packs").innerHTML=PACKS.map(p=>`<div class="offer p-${p.key}">
+  const gifts=state.inbox.length?`<h2 style="margin-top:4px">Mes packs offerts</h2><div class="gifts">${state.inbox.map((k,i)=>{const p=PACKS.find(x=>x.key===k);return `<button class="gift" data-inbox="${i}">${packHTML(p)}<b>${p.label}</b><span>Ouvrir</span></button>`}).join("")}</div><h2>Boutique</h2>`:"";
+  $("packs").innerHTML=gifts+PACKS.map(p=>`<div class="offer p-${p.key}">
     ${packHTML(p)}
     <div class="info">
       <h3>${p.label}</h3><p>${p.size} cartes tirées dans toutes les discographies</p>
@@ -172,6 +202,7 @@ function renderPacks(){
     </div>
   </div>`).join("")+`<p class="note">Les packs spéciaux se gagnent dans les défis de cartes (onglet Défis).</p>`;
   document.querySelectorAll(".offer .btn").forEach(b=>b.onclick=()=>buyPack(b.dataset.k));
+  document.querySelectorAll("[data-inbox]").forEach(b=>b.onclick=()=>{SFX.tap();openInbox(+b.dataset.inbox)});
 }
 function buyPack(k){const p=PACKS.find(x=>x.key===k);if(state.coins<p.price)return;state.coins-=p.price;SFX.cash();openPack(p)}
 
@@ -401,6 +432,7 @@ function recap(){
 function closePack(){
   stopAudio();
   open.hidden=true;run=null;scene.innerHTML="";
+  renderPacks();setTimeout(announceAlbums,250);
   renderClub();
   if(state.coins<PACKS[0].price)toast("Plus de pièces ? Vends des cartes ou fais tes défis");
 }
@@ -438,6 +470,7 @@ function cardSheet(k){
   const c=CARD[k],q=state.owned[k]||0;
   if(!run){unlockAudio();playFor(c)} // on écoute l'extrait du titre en ouvrant sa carte
   state.seen[k]=1;save();
+  if(!q){sheet(`${cw(c)}${facts(c)}<p class="note" style="text-align:center">Tu n’as pas encore cette carte.</p>`);return}
   sheet(`${cw(c)}${facts(c)}<div class="acts" id="acts">
     <div class="two"><button class="btn ghost" id="shQuick">Vente rapide · +${fmt(quick(c))}</button><button class="btn cyan" id="shList">Au marché</button></div>
     <button class="btn ghost" id="shGift">Offrir à un ami</button>
@@ -470,7 +503,7 @@ function giftSheet(k){
 function addFriend(name,dir){let f=state.friends.find(x=>x.name.toLowerCase()===name.toLowerCase());if(!f){f={name,sent:0,recv:0};state.friends.push(f)}f[dir]++}
 
 // ---------- collection : mes artistes → tous leurs albums → toutes les cartes de l'album ----------
-const club={view:"artists",ar:null,alb:null,q:"",sort:"note"};
+const club={view:"artists",ar:null,alb:null,q:"",sort:"note",asort:"own"};
 const albumOwned=al=>al.tr.filter((_,i)=>has(`t:${al.id}:${i}`)||has(`h:${al.id}:${i}`)).length;
 const uniq=()=>TRACKS.filter(t=>has(t.key)||has(holo(t)?.key)).length;
 const albumDone=al=>albumOwned(al)===al.tr.length;
@@ -482,7 +515,8 @@ function myArtists(){
 function renderClub(){
   if($("s-club").hidden)return;
   const el=$("club");let html="";
-  const seg=`<div class="seg" id="clubSeg"><button aria-pressed="${club.view==="artists"}" data-v="artists">Artistes</button><button aria-pressed="${club.view==="binder"}" data-v="binder">Classeur</button></div>`;
+  const seg=`<div class="seg" id="clubSeg"><button aria-pressed="${club.view!=="binder"}" data-v="artists">Catalogue</button><button aria-pressed="${club.view==="binder"}" data-v="binder">Classeur</button></div>`;
+  const lock=(c)=>cw(c,{tap:true,lock:true}); // carte du jeu pas encore obtenue : visible, avec sa note, mais grisée
   const SORTS={note:["Note",(a,b)=>weight(b)-weight(a)||a.title.localeCompare(b.title)],streams:["Streams",(a,b)=>b.streams-a.streams],valeur:["Valeur",(a,b)=>value(b)-value(a)],titre:["Titre",(a,b)=>a.title.localeCompare(b.title)],artiste:["Artiste",(a,b)=>a.artist.localeCompare(b.artist)||weight(b)-weight(a)],doublons:["Doublons",(a,b)=>(state.owned[b.key]||0)-(state.owned[a.key]||0)||weight(b)-weight(a)]};
   const sortBar=`<div class="chips" id="sortBar">${Object.entries(SORTS).map(([k,[l]])=>`<button aria-pressed="${club.sort===k}" data-sort="${k}">${l}</button>`).join("")}</div>`;
   const sorter=SORTS[club.sort][1];
@@ -491,39 +525,45 @@ function renderClub(){
     const q=slug(club.q);
     const list=Object.keys(state.owned).map(k=>CARD[k]).filter(c=>!q||slug(c.title+" "+c.artist).includes(q)).sort(sorter);
     const total=Object.values(state.owned).reduce((s,n)=>s+n,0);
-    html=`<div class="titlerow"><h1>Collection</h1><span class="count-big"><b>${fmt(Object.keys(state.owned).length)}</b> cartes</span></div>${seg}
+    html=`<div class="titlerow"><h1>Classeur</h1><span class="count-big"><b>${fmt(Object.keys(state.owned).length)}</b> cartes</span></div>${seg}
       <input type="search" id="search" class="search" placeholder="Rechercher un titre ou un artiste" value="${esc(club.q)}" autocomplete="off">${sortBar}
       ${list.length?`<div class="grid">${list.slice(0,600).map(c=>cw(c,{tap:true,qty:state.owned[c.key]})).join("")}</div>${list.length>600?`<p class="note" style="text-align:center;margin-top:14px">+ ${fmt(list.length-600)} cartes : affine avec la recherche</p>`:""}`
         :`<p class="empty">${total?"Aucune carte ne correspond.":"Ta collection est vide : ouvre un pack dans la Boutique."}</p>`}`;
   }else if(club.view==="artists"){
-    const {n,fresh}=myArtists(),q=slug(club.q);
-    const list=ARTISTS.filter(a=>n[a.id]&&(!q||slug(a.n).includes(q))).sort(club.sort==="titre"||club.sort==="artiste"?(a,b)=>a.n.localeCompare(b.n):(a,b)=>n[b.id]-n[a.id]);
-    html=`<div class="titlerow"><h1>Collection</h1><span class="count-big"><b>${uniq()}</b> / ${fmt(TRACKS.length)}</span></div>${seg}
-      <input type="search" id="search" class="search" placeholder="Rechercher un artiste" value="${esc(club.q)}" autocomplete="off"><div class="chips" id="sortBar"><button aria-pressed="${club.sort!=="titre"&&club.sort!=="artiste"}" data-sort="note">Nombre de cartes</button><button aria-pressed="${club.sort==="titre"||club.sort==="artiste"}" data-sort="artiste">Nom</button></div>
-      ${list.length?`<div class="agrid">${list.map(a=>`<button class="atile" data-ar="${a.id}">${coverHTML(a.cover)}<b>${esc(a.n)}</b><small>${n[a.id]} carte${n[a.id]>1?"s":""}</small></button>`).join("")}</div>`
-        :`<p class="empty">${Object.keys(state.owned).length?"Aucun artiste ne correspond.":"Ta collection est vide : ouvre un pack dans la Boutique."}</p>`}`;
+    // le catalogue : tous les artistes du jeu, ceux qu'on a et ceux qu'on n'a pas encore
+    const {n}=myArtists(),q=slug(club.q);
+    const AS={own:["Mes cartes",(a,b)=>(n[b.id]||0)-(n[a.id]||0)||a.n.localeCompare(b.n)],pop:["Popularité",(a,b)=>CARD[b.icone].ovr-CARD[a.icone].ovr],nom:["Nom",(a,b)=>a.n.localeCompare(b.n)],FR:["France",null],US:["USA",null],UK:["UK",null]};
+    const list=ARTISTS.filter(a=>a.tracks.length&&(!q||slug(a.n).includes(q))&&(!["FR","US","UK"].includes(club.asort)||a.c===club.asort)).sort(AS[club.asort][1]||AS.own[1]);
+    html=`<div class="titlerow"><h1>Catalogue</h1><span class="count-big"><b>${uniq()}</b> / ${fmt(TRACKS.length)}</span></div>${seg}
+      <input type="search" id="search" class="search" placeholder="Rechercher un artiste" value="${esc(club.q)}" autocomplete="off">
+      <div class="chips" id="asortBar">${Object.entries(AS).map(([k,[l]])=>`<button aria-pressed="${club.asort===k}" data-asort="${k}">${l}</button>`).join("")}</div>
+      ${list.length?`<div class="agrid">${list.map(a=>{const o=a.tracks.filter(t=>has(t.key)||has(holo(t)?.key)).length;return `<button class="atile${o?"":" none"}" data-ar="${a.id}">${coverHTML(a.cover)}<b>${esc(a.n)}</b><small>${o}/${a.tracks.length} · Icône ${CARD[a.icone].ovr}</small></button>`}).join("")}</div>`:`<p class="empty">Aucun artiste ne correspond.</p>`}`;
   }else if(club.view==="artist"){
     const a=ART[club.ar],own=a.tracks.filter(t=>has(t.key)||has(holo(t)?.key)).length,ic=CARD[a.icone];
-    html=`<button class="back" data-back="artists">‹ Mes artistes</button>
+    html=`<button class="back" data-back="artists">‹ Catalogue</button>
       <div class="ahero">${coverHTML(a.cover)}<div><h1>${esc(a.n)}</h1><small>${a.albums.length} albums · ${own}/${a.tracks.length} titres</small></div></div>
       <div class="alist">
-        <button class="arow${has(ic.key)?" done":""}" data-icone="1">${coverHTML(a.cover)}<div class="at"><b>Carte Icône</b><small>${has(ic.key)?"Obtenue":"Pas encore obtenue"}</small></div></button>
-        ${a.albums.map(al=>{const o=albumOwned(al);return `<button class="arow${o===al.tr.length?" done":""}" data-alb="${al.id}">${coverHTML(al.id)}<div class="at"><b>${esc(al.t)}</b><small>${al.y} · ${o}/${al.tr.length} titres</small><div class="bar"><i style="width:${o/al.tr.length*100}%"></i></div></div></button>`}).join("")}
+        <button class="arow${has(ic.key)?" done":""}" data-icone="1">${coverHTML(a.cover)}<div class="at"><b>Carte Icône · ${ic.ovr}</b><small>${has(ic.key)?"Obtenue":"Pas encore obtenue"}</small></div></button>
+        ${a.albums.map(al=>{const o=albumOwned(al),pr=albumPrize(al),got=state.rewarded.includes(al.id);return `<button class="arow${o===al.tr.length?" done":""}" data-alb="${al.id}">${coverHTML(al.id)}<div class="at"><b>${esc(al.t)}</b><small>${al.y} · ${o}/${al.tr.length} titres${!pr?"":got?" · prime reçue ✓":` · prime ${fmt(pr.coins)} + ${PACKS.find(p=>p.key===pr.pack).label}`}</small><div class="bar"><i style="width:${o/al.tr.length*100}%"></i></div></div></button>`}).join("")}
       </div>`;
   }else{
     const a=ART[club.ar],al=ALB[club.alb];
     if(club.alb==="icone"){
       const ic=CARD[a.icone];
-      html=`<button class="back" data-back="artist">‹ ${esc(a.n)}</button><h1>Carte Icône</h1><div class="grid">${has(ic.key)?cw(ic,{qty:state.owned[ic.key],tap:true}):`<div class="cw"><div class="card ghost"><b>★</b><span>${esc(a.n)}</span></div></div>`}</div>`;
+      html=`<button class="back" data-back="artist">‹ ${esc(a.n)}</button><h1>Carte Icône</h1><div class="grid">${has(ic.key)?cw(ic,{qty:state.owned[ic.key],tap:true}):lock(ic)}</div>`;
     }else{
       const mine=[],miss=[];
       const own=[];
-      al.tr.forEach((tr,i)=>{const t=CARD[`t:${al.id}:${i}`];if(has(t.key))own.push(t);else miss.push(`<div class="cw"><div class="card ghost"><b>#${i+1}</b><span>${esc(tr[0])}</span></div></div>`)});
+      al.tr.forEach((tr,i)=>{const t=CARD[`t:${al.id}:${i}`];if(has(t.key))own.push(t);else miss.push(t)});
+      const missHTML=miss.sort(sorter).map(lock);
       own.sort(sorter).forEach(t=>mine.push(cw(t,{qty:state.owned[t.key],tap:true})));
-      const holos=al.tr.map((_,i)=>CARD[`h:${al.id}:${i}`]).filter(h=>h&&has(h.key)).sort(sorter).map(h=>cw(h,{qty:state.owned[h.key],tap:true})).join("");
+      const holos=al.tr.map((_,i)=>CARD[`h:${al.id}:${i}`]).filter(Boolean).sort(sorter).map(h=>has(h.key)?cw(h,{qty:state.owned[h.key],tap:true}):lock(h)).join("");
+      const pr=albumPrize(al),got=state.rewarded.includes(al.id);
       html=`<button class="back" data-back="artist">‹ ${esc(a.n)}</button>
         <div class="ahero alb">${coverHTML(al.id)}<div><h1 style="font-size:26px">${esc(al.t)}</h1><small>${esc(a.n)} · ${al.y} · ${albumOwned(al)}/${al.tr.length} titres</small></div></div>
-        ${sortBar}<div class="grid">${mine.join("")}${holos}${miss.join("")}</div>`;
+        ${pr?`<div class="aprize${got?" got":""}"><i class="coin"></i>${got?"Prime de l’album reçue ✓":`Finis l’album : +${fmt(pr.coins)} pièces et un ${PACKS.find(p=>p.key===pr.pack).label} offert`}</div>`:""}
+        ${sortBar}<h2 style="font-size:16px;margin:14px 0 8px">Titres</h2><div class="grid">${mine.join("")}${missHTML.join("")}</div>
+        ${holos?`<h2 style="font-size:16px;margin:18px 0 8px">Holo de l’album</h2><div class="grid">${holos}</div>`:""}`;
     }
   }
   el.innerHTML=html;
@@ -533,6 +573,7 @@ $("club").onclick=e=>{
   const t=e.target;
   const v=t.closest("#clubSeg [data-v]");if(v){club.view=v.dataset.v;club.q="";renderClub();haptic(6);return}
   const so=t.closest("#sortBar [data-sort]");if(so){club.sort=so.dataset.sort;renderClub();haptic(6);return}
+  const as=t.closest("#asortBar [data-asort]");if(as){club.asort=as.dataset.asort;renderClub();haptic(6);return}
   const b=t.closest("[data-back]");if(b){club.view=b.dataset.back;renderClub();scrollTo(0,0);return}
   const ar=t.closest("[data-ar]");if(ar){club.view="artist";club.ar=ar.dataset.ar;renderClub();scrollTo(0,0);haptic();return}
   const al=t.closest("[data-alb]");if(al){club.view="album";club.alb=al.dataset.alb;renderClub();markSeen();scrollTo(0,0);haptic();return}
@@ -570,7 +611,7 @@ $("mktRefresh").onclick=()=>{if(state.coins<REFRESH_COST)return;state.coins-=REF
 $("s-market").onclick=e=>{
   const buy=e.target.closest("[data-buy]"),cancel=e.target.closest("[data-cancel]"),card=e.target.closest(".cw[data-k]");
   if(buy){const m=state.market,o=m.offers.find(x=>x.id===buy.dataset.buy);if(!o||state.coins<o.price)return;
-    state.coins-=o.price;give(o.k);SFX.cash();m.offers=m.offers.filter(x=>x!==o);daily().bought++;save();wallet();renderMarket();badge();toast(`${CARD[o.k].title} rejoint ta collection`);haptic([10,30,10]);return}
+    state.coins-=o.price;give(o.k);SFX.cash();m.offers=m.offers.filter(x=>x!==o);daily().bought++;save();wallet();renderMarket();badge();toast(`${CARD[o.k].title} rejoint ta collection`);haptic([10,30,10]);setTimeout(announceAlbums,600);return}
   if(cancel){const l=state.listings.find(x=>x.id===cancel.dataset.cancel);if(!l)return;give(l.k);state.listings=state.listings.filter(x=>x!==l);save();renderMarket();toast("Carte retirée du marché");return}
   if(card){const c=CARD[card.dataset.k];sheet(`${cw(c)}${facts(c)}<button class="btn ghost" onclick="closeSheet()">Fermer</button>`);unlockAudio();playFor(c)}
 };
@@ -592,48 +633,59 @@ function tickListings(){
   }else save();
 }
 
-// ---------- défis de cartes : on donne des cartes, on gagne un pack spécial ----------
+// ---------- défis de cartes : on donne des cartes, on gagne un pack ----------
 const avg=cs=>cs.reduce((s,c)=>s+c.ovr,0)/cs.length;
 const SBC=[
-  {id:"swap",t:"Échange",d:"3 cartes au choix",n:3,ok:()=>true,rw:"sp3",c1:"#22e0ff",c2:"#4361ee"},
-  {id:"fr",t:"Rap FR",d:"5 cartes d’artistes français",n:5,ok:c=>c.country==="FR",rw:"fr",c1:"#2f6bff",c2:"#ff4d6d"},
-  {id:"us",t:"Rap US",d:"5 cartes d’artistes américains",n:5,ok:c=>c.country==="US",rw:"us",c1:"#ff4d6d",c2:"#3a3b8f"},
-  {id:"uk",t:"Rap UK",d:"5 cartes d’artistes anglais",n:5,ok:c=>c.country==="UK",rw:"uk",c1:"#3a7bff",c2:"#c8102e"},
-  {id:"same",t:"Même artiste",d:"4 cartes du même artiste",n:4,ok:()=>true,check:cs=>new Set(cs.map(c=>c.ar)).size===1,rule:"Toutes du même artiste",rw:"icone",c1:"#ff3d8b",c2:"#7b2ff7"},
-  {id:"avg",t:"Note 85",d:"5 cartes, note moyenne de 85 ou plus",n:5,ok:()=>true,check:cs=>avg(cs)>=85,rule:"Note moyenne ≥ 85",rw:"legend",c1:"#ffd23f",c2:"#e8590c"},
-  {id:"dia",t:"Disques de diamant",d:"3 titres certifiés Diamant",n:3,ok:c=>disc(c.country,c.vs).lvl==="Diamant",rw:"holo",c1:"#7af0ff",c2:"#8a5cff"},
-  {id:"old",t:"Old School",d:"4 cartes d’albums sortis avant 2005",n:4,ok:c=>ALB[c.alb].y<2005,rw:"old",c1:"#b6ff3b",c2:"#0b5e4a"}
+  {id:"swap",cat:"Échanges",t:"Échange express",d:"3 cartes au choix",n:3,ok:()=>true,rw:"sp3",c1:"#22e0ff",c2:"#4361ee"},
+  {id:"vinyle",cat:"Échanges",t:"Bac à vinyles",d:"8 cartes Vinyle",n:8,ok:c=>c.kind==="track"&&c.tier==="commune",rw:"p6",c1:"#6a6a78",c2:"#1d1b2a"},
+  {id:"gold",cat:"Échanges",t:"Disques d’or",d:"5 cartes Or",n:5,ok:c=>c.kind==="track"&&c.tier==="rare",rw:"p6",c1:"#ffd23f",c2:"#b86e00"},
+  {id:"fr",cat:"Pays",t:"Rap FR",d:"5 cartes d’artistes français",n:5,ok:c=>c.country==="FR",rw:"fr",c1:"#2f6bff",c2:"#ff4d6d"},
+  {id:"us",cat:"Pays",t:"Rap US",d:"5 cartes d’artistes américains",n:5,ok:c=>c.country==="US",rw:"us",c1:"#ff4d6d",c2:"#3a3b8f"},
+  {id:"uk",cat:"Pays",t:"Rap UK",d:"5 cartes d’artistes anglais",n:5,ok:c=>c.country==="UK",rw:"uk",c1:"#3a7bff",c2:"#c8102e"},
+  {id:"same",cat:"Exploits",t:"Fan absolu",d:"4 cartes du même artiste",n:4,ok:()=>true,check:cs=>new Set(cs.map(c=>c.ar)).size===1,rule:"Toutes du même artiste",rw:"icone",c1:"#ff3d8b",c2:"#7b2ff7"},
+  {id:"album",cat:"Exploits",t:"Face A",d:"3 cartes du même album",n:3,ok:c=>c.kind!=="icone",check:cs=>new Set(cs.map(c=>c.alb)).size===1,rule:"Toutes du même album",rw:"p12",c1:"#ff8a1f",c2:"#7b1fa2"},
+  {id:"avg",cat:"Exploits",t:"Note 85",d:"5 cartes, moyenne de 85 ou plus",n:5,ok:()=>true,check:cs=>avg(cs)>=85,rule:"Note moyenne ≥ 85",rw:"legend",c1:"#ffd23f",c2:"#e8590c"},
+  {id:"holo",cat:"Exploits",t:"Prisme",d:"2 cartes Holo",n:2,ok:c=>c.kind==="holo",rw:"legend",c1:"#ff7ad9",c2:"#4ee6d0"},
+  {id:"dia",cat:"Exploits",t:"Disques de diamant",d:"3 titres certifiés Diamant",n:3,ok:c=>disc(c.country,c.vs).lvl==="Diamant",rw:"holo",c1:"#7af0ff",c2:"#8a5cff"},
+  {id:"old",cat:"Époques",t:"Old School",d:"4 cartes d’albums sortis avant 2005",n:4,ok:c=>ALB[c.alb].y<2005,rw:"old",c1:"#b6ff3b",c2:"#0b5e4a"},
+  {id:"newgen",cat:"Époques",t:"Nouvelle vague",d:"4 cartes d’albums sortis depuis 2023",n:4,ok:c=>ALB[c.alb].y>=2023,rw:"newgen",c1:"#22e0ff",c2:"#ff3d8b"}
 ];
-let sbcSel=[];
-function sbcSheet(id){sbcSel=[];drawSbc(id)}
-function eligible(s){return Object.keys(state.owned).map(k=>CARD[k]).filter(s.ok).sort((a,b)=>value(a)-value(b))}
+let sbcSel=[],sbcOnlyDup=false;
+function sbcSheet(id){sbcSel=[];sbcOnlyDup=false;drawSbc(id)}
+// les cartes éligibles : les doublons d'abord, puis les moins chères (on garde ses meilleures cartes)
+function eligible(s){return Object.keys(state.owned).map(k=>CARD[k]).filter(s.ok).sort((a,b)=>((state.owned[b.key]>1)-(state.owned[a.key]>1))||value(a)-value(b))}
+const canDo=s=>autoFill(s).length>=s.n;
 function drawSbc(id){
-  const s=SBC.find(x=>x.id===id),cs=sbcSel.map(k=>CARD[k]),full=cs.length===s.n,ok=full&&(!s.check||s.check(cs));
-  const reqs=[[`${s.n} cartes (${cs.length}/${s.n})`,full],s.check?[s.rule,cs.length>0&&s.check(cs)]:[s.d,full]];
-  const el=eligible(s),cnt={};sbcSel.forEach(k=>cnt[k]=(cnt[k]||0)+1);
-  sheet(`<h2>${esc(s.t)}</h2><p class="note" style="align-self:flex-start;margin:-6px 0 0">Récompense : <b style="color:#fff">${SPECIAL[s.rw].label}</b> (${SPECIAL[s.rw].desc}). Les cartes données quittent ta collection.</p>
-    <div class="reqs">${reqs.map(([t,v])=>`<div class="req${v?" ok":""}"><i>${v?"✓":""}</i>${esc(t)}</div>`).join("")}</div>
-    <div class="slots">${Array.from({length:s.n},(_,i)=>sbcSel[i]?`<div data-un="${i}">${cw(CARD[sbcSel[i]])}</div>`:`<div class="slot">${i+1}</div>`).join("")}</div>
+  const s=SBC.find(x=>x.id===id),rw=REWARD[s.rw],cs=sbcSel.map(k=>CARD[k]),full=cs.length===s.n,ok=full&&(!s.check||s.check(cs));
+  const reqs=[[`${s.n} cartes`,`${cs.length}/${s.n}`,cs.length/s.n,full],s.check?[s.rule,s.id==="avg"&&cs.length?`${avg(cs).toFixed(1)}`:"",cs.length&&s.check(cs)?1:0,cs.length>0&&s.check(cs)]:[s.d,"",full?1:0,full]];
+  const el=eligible(s).filter(c=>!sbcOnlyDup||state.owned[c.key]>1),cnt={};sbcSel.forEach(k=>cnt[k]=(cnt[k]||0)+1);
+  const lost=cs.reduce((t,c)=>t+value(c),0);
+  sheet(`<div class="sbchead" style="--c1:${s.c1};--c2:${s.c2}"><div><small>${esc(s.cat)}</small><h2>${esc(s.t)}</h2><p>${esc(s.d)}</p><span class="rw">Récompense · ${rw.label}</span></div>${packHTML(rw)}</div>
+    <div class="reqs">${reqs.map(([t,v,p,okk])=>`<div class="req${okk?" ok":""}"><i>${okk?"✓":""}</i><span>${esc(t)}</span><em>${v}</em><b style="width:${Math.min(1,p)*100}%"></b></div>`).join("")}</div>
+    <div class="slots" style="grid-template-columns:repeat(${Math.min(s.n,5)},1fr)">${Array.from({length:s.n},(_,i)=>sbcSel[i]?`<div data-un="${i}">${cw(CARD[sbcSel[i]])}</div>`:`<div class="slot">${i+1}</div>`).join("")}</div>
+    ${cs.length?`<p class="note" style="margin:0;align-self:center">Valeur des cartes données : <b style="color:#fff">${fmt(lost)}</b> pièces</p>`:""}
     <div class="acts"><div class="two"><button class="btn ghost" id="sbAuto">Remplir auto</button><button class="btn" id="sbGo" ${ok?"":"disabled"}>Valider</button></div></div>
-    <h2 style="font-size:17px">Tes cartes éligibles (${el.length})</h2>
+    <div class="titlerow" style="width:100%"><h2 style="font-size:17px">Tes cartes éligibles (${el.length})</h2><button class="chipbtn${sbcOnlyDup?" on":""}" id="sbDup">Doublons</button></div>
     ${el.length?`<div class="picker">${el.map(c=>`<div class="cw${cnt[c.key]?" sel":""}${!cnt[c.key]&&full?" off":""}" data-pick="${c.key}">${cardHTML(c)}${cnt[c.key]?`<span class="qty">${cnt[c.key]}/${state.owned[c.key]}</span>`:state.owned[c.key]>1?`<span class="qty">×${state.owned[c.key]}</span>`:""}</div>`).join("")}</div>`:`<p class="empty" style="width:100%">Aucune carte éligible pour l’instant.</p>`}`);
   $("sheetIn").onclick=e=>{
     const p=e.target.closest("[data-pick]"),u=e.target.closest("[data-un]");
-    if(p){const k=p.dataset.pick,c=cnt[k]||0;if(c<state.owned[k]&&sbcSel.length<s.n)sbcSel.push(k);else if(c)sbcSel.splice(sbcSel.lastIndexOf(k),1);haptic(6);drawSbc(id);return}
+    if(p){const k=p.dataset.pick,c=cnt[k]||0;if(c<state.owned[k]&&sbcSel.length<s.n)sbcSel.push(k);else if(c)sbcSel.splice(sbcSel.lastIndexOf(k),1);haptic(6);SFX.tick();drawSbc(id);return}
     if(u){sbcSel.splice(+u.dataset.un,1);drawSbc(id);return}
+    if(e.target.closest("#sbDup")){sbcOnlyDup=!sbcOnlyDup;drawSbc(id);return}
     if(e.target.closest("#sbAuto")){sbcSel=autoFill(s);if(sbcSel.length<s.n)toast("Pas assez de cartes éligibles");drawSbc(id);return}
     if(e.target.closest("#sbGo")&&ok){
-      sbcSel.forEach(take);daily().sbc++;SFX.done();save();closeSheet();$("sheetIn").onclick=null;sbcSel=[];
-      renderQuests();badge();toast(`Défi réussi : ${SPECIAL[s.rw].label} !`);openPack(SPECIAL[s.rw]);
+      sbcSel.forEach(take);daily().sbc++;state.sbcDone[s.id]=(state.sbcDone[s.id]||0)+1;SFX.done();save();closeSheet();$("sheetIn").onclick=null;sbcSel=[];
+      renderQuests();badge();toast(`Défi réussi : ${rw.label} !`);openPack(rw);
     }
   };
 }
-// remplit le défi avec les cartes les moins chères qui le valident
+// remplit le défi avec les doublons, puis les cartes les moins chères qui le valident
 function autoFill(s){
   const copies=[];eligible(s).forEach(c=>{for(let i=0;i<state.owned[c.key];i++)copies.push(c)});
+  const dupFirst=(a,b)=>((state.owned[b.key]>1)-(state.owned[a.key]>1))||value(a)-value(b);
   let pick=[];
-  if(s.id==="same"){const by={};copies.forEach(c=>(by[c.ar]??=[]).push(c));const g=Object.values(by).filter(x=>x.length>=s.n).map(x=>x.slice(0,s.n)).sort((a,b)=>a.reduce((t,c)=>t+value(c),0)-b.reduce((t,c)=>t+value(c),0))[0];pick=g||[]}
-  else if(s.id==="avg")pick=copies.filter(c=>c.ovr>=85).slice(0,s.n);
+  if(s.id==="same"||s.id==="album"){const key=s.id==="same"?"ar":"alb",by={};copies.forEach(c=>(by[c[key]]??=[]).push(c));const g=Object.values(by).filter(x=>x.length>=s.n).map(x=>x.sort(dupFirst).slice(0,s.n)).sort((a,b)=>a.reduce((t,c)=>t+value(c),0)-b.reduce((t,c)=>t+value(c),0))[0];pick=g||[]}
+  else if(s.id==="avg")pick=copies.filter(c=>c.ovr>=85).sort(dupFirst).slice(0,s.n);
   else pick=copies.slice(0,s.n);
   return pick.map(c=>c.key);
 }
@@ -656,12 +708,17 @@ const ready=q=>!q.got&&q.v>=q.goal;
 function badge(){$("questBadge").hidden=!quests().some(ready)}
 function renderQuests(){
   if($("s-quests").hidden)return;
-  const all=quests(),row=q=>`<div class="quest${q.got?" got":""}">${q.al?coverHTML(q.al.id):""}<div class="qi"><b>${esc(q.t)}</b><div class="bar"><i style="width:${q.v/q.goal*100}%"></i></div><small>${q.v}/${q.goal} · <i class="coin"></i>${fmt(q.r)}</small></div>${q.got?`<span class="note" style="margin:0">Reçu ✓</span>`:`<button class="btn sm" data-claim="${q.id}" ${ready(q)?"":"disabled"}>Récupérer</button>`}</div>`;
-  $("quests").innerHTML=`<h2 style="margin-top:4px">Défis de cartes</h2><p class="note">Donne des cartes de ta collection pour gagner un pack spécial. Tu peux les refaire autant que tu veux.</p>
-    <div class="sbcs">${SBC.map(s=>`<button class="sbc" data-sbc="${s.id}" style="--c1:${s.c1};--c2:${s.c2}"><b>${esc(s.t)}</b><small>${esc(s.d)}</small><span class="rw">${SPECIAL[s.rw].label}</span></button>`).join("")}</div>
-    ${all.some(ready)?`<button class="btn" id="claimAll" style="margin-top:22px">Tout récupérer · <i class="coin"></i>${fmt(all.filter(ready).reduce((t,q)=>t+q.r,0))}</button>`:""}
+  const all=quests(),row=q=>`<div class="quest${q.got?" got":""}"><div class="qi"><b>${esc(q.t)}</b><div class="bar"><i style="width:${q.v/q.goal*100}%"></i></div><small>${q.v}/${q.goal} · <i class="coin"></i>${fmt(q.r)}</small></div>${q.got?`<span class="note" style="margin:0">Reçu ✓</span>`:`<button class="btn sm" data-claim="${q.id}" ${ready(q)?"":"disabled"}>Récupérer</button>`}</div>`;
+  const done=Object.values(state.sbcDone).reduce((t,n)=>t+n,0),readyN=SBC.filter(canDo).length,albums=state.rewarded.length;
+  const cats=[...new Set(SBC.map(s=>s.cat))];
+  $("quests").innerHTML=`<div class="qstats"><div><b>${done}</b><small>défis de cartes réussis</small></div><div><b>${readyN}</b><small>faisables maintenant</small></div><div><b>${albums}</b><small>albums complétés</small></div></div>
+    ${all.some(ready)?`<button class="btn" id="claimAll" style="margin-top:16px">Tout récupérer · <i class="coin"></i>${fmt(all.filter(ready).reduce((t,q)=>t+q.r,0))}</button>`:""}
+    <h2>Défis de cartes</h2><p class="note">Donne des cartes pour gagner un pack. On les refait autant qu’on veut ; « Remplir auto » prend tes doublons en premier.</p>
+    ${cats.map(cat=>`<h3 class="qcat">${cat}</h3><div class="sbcs">${SBC.filter(s=>s.cat===cat).map(s=>{const rw=REWARD[s.rw],n=state.sbcDone[s.id]||0,r=canDo(s);return `<button class="sbc${r?" ready":""}" data-sbc="${s.id}" style="--c1:${s.c1};--c2:${s.c2}">
+      <div class="sbct"><b>${esc(s.t)}</b><small>${esc(s.d)}</small></div>${packHTML(rw)}
+      <div class="sbcf"><span class="rw">${rw.label}</span>${r?`<span class="ok">Prêt</span>`:""}${n?`<span class="cnt">×${n}</span>`:""}</div></button>`}).join("")}</div>`).join("")}
     <h2>Défis du jour</h2><p class="note">Ils reviennent chaque jour à minuit.</p>${all.filter(q=>q.sec==="day").map(row).join("")}
-`;
+    <h2>Albums</h2><p class="note">Finis un album d’au moins 4 titres pour gagner des pièces et un pack offert. Retrouve les primes dans le Catalogue.</p>`;
 }
 $("quests").onclick=e=>{
   const s=e.target.closest("[data-sbc]");if(s){sbcSheet(s.dataset.sbc);haptic();return}
@@ -686,7 +743,8 @@ $("giftGo").onclick=()=>{
   if(state.usedGifts.includes(g.n))return toast("Ce code a déjà été utilisé");
   state.usedGifts.push(g.n);give(g.k);addFriend(String(g.f||"Un ami").slice(0,16),"recv");save();
   $("giftIn").value="";renderFriends();badge();haptic([20,40,20]);
-  sheet(`<h2>Cadeau de ${esc(g.f||"un ami")}</h2>${cw(CARD[g.k],{fresh:true})}<button class="btn" onclick="closeSheet()">Super</button>`);
+  sheet(`<h2>Cadeau de ${esc(g.f||"un ami")}</h2>${cw(CARD[g.k],{fresh:true})}<button class="btn" id="giftOk">Super</button>`);
+  $("giftOk").onclick=()=>{closeSheet();setTimeout(announceAlbums,300)};
 };
 
 // ---------- paramètres ----------
@@ -710,12 +768,12 @@ $("foot").textContent=`${ARTISTS.length} artistes · ${fmt(ALBUMS.length)} album
 const SCREENS=["s-market","s-friends","s-shop","s-quests","s-settings","s-club"];
 function show(id){
   SCREENS.forEach(s=>$(s).hidden=s!==id);
-  $("btnClub").classList.toggle("on",id==="s-club");
-  if(id==="s-club"){TABS.forEach(b=>b.classList.remove("on"));pillTo(null)}
+  $("btnFriends").classList.toggle("on",id==="s-friends");
+  if(id==="s-friends"){TABS.forEach(b=>b.classList.remove("on"));pillTo(null)}
   ({"s-shop":renderPacks,"s-club":renderClub,"s-market":renderMarket,"s-quests":renderQuests,"s-friends":renderFriends})[id]?.();
   scrollTo(0,0);
 }
-$("btnClub").onclick=()=>{haptic();SFX.tab();club.view="artists";show("s-club")};
+$("btnFriends").onclick=()=>{haptic();SFX.tab();show("s-friends")};
 
 // ---------- barre d'onglets du bas : la bulle de verre s'étire en glissant d'un onglet à l'autre,
 // grossit comme une loupe sous le doigt et suit le doigt quand on la fait glisser ----------

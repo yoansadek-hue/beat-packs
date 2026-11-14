@@ -76,7 +76,7 @@ const ALL_PROMO=LV.promos.map(p=>({p,cs:p.tr.map(([a,i])=>promoCard(p.id,a,i)).f
 const NEWS=LV.news.map(id=>ALB[id]).filter(Boolean);
 const LIVE_POOL=[...TOTW_NOW,...PROMO_NOW];
 const holo = t => CARD["h"+t.key.slice(1)]; // undefined si le titre n'a pas de version Holo
-const drawHolo = f => any(f?HOLOS.filter(f):HOLOS);
+const drawHolo = f => byNote(f?HOLOS.filter(f):HOLOS);
 // la valeur vient des disques : 100 pièces + 800 par disque de platine (×2,5 en Holo, ×4 en Icône)
 // valeur au marché, comme les prix moyens de FIFA selon la note : ~400 à 75, ~1 000 à 81, ~9 000 à 86, ~55 000 à 90, plus d'un million à 99
 const FIFA={75:400,76:450,77:500,78:600,79:700,80:850,81:1000,82:1300,83:1800,84:3000,85:5000,86:9000,87:15000,88:24000,89:35000,90:55000,91:75000,92:100000,93:140000,94:200000,95:300000,96:450000,97:650000,98:900000,99:1300000};
@@ -92,7 +92,7 @@ const weight = c => c.ovr+(KW[c.kind]||0); // on range par note, la couleur ne s
 const walkout = c => c.kind==="icone"||c.kind==="promo"||c.kind==="album"||(c.kind==="totw"||c.kind==="holo"?c.ovr>=83:c.ovr>=86); // walkout : 86+ (Holo 83+), et toujours pour une Icône
 const labelOf = c => c.kind==="icone"?"Icône":c.kind==="holo"?"Holo":c.kind==="totw"?"TOTW":c.kind==="promo"?c.promo:c.kind==="album"?"Album":TIER[c.tier];
 
-const ODDS={commune:.62,rare:.27,epique:.09,legendaire:.02};
+const ODDS={commune:.70,rare:.24,epique:.055,legendaire:.005};
 const PACKS=[
   {key:"3",label:"Pack 3 cartes",size:3,price:10000},
   {key:"5",label:"Pack 6 cartes",size:6,price:20000},
@@ -124,15 +124,15 @@ function pickSheet(rw,onTake){
   const pool=rw.pick==="promo"?(PROMO_NOW.length>=3?PROMO_NOW:HOLOS):rw.pick==="icone"?ICONES:rw.pick==="holo"?HOLOS:POOL.legendaire,ch=[];
   while(ch.length<3){const c=any(pool);if(!ch.includes(c))ch.push(c)}
   SFX.board();haptic([30,40,30]);let sel=null;
-  sheet(`<div class="pickhead"><small>Choix de carte</small><h2>${rw.label}</h2><p>Touche la carte que tu veux garder, puis confirme.</p></div>
+  sheet(`<div class="pickhead"><small>Choix de carte</small><h2>${rw.label}</h2><p>Touche la carte que tu veux garder, puis confirme. Le choix est définitif.</p></div>
     <div class="picks">${ch.map((c,i)=>`<button class="pickc" style="--i:${i}" data-pk="${c.key}">${cw(c,{fresh:!has(c.key)})}
       <b>${esc(c.kind==="icone"?c.artist:c.title)}</b><small>${c.kind==="icone"?`Icône · ${c.country}`:`${esc(c.artist)} · ${labelOf(c)}`}</small>
       <em><i class="coin"></i>${fmt(value(c))}</em>${has(c.key)?`<span class="pown">Déjà ×${state.owned[c.key]}</span>`:`<span class="pnew">Nouvelle</span>`}</button>`).join("")}</div>
-    <button class="btn" id="pkGo" disabled>Choisis une carte</button>`);
+    <button class="btn" id="pkGo" disabled>Choisis une carte</button>`,true);
   $("sheetIn").onclick=e=>{
     const p=e.target.closest("[data-pk]");
     if(p){sel=CARD[p.dataset.pk];SFX.tick();haptic(8);$("sheetIn").querySelectorAll(".pickc").forEach(x=>{x.classList.toggle("sel",x===p);x.classList.toggle("off",x!==p)});const g=$("pkGo");g.disabled=false;g.textContent=`Garder ${sel.kind==="icone"?sel.artist:sel.title}`;return}
-    if(e.target.closest("#pkGo")&&sel){give(sel.key);onTake&&onTake();save();SFX.bigReveal();closeSheet();toast(`${sel.kind==="icone"?"Icône "+sel.artist:sel.title} rejoint ta collection`);setTimeout(announceAlbums,400)}
+    if(e.target.closest("#pkGo")&&sel){sheetLock=false;give(sel.key);onTake&&onTake();save();SFX.bigReveal();closeSheet();toast(`${sel.kind==="icone"?"Icône "+sel.artist:sel.title} rejoint ta collection`);setTimeout(announceAlbums,400)}
   };
 }
 
@@ -180,17 +180,17 @@ function statsOf(c){
 }
 function cardHTML(c,fresh,qty){
   return `<div class="card ${c.kind==="track"?"t-"+c.tier:"k-"+c.kind}">
-    <div class="cart">${coverHTML(c.alb,"art")}${c.kind!=="track"?`<span class="kind">${labelOf(c).toUpperCase()}</span>`:""}</div>
+    <div class="cart">${coverHTML(c.alb,"art")}${c.kind!=="track"&&!POP[c.kind]?`<span class="kind">${labelOf(c).toUpperCase()}</span>`:""}</div>
     <span class="ovr">${c.ovr}</span><span class="cc">${c.country}</span>${c.kind==="totw"?`<span class="rup">${TIER[c.from]} › ${TIER[c.tier]}</span>`:""}
     ${fresh?`<span class="new">NEW</span>`:qty>1?`<span class="new dup">×${qty}</span>`:""}
-    <div class="nm">${esc(c.kind==="icone"?"Icône":c.title)}</div>
-    <div class="ar">${esc(c.artist)}</div>
+    <div class="nm">${esc(c.kind==="icone"?"Icône":cleanT(c.title)||c.title)}</div>
+    <div class="ar${c.artist.length>16?" xs":c.artist.length>11?" sm":""}">${esc(c.artist)}</div>
     <div class="tl"><span>${labelOf(c)}</span><span>${PLAY}${fmtStreams(c.streams)}</span></div>
     <div class="glare"></div>
   </div>${POP[c.kind]||""}`;
 }
 // décor qui dépasse de la carte (TOTW et équipe du mois)
-const POP={totw:`<span class="pop pop-totw" aria-hidden="true"><i></i><i></i><i></i><i></i><b>TOTW</b></span>`,promo:`<span class="pop pop-promo" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i><b>★</b></span>`};
+const POP={totw:`<span class="pop pop-totw" aria-hidden="true"><i></i><i></i><i></i><i></i></span>`,promo:`<span class="pop pop-promo" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i></span>`};
 const cw=(c,{fresh=false,qty=0,tap=false,i,lock=false}={})=>`<div class="cw${lock?" lock":""}"${tap?` data-k="${c.key}"`:""}${i!=null?` style="--i:${i}"`:""}>${cardHTML(c,fresh,qty)}</div>`;
 // les pochettes des packs : les albums de rap les plus streamés au monde, trois par pack
 const WORLD=[["Views","beerbongs & bentleys","The Eminem Show"],["ASTROWORLD","Goodbye & Good Riddance","DAMN."],["Certified Lover Boy","My Beautiful Dark Twisted Fantasy","Rodeo"]]
@@ -209,14 +209,14 @@ const packHTML=p=>`<div class="pack k-${p.key}"><div class="foil"></div><div cla
 function pickTier(odds){let x=Math.random(),acc=0;for(const r of ORDER){acc+=odds[r];if(x<acc)return r}return "commune"}
 // tirage par note : dans une rareté, chaque point de note en plus rend la carte ~30 % plus rare
 function byNote(p){
-  const lo=Math.min(...p.map(c=>c.ovr)),w=p.map(c=>Math.exp(-.35*(c.ovr-lo))),tot=w.reduce((s,x)=>s+x,0);
+  const lo=Math.min(...p.map(c=>c.ovr)),w=p.map(c=>Math.exp(-.5*(c.ovr-lo))),tot=w.reduce((s,x)=>s+x,0);
   let x=Math.random()*tot;for(let i=0;i<p.length;i++){x-=w[i];if(x<=0)return p[i]}return p[p.length-1];
 }
 function drawTrack(t,f,not){
   for(let i=ORDER.indexOf(t);i>=0;i--){const p=POOL[ORDER[i]].filter(c=>(!f||f(c))&&!(not&&not.has(c.key)));if(p.length)return byNote(p)}
   return any(TRACKS.filter(c=>(!f||f(c))&&!(not&&not.has(c.key))));
 }
-const drawIcone = country => any(ICONES.filter(c=>!country||c.country===country));
+const drawIcone = country => byNote(ICONES.filter(c=>!country||c.country===country));
 function drawPack(p){
   const f=p.country||p.before||p.after?c=>(!p.country||c.country===p.country)&&(!p.before||ALB[c.alb].y<p.before)&&(!p.after||ALB[c.alb].y>=p.after):null;
   // jamais deux fois la même carte (ni un titre et sa Holo) dans un même pack
@@ -225,9 +225,9 @@ function drawPack(p){
   const notUsed=()=>new Set([...used].map(k=>"t"+k.slice(1)));
   const live=f?LIVE_POOL.filter(f):LIVE_POOL;
   const out=Array.from({length:p.size},()=>take1(()=>{
-    if(live.length&&Math.random()<.025)return any(live); // TOTW et anniversaires de la semaine
-    if(!p.before&&Math.random()<.004)return drawIcone(p.country);
-    return Math.random()<.03?drawHolo(f):drawTrack(pickTier(ODDS),f,notUsed());
+    if(live.length&&Math.random()<.012)return byNote(live); // TOTW et équipe du mois
+    if(!p.before&&Math.random()<.0015)return drawIcone(p.country);
+    return Math.random()<.015?drawHolo(f):drawTrack(pickTier(ODDS),f,notUsed());
   }));
   const swap=(i,gen)=>{used.delete(songKey(out[i]));out[i]=take1(gen)};
   if(p.guarantee&&!out.some(c=>c.kind!=="track"||ORDER.indexOf(c.tier)>=ORDER.indexOf(p.guarantee)))swap(0,()=>drawTrack(p.guarantee,f,notUsed()));
@@ -611,8 +611,9 @@ function tilt(box){
 }
 
 // ---------- feuille du bas : fiche d'une carte (vendre, mettre au marché, offrir) ----------
-function sheet(html){SFX.tap();$("sheetIn").onclick=null;$("sheetIn").innerHTML=`<button class="xclose" aria-label="Fermer">✕</button>`+html;$("sheet").hidden=false;$("sheetIn").scrollTop=0}
-const closeSheet=()=>{$("sheet").hidden=true;if(!run)stopAudio()};
+let sheetLock=false;
+function sheet(html,lock=false){SFX.tap();sheetLock=lock;$("sheetIn").onclick=null;$("sheetIn").innerHTML=(lock?"":`<button class="xclose" aria-label="Fermer">✕</button>`)+html;$("sheet").hidden=false;$("sheetIn").scrollTop=0}
+const closeSheet=()=>{if(sheetLock)return;$("sheet").hidden=true;if(!run)stopAudio()};
 $("sheet").addEventListener("click",e=>{if(e.target.id==="sheet"||e.target.closest(".xclose"))closeSheet()});
 tilt($("sheetIn"));
 function facts(c){
@@ -820,31 +821,53 @@ const isT=t=>c=>c.kind==="track"&&c.tier===t;
 const atLeast=t=>c=>c.kind!=="track"||ORDER.indexOf(c.tier)>=ORDER.indexOf(t);
 const inC=k=>c=>c.country===k;
 const yr=c=>ALB[c.alb]?.y||0;
+const isHolo=c=>c.kind==="holo";
 const SBC=[
-  {id:"swap",cat:"Échanges",t:"Échange express",d:"3 cartes au choix",b:"3 cartes au choix",n:3,ok:()=>true,rw:"sp3",c1:"#22e0ff",c2:"#4361ee"},
-  {id:"vinyle",cat:"Échanges",t:"Bac à vinyles",d:"8 cartes Vinyle",b:"8 cartes Vinyle",n:8,ok:isT("commune"),rw:"p3",c1:"#6a6a78",c2:"#1d1b2a"},
-  {id:"gold",cat:"Échanges",t:"Disques d’or",d:"6 cartes Or de 2 pays",b:"6 cartes Or",n:6,ok:isT("rare"),reqs:[R.cty(2)],rw:"p6",c1:"#ffd23f",c2:"#b86e00"},
-  {id:"fr",cat:"Pays",t:"Rap FR",d:"6 cartes FR dont 1 Platine",b:"6 cartes d’artistes français",n:6,ok:inC("FR"),reqs:[R.min(1,atLeast("epique"),"Min. 1 Platine ou mieux"),R.arts(3)],rw:"fr",c1:"#2f6bff",c2:"#ff4d6d"},
-  {id:"us",cat:"Pays",t:"Rap US",d:"6 cartes US dont 1 Platine",b:"6 cartes d’artistes américains",n:6,ok:inC("US"),reqs:[R.min(1,atLeast("epique"),"Min. 1 Platine ou mieux"),R.arts(3)],rw:"us",c1:"#ff4d6d",c2:"#3a3b8f"},
-  {id:"uk",cat:"Pays",t:"Rap UK",d:"6 cartes UK dont 1 Or",b:"6 cartes d’artistes anglais",n:6,ok:inC("UK"),reqs:[R.min(1,atLeast("rare"),"Min. 1 Or ou mieux"),R.arts(3)],rw:"uk",c1:"#3a7bff",c2:"#c8102e"},
-  {id:"banlieue",cat:"Pays",t:"Banlieue",d:"7 cartes FR, 2 Platine, 5 artistes",b:"7 cartes d’artistes français",n:7,ok:inC("FR"),reqs:[R.min(2,atLeast("epique"),"Min. 2 Platine ou mieux"),R.arts(5),R.avg(79)],rw:"p12",c1:"#1f4bd8",c2:"#ffd23f"},
-  {id:"holo",cat:"Spéciales",t:"Prisme",d:"5 cartes Platine",b:"5 cartes Platine",n:5,ok:isT("epique"),rw:"holo",c1:"#ff7ad9",c2:"#4ee6d0"},
-  {id:"avg",cat:"Spéciales",t:"Note 85",d:"5 cartes, moyenne 85, 2 pays",b:"5 cartes au choix",n:5,ok:()=>true,reqs:[R.avg(85),R.cty(2)],rw:"legend",c1:"#7af0ff",c2:"#2a8fd6"},
-  {id:"same",cat:"Spéciales",t:"Fan absolu",d:"5 cartes du même artiste",b:"5 cartes au choix",n:5,ok:()=>true,reqs:[R.same("ar","Toutes du même artiste")],rw:"icone",c1:"#ff3d8b",c2:"#7b2ff7"},
-  {id:"album",cat:"Spéciales",t:"Face A",d:"5 cartes du même album",b:"5 titres",n:5,ok:c=>c.kind!=="icone",reqs:[R.same("alb","Toutes du même album")],rw:"p12",c1:"#ff8a1f",c2:"#7b1fa2"},
-  {id:"world",cat:"Multi-conditions",t:"Tour du monde",d:"FR, US et UK, moyenne 78",b:"6 cartes au choix",n:6,ok:()=>true,reqs:[R.min(1,inC("FR"),"Min. 1 carte FR"),R.min(1,inC("US"),"Min. 1 carte US"),R.min(1,inC("UK"),"Min. 1 carte UK"),R.avg(78)],rw:"p6",c1:"#22e0ff",c2:"#ff8a1f"},
-  {id:"era",cat:"Multi-conditions",t:"Classique & moderne",d:"2 d’avant 2005, 2 depuis 2020, moyenne 80",b:"6 cartes au choix",n:6,ok:()=>true,reqs:[R.min(2,c=>yr(c)<2005,"Min. 2 cartes d’avant 2005"),R.min(2,c=>yr(c)>=2020,"Min. 2 cartes depuis 2020"),R.avg(80)],rw:"p12",c1:"#b6ff3b",c2:"#8a5cff"},
-  {id:"atl",cat:"Multi-conditions",t:"Transatlantique",d:"3 US, 2 UK, max 1 Vinyle",b:"6 cartes au choix",n:6,ok:()=>true,reqs:[R.min(3,inC("US"),"Min. 3 cartes US"),R.min(2,inC("UK"),"Min. 2 cartes UK"),R.max(1,isT("commune"),"Max. 1 Vinyle")],rw:"pickHolo",c1:"#3a7bff",c2:"#ff4d6d"},
-  {id:"novinyl",cat:"Multi-conditions",t:"Zéro vinyle",d:"Or ou mieux, moyenne 82, 3 pays",b:"5 cartes Or ou mieux",n:5,ok:atLeast("rare"),reqs:[R.avg(82),R.cty(3)],rw:"legend",c1:"#ffd23f",c2:"#2a8fd6"},
-  {id:"cent",cat:"Multi-conditions",t:"Club des 100 M",d:"6 titres à 100 M, moyenne 85, max 3 US",b:"6 titres à 100 M de streams ou plus",n:6,ok:c=>c.kind!=="icone"&&c.streams>=100,reqs:[R.avg(85),R.max(3,inC("US"),"Max. 3 cartes US"),R.arts(4)],rw:"pickDia",c1:"#3ef0d0",c2:"#1f4bd8"},
-  {id:"elite",cat:"Multi-conditions",t:"Élite",d:"8 cartes, moyenne 86, 1 Holo",b:"8 cartes au choix",n:8,ok:()=>true,reqs:[R.min(1,c=>c.kind==="holo","Min. 1 Holo"),R.avg(86),R.cty(2),R.arts(6)],rw:"pickIco",c1:"#ff3d8b",c2:"#ffd23f"},
-  {id:"dia",cat:"Choix de cartes",t:"Disques de diamant",d:"5 titres certifiés Diamant",b:"5 titres certifiés Diamant",n:5,ok:c=>disc(c.country,c.vs).lvl==="Diamant",rw:"pickDia",c1:"#7af0ff",c2:"#8a5cff"},
-  {id:"prism2",cat:"Choix de cartes",t:"Arc-en-ciel",d:"3 cartes Holo",b:"3 cartes Holo",n:3,ok:c=>c.kind==="holo",rw:"pickHolo",c1:"#ff7ad9",c2:"#7f8cff"},
-  {id:"pantheon",cat:"Choix de cartes",t:"Panthéon",d:"3 cartes Diamant",b:"3 cartes Diamant",n:3,ok:isT("legendaire"),rw:"pickIco",c1:"#ffd23f",c2:"#ff3d8b"},
-  {id:"old",cat:"Époques",t:"Old School",d:"5 cartes d’avant 2005, moyenne 76",b:"5 cartes d’albums sortis avant 2005",n:5,ok:c=>yr(c)<2005,reqs:[R.avg(76)],rw:"old",c1:"#b6ff3b",c2:"#0b5e4a"},
-  {id:"newgen",cat:"Époques",t:"Nouvelle vague",d:"5 cartes depuis 2023, 3 artistes",b:"5 cartes d’albums sortis depuis 2023",n:5,ok:c=>yr(c)>=2023,reqs:[R.arts(3)],rw:"newgen",c1:"#22e0ff",c2:"#ff3d8b"}
+  {id:"swap",cat:"Échanges",t:"Échange express",d:"5 cartes, moyenne 68",b:"5 cartes au choix",n:5,ok:()=>true,reqs:[R.avg(68)],rw:"sp3",c1:"#22e0ff",c2:"#4361ee"},
+  {id:"vinyle",cat:"Échanges",t:"Bac à vinyles",d:"11 cartes Vinyle de 5 artistes",b:"11 cartes Vinyle",n:11,ok:isT("commune"),reqs:[R.arts(5)],rw:"p3",c1:"#6a6a78",c2:"#1d1b2a"},
+  {id:"gold",cat:"Échanges",t:"Disques d’or",d:"8 cartes Or de 3 pays",b:"8 cartes Or",n:8,ok:isT("rare"),reqs:[R.cty(3),R.arts(6)],rw:"p6",c1:"#ffd23f",c2:"#b86e00"},
+  {id:"fr",cat:"Pays",t:"Rap FR",d:"8 cartes FR, 2 Platine, moyenne 77",b:"8 cartes d’artistes français",n:8,ok:inC("FR"),reqs:[R.min(2,atLeast("epique"),"Min. 2 Platine ou mieux"),R.arts(5),R.avg(77)],rw:"fr",c1:"#2f6bff",c2:"#ff4d6d"},
+  {id:"us",cat:"Pays",t:"Rap US",d:"8 cartes US, 2 Platine, moyenne 77",b:"8 cartes d’artistes américains",n:8,ok:inC("US"),reqs:[R.min(2,atLeast("epique"),"Min. 2 Platine ou mieux"),R.arts(5),R.avg(77)],rw:"us",c1:"#ff4d6d",c2:"#3a3b8f"},
+  {id:"uk",cat:"Pays",t:"Rap UK",d:"8 cartes UK, 1 Platine, moyenne 74",b:"8 cartes d’artistes anglais",n:8,ok:inC("UK"),reqs:[R.min(1,atLeast("epique"),"Min. 1 Platine ou mieux"),R.arts(4),R.avg(74)],rw:"uk",c1:"#3a7bff",c2:"#c8102e"},
+  {id:"banlieue",cat:"Pays",t:"Banlieue",d:"10 cartes FR, 3 Platine, moyenne 80",b:"10 cartes d’artistes français",n:10,ok:inC("FR"),reqs:[R.min(3,atLeast("epique"),"Min. 3 Platine ou mieux"),R.arts(7),R.avg(80)],rw:"p12",c1:"#1f4bd8",c2:"#ffd23f"},
+  {id:"holo",cat:"Spéciales",t:"Prisme",d:"8 cartes Platine de 5 artistes",b:"8 cartes Platine",n:8,ok:isT("epique"),reqs:[R.arts(5)],rw:"holo",c1:"#ff7ad9",c2:"#4ee6d0"},
+  {id:"avg",cat:"Spéciales",t:"Note 86",d:"8 cartes, moyenne 86, 3 pays",b:"8 cartes au choix",n:8,ok:()=>true,reqs:[R.avg(86),R.cty(3)],rw:"legend",c1:"#7af0ff",c2:"#2a8fd6"},
+  {id:"same",cat:"Spéciales",t:"Fan absolu",d:"8 cartes du même artiste, moyenne 78",b:"8 cartes au choix",n:8,ok:()=>true,reqs:[R.same("ar","Toutes du même artiste"),R.avg(78)],rw:"icone",c1:"#ff3d8b",c2:"#7b2ff7"},
+  {id:"album",cat:"Spéciales",t:"Face A",d:"8 cartes du même album, moyenne 76",b:"8 titres",n:8,ok:c=>c.kind!=="icone",reqs:[R.same("alb","Toutes du même album"),R.avg(76)],rw:"p12",c1:"#ff8a1f",c2:"#7b1fa2"},
+  {id:"world",cat:"Multi-conditions",t:"Tour du monde",d:"2 FR, 2 US, 2 UK, moyenne 80",b:"8 cartes au choix",n:8,ok:()=>true,reqs:[R.min(2,inC("FR"),"Min. 2 cartes FR"),R.min(2,inC("US"),"Min. 2 cartes US"),R.min(2,inC("UK"),"Min. 2 cartes UK"),R.avg(80)],rw:"p6",c1:"#22e0ff",c2:"#ff8a1f"},
+  {id:"era",cat:"Multi-conditions",t:"Classique & moderne",d:"3 d’avant 2005, 3 depuis 2020, moyenne 82",b:"8 cartes au choix",n:8,ok:()=>true,reqs:[R.min(3,c=>yr(c)<2005,"Min. 3 cartes d’avant 2005"),R.min(3,c=>yr(c)>=2020,"Min. 3 cartes depuis 2020"),R.avg(82)],rw:"p12",c1:"#b6ff3b",c2:"#8a5cff"},
+  {id:"atl",cat:"Multi-conditions",t:"Transatlantique",d:"4 US, 3 UK, aucun Vinyle, moyenne 80",b:"8 cartes au choix",n:8,ok:()=>true,reqs:[R.min(4,inC("US"),"Min. 4 cartes US"),R.min(3,inC("UK"),"Min. 3 cartes UK"),R.max(0,isT("commune"),"Aucun Vinyle"),R.avg(80)],rw:"pickHolo",c1:"#3a7bff",c2:"#ff4d6d"},
+  {id:"novinyl",cat:"Multi-conditions",t:"Zéro vinyle",d:"7 cartes Or ou mieux, moyenne 84, 3 pays",b:"7 cartes Or ou mieux",n:7,ok:atLeast("rare"),reqs:[R.avg(84),R.cty(3),R.arts(6)],rw:"legend",c1:"#ffd23f",c2:"#2a8fd6"},
+  {id:"cent",cat:"Multi-conditions",t:"Club des 100 M",d:"8 titres à 100 M, moyenne 87, max 3 US",b:"8 titres à 100 M de streams ou plus",n:8,ok:c=>c.kind!=="icone"&&c.streams>=100,reqs:[R.avg(87),R.max(3,inC("US"),"Max. 3 cartes US"),R.arts(6)],rw:"pickDia",c1:"#3ef0d0",c2:"#1f4bd8"},
+  {id:"elite",cat:"Multi-conditions",t:"Élite",d:"11 cartes, moyenne 87, 2 Holo",b:"11 cartes au choix",n:11,ok:()=>true,reqs:[R.min(2,isHolo,"Min. 2 Holo"),R.avg(87),R.cty(3),R.arts(9)],rw:"pickIco",c1:"#ff3d8b",c2:"#ffd23f"},
+  {id:"dia",cat:"Choix de cartes",t:"Disques de diamant",d:"8 titres certifiés Diamant de 5 artistes",b:"8 titres certifiés Diamant",n:8,ok:c=>disc(c.country,c.vs).lvl==="Diamant",reqs:[R.arts(5)],rw:"pickDia",c1:"#7af0ff",c2:"#8a5cff"},
+  {id:"prism2",cat:"Choix de cartes",t:"Arc-en-ciel",d:"5 cartes Holo, moyenne 84",b:"5 cartes Holo",n:5,ok:isHolo,reqs:[R.avg(84)],rw:"pickHolo",c1:"#ff7ad9",c2:"#7f8cff"},
+  {id:"pantheon",cat:"Choix de cartes",t:"Panthéon",d:"5 cartes Diamant de 4 artistes",b:"5 cartes Diamant",n:5,ok:isT("legendaire"),reqs:[R.arts(4)],rw:"pickIco",c1:"#ffd23f",c2:"#ff3d8b"},
+  {id:"old",cat:"Époques",t:"Old School",d:"8 cartes d’avant 2005, moyenne 78",b:"8 cartes d’albums sortis avant 2005",n:8,ok:c=>yr(c)<2005,reqs:[R.avg(78),R.arts(5)],rw:"old",c1:"#b6ff3b",c2:"#0b5e4a"},
+  {id:"newgen",cat:"Époques",t:"Nouvelle vague",d:"8 cartes depuis 2023, moyenne 76",b:"8 cartes d’albums sortis depuis 2023",n:8,ok:c=>yr(c)>=2023,reqs:[R.arts(5),R.avg(76)],rw:"newgen",c1:"#22e0ff",c2:"#ff3d8b"}
 ];
-if(PROMO)SBC.unshift({id:"promo",cat:"Équipe du mois",t:PROMO.name,d:"8 cartes Vinyle de 4 artistes",b:"8 cartes Vinyle",n:8,ok:isT("commune"),reqs:[R.arts(4)],rw:"pickPromo",c1:"#34e3b0",c2:"#7b4dff"});
+// défis de groupe, comme sur FIFA : plusieurs équipes à rendre, chacune rapporte un pack, et toutes ensemble une grosse récompense (une seule fois)
+const GROUPS=[
+  {id:"g-icone",t:"Légende du rap",d:"4 équipes pour une Icône au choix",rw:"pickIco",c1:"#ffd23f",c2:"#ff3d8b",parts:[
+    {t:"Les pionniers",d:"8 cartes d’avant 2005, moyenne 80",b:"8 cartes d’albums sortis avant 2005",n:8,ok:c=>yr(c)<2005,reqs:[R.avg(80),R.arts(5)],rw:"sp3"},
+    {t:"La relève",d:"8 cartes depuis 2020, moyenne 82",b:"8 cartes d’albums sortis depuis 2020",n:8,ok:c=>yr(c)>=2020,reqs:[R.avg(82),R.arts(5)],rw:"p6"},
+    {t:"Sans frontières",d:"2 FR, 2 US, 2 UK, moyenne 83",b:"8 cartes au choix",n:8,ok:()=>true,reqs:[R.min(2,inC("FR"),"Min. 2 cartes FR"),R.min(2,inC("US"),"Min. 2 cartes US"),R.min(2,inC("UK"),"Min. 2 cartes UK"),R.avg(83)],rw:"p6"},
+    {t:"Haut niveau",d:"11 cartes, moyenne 85, 1 Holo",b:"11 cartes au choix",n:11,ok:()=>true,reqs:[R.min(1,isHolo,"Min. 1 Holo"),R.avg(85),R.arts(8)],rw:"p12"}]},
+  ...(PROMO?[{id:"g-"+PROMO.id,t:PROMO.name,d:`3 équipes pour une carte ${PROMO.name} au choix`,rw:"pickPromo",c1:"#34e3b0",c2:"#7b4dff",parts:[
+    {t:"Les petits",d:"11 cartes Vinyle de 6 artistes",b:"11 cartes Vinyle",n:11,ok:isT("commune"),reqs:[R.arts(6)],rw:"sp3"},
+    {t:"Or massif",d:"8 cartes Or de 3 pays",b:"8 cartes Or",n:8,ok:isT("rare"),reqs:[R.cty(3),R.arts(6)],rw:"p3"},
+    {t:"Platine",d:"7 cartes Platine ou mieux, moyenne 85",b:"7 cartes Platine ou mieux",n:7,ok:atLeast("epique"),reqs:[R.avg(85),R.arts(5)],rw:"p6"}]}]:[])
+];
+const PARTS={};GROUPS.forEach(g=>g.parts.forEach((p,i)=>{Object.assign(p,{id:`${g.id}.${i}`,cat:g.t,group:g,idx:i,c1:g.c1,c2:g.c2});PARTS[p.id]=p}));
+const sbcById=id=>SBC.find(x=>x.id===id)||PARTS[id];
+const grp=g=>(state.groups??={})[g.id]??={done:[],fin:false};
+function groupSheet(gid){
+  const g=GROUPS.find(x=>x.id===gid),st=grp(g),rw=REWARD[g.rw];
+  sheet(`<div class="sbchead" style="--c1:${g.c1};--c2:${g.c2}"><div><small>Défi de groupe</small><h2>${esc(g.t)}</h2><p>${esc(g.d)}</p><span class="rw">Récompense finale · ${rw.label}</span></div>${sfan(g.parts[0],true)}</div>
+    <p class="note" style="margin:0">${st.fin?"Défi terminé ✓":`${st.done.length}/${g.parts.length} équipes rendues. Chaque équipe rapporte un pack ; toutes ensemble, la récompense finale. Une seule fois.`}</p>
+    <div class="gparts">${g.parts.map((p,i)=>{const d=st.done.includes(i),r=!d&&canDo(p);return `<button class="gpart${d?" done":""}" data-part="${p.id}" ${d?"disabled":""}><span class="gn">${d?"✓":i+1}</span><span class="gt"><b>${esc(p.t)}</b><small>${esc(p.d)}</small><small>${REWARD[p.rw].label}</small></span>${r?`<em>Faisable</em>`:""}</button>`}).join("")}</div>`);
+  $("sheetIn").onclick=e=>{const b=e.target.closest("[data-part]");if(b&&!b.disabled){sbcSheet(b.dataset.part);haptic()}};
+}
 function reqState(r,cs){
   if(r.type==="min"){const n=cs.filter(r.f).length;return {v:`${Math.min(n,r.k)}/${r.k}`,p:n/r.k,ok:n>=r.k}}
   if(r.type==="max"){const n=cs.filter(r.f).length;return {v:`${n}/${r.k}`,p:n<=r.k?1:0,ok:n<=r.k}}
@@ -859,7 +882,7 @@ function sbcSheet(id){sbcSel=[];sbcOnlyDup=false;drawSbc(id)}
 function eligible(s){return Object.keys(state.owned).map(k=>CARD[k]).filter(s.ok).sort((a,b)=>((state.owned[b.key]>1)-(state.owned[a.key]>1))||value(a)-value(b))}
 const canDo=s=>sbcValid(s,autoFill(s).map(k=>CARD[k]));
 function drawSbc(id){
-  const s=SBC.find(x=>x.id===id),rw=REWARD[s.rw],cs=sbcSel.map(k=>CARD[k]),full=cs.length===s.n,ok=sbcValid(s,cs);
+  const s=sbcById(id),rw=REWARD[s.rw],cs=sbcSel.map(k=>CARD[k]),full=cs.length===s.n,ok=sbcValid(s,cs)&&!(s.group&&grp(s.group).done.includes(s.idx));
   const reqs=[[s.b,`${cs.length}/${s.n}`,cs.length/s.n,full],...(s.reqs||[]).map(r=>{const st=reqState(r,cs);return [r.t,st.v,st.p,st.ok&&cs.length>0]})];
   const el=eligible(s).filter(c=>!sbcOnlyDup||state.owned[c.key]>1),cnt={};sbcSel.forEach(k=>cnt[k]=(cnt[k]||0)+1);
   const lost=cs.reduce((t,c)=>t+value(c),0);
@@ -878,7 +901,10 @@ function drawSbc(id){
     if(e.target.closest("#sbAuto")){sbcSel=autoFill(s);if(sbcSel.length<s.n)toast("Pas assez de cartes éligibles");drawSbc(id);return}
     if(e.target.closest("#sbGo")&&ok){
       sbcSel.forEach(take);daily().sbc++;state.sbcDone[s.id]=(state.sbcDone[s.id]||0)+1;SFX.done();save();closeSheet();$("sheetIn").onclick=null;sbcSel=[];
-      renderQuests();badge();rewardScreen({title:"SBC réussi",sub:s.t,packs:[s.rw]});
+      if(s.group){
+        const g=s.group,st=grp(g);st.done.push(s.idx);const all=st.done.length>=g.parts.length;if(all)st.fin=true;save();renderQuests();badge();
+        rewardScreen({title:all?"Défi de groupe terminé !":"Équipe rendue",sub:`${g.t} · ${s.t}`,packs:all?[s.rw,g.rw]:[s.rw]});
+      }else{renderQuests();badge();rewardScreen({title:"SBC réussi",sub:s.t,packs:[s.rw]})}
     }
   };
 }
@@ -1099,7 +1125,11 @@ function renderQuests(){
   $("qSeg").querySelector('[data-q="day"]').innerHTML=`Défis${all.some(ready)?' <i class="qdot"></i>':""}`;
   if(qTab==="sbc"){
     $("quests").innerHTML=`<div class="qstats two"><div><b>${done}</b><small>SBC réussis</small></div><div><b>${readyN}</b><small>faisables maintenant</small></div></div>
-      <p class="note" style="margin-top:12px">Donne des cartes pour gagner un pack. On les refait autant qu’on veut ; « Remplir auto » prend tes doublons en premier.</p>
+      <p class="note" style="margin-top:12px">Donne des cartes pour gagner un pack. Les SBC simples se refont autant qu’on veut ; les défis de groupe, une seule fois. « Remplir auto » prend tes doublons en premier.</p>
+      <h3 class="qcat">Défis de groupe</h3><div class="stiles">${GROUPS.map(g=>{const st=grp(g),rw=REWARD[g.rw];return `<button class="stile gtile${st.fin?" fin":""}" data-grp="${g.id}">
+        <div class="sth">${sfan(g.parts[0])}<div><span>${rw.label}</span><small>${rw.desc||""}</small></div></div>
+        <div class="stb"><b>${esc(g.t)}</b><small>${esc(g.d)}</small><span class="srq"><i style="width:${st.done.length/g.parts.length*100}%"></i></span>
+        <div class="stf"><em>${st.fin?"Terminé ✓":`${st.done.length}/${g.parts.length} équipes`}</em></div></div></button>`}).join("")}</div>
       ${cats.map(cat=>`<h3 class="qcat">${cat}</h3><div class="stiles">${SBC.filter(s=>s.cat===cat).map(s=>{const rw=REWARD[s.rw],n=state.sbcDone[s.id]||0,r=canDo(s),el=eligible(s).reduce((t,c)=>t+state.owned[c.key],0);return `<button class="stile${r?" ready":""}" data-sbc="${s.id}" style="--c1:${s.c1};--c2:${s.c2}">
         <div class="sth">${sfan(s)}<div><span>${rw.label}</span><small>${rw.desc||rw.size+" cartes"}</small></div></div>
         <div class="stb"><b>${esc(s.t)}</b><small>${esc(s.d)}</small>${(s.reqs||[]).length>1?`<span class="nreq">${s.reqs.length+1} conditions</span>`:""}<span class="srq"><i style="width:${Math.min(1,el/s.n)*100}%"></i></span>
@@ -1131,6 +1161,7 @@ let qTab="sbc";
 $("qSeg").onclick=e=>{const b=e.target.closest("[data-q]");if(!b)return;qTab=b.dataset.q;$("qSeg").querySelectorAll("button").forEach(x=>x.setAttribute("aria-pressed",x===b));SFX.tab();renderQuests()};
 $("quests").onclick=e=>{
   const s=e.target.closest("[data-sbc]");if(s){sbcSheet(s.dataset.sbc);haptic();return}
+  const gp=e.target.closest("[data-grp]");if(gp){groupSheet(gp.dataset.grp);haptic();return}
   const a2=e.target.closest("[data-alb2]");if(a2){const al=ALB[a2.dataset.alb2];club.view="album";club.ar=al.ar;club.alb=al.id;TABS.forEach(b=>b.classList.toggle("on",b.dataset.go==="s-club"));pillTo(TABS.find(b=>b.dataset.go==="s-club"));show("s-club");return}
   if(e.target.closest("#claimAll")){const rs=quests().filter(ready);rs.forEach(q=>(q.sec==="day"?daily().claimed:state.claimed).push(q.id));earn(rs.reduce((t,q)=>t+q.r,0),`${rs.length} défis récupérés`);renderQuests();badge();return}
   const b=e.target.closest("[data-claim]");if(!b)return;

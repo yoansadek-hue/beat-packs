@@ -497,9 +497,9 @@ function recap(){
   open.classList.remove("run","wo");open.classList.add("recapmode");hint("");
   const seen=new Set(),n=run.cards.length;
   // la grille est calculée pour tenir dans l'écran, sans défilement
-  const gap=8,W=Math.min(innerWidth-36,innerWidth>=900?1100:520),H=(visualViewport?.height||innerHeight)-290;
-  const size=c=>{const r=Math.ceil(n/c);return Math.floor(Math.min((W-gap*(c-1))/c,((H-gap*(r-1))/r)*.72,innerWidth>=900?210:170))};
-  let cols=1;for(let c=2;c<=Math.min(n,5);c++)if(size(c)>size(cols))cols=c; // le nombre de colonnes qui donne les plus grandes cartes
+  const gap=8,big=innerWidth>=700,CAP=big?200:170,MAXC=big?6:5,W=Math.min(innerWidth-36,big?1180:520),H=(visualViewport?.height||innerHeight)-290;
+  const size=c=>{const r=Math.ceil(n/c);return Math.floor(Math.min((W-gap*(c-1))/c,((H-gap*(r-1))/r)*.72,CAP))};
+  let cols=1;for(let c=2;c<=Math.min(n,MAXC);c++)if(size(c)>size(cols))cols=c; // le nombre de colonnes qui donne les plus grandes cartes
   const w=size(cols);
   scene.innerHTML=`<div class="recap"><h2>Ton pack</h2><p class="note" style="margin:-10px 0 0">Touche une carte pour la voir, la vendre ou l’offrir.</p><div class="recapgrid" style="grid-template-columns:repeat(${cols},${w}px);gap:${gap}px">${run.cards.map((c,i)=>{const f=run.fresh.has(c.key)&&!seen.has(c.key);seen.add(c.key);return cw(c,{fresh:f,i,tap:true})}).join("")}</div></div><div class="recapbar"><button class="btn go" id="done">Continuer</button></div>`;
   run.cards.forEach((_,i)=>later(SFX.tick,i*90)); // un petit tic par carte qui apparaît
@@ -507,8 +507,8 @@ function recap(){
   requestAnimationFrame(()=>{
     const grid=scene.querySelector(".recapgrid"),bar=document.querySelector(".recapbar");if(!grid||!bar)return;
     const H2=bar.getBoundingClientRect().top-grid.getBoundingClientRect().top-12;
-    const fit=c=>{const r=Math.ceil(n/c);return Math.floor(Math.min((W-gap*(c-1))/c,((H2-gap*(r-1))/r)*.72,170))};
-    let c2=1;for(let c=2;c<=Math.min(n,5);c++)if(fit(c)>fit(c2))c2=c;
+    const fit=c=>{const r=Math.ceil(n/c);return Math.floor(Math.min((W-gap*(c-1))/c,((H2-gap*(r-1))/r)*.72,CAP))};
+    let c2=1;for(let c=2;c<=Math.min(n,MAXC);c++)if(fit(c)>fit(c2))c2=c;
     grid.style.gridTemplateColumns=`repeat(${c2},${fit(c2)}px)`;
   });
 }

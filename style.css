@@ -110,7 +110,6 @@ input::placeholder{color:var(--dim)}
 .pack .foil::after{content:"";position:absolute;inset:0;box-shadow:inset 7px 0 12px -6px rgba(0,0,0,.5),inset -7px 0 12px -6px rgba(0,0,0,.5)} /* le sachet est bombé */
 .pack .crimp{position:absolute;left:0;right:0;height:8%;z-index:3;clip-path:var(--zz);background:repeating-linear-gradient(90deg,rgba(255,255,255,.5) 0 1px,rgba(0,0,0,.3) 1px 3px)}
 .pack .crimp.t{top:0} .pack .crimp.b{bottom:0}
-.pack .crimp.t::after{content:"";position:absolute;right:9%;bottom:-40%;width:6%;aspect-ratio:1;border-radius:50%;background:#0c0b25;box-shadow:0 0 0 1px rgba(255,255,255,.4)} /* l'encoche pour déchirer */
 .pack.k-3{--pc:#2ec5ff} .pack.k-5{--pc:#ff4fae} .pack.k-10{--pc:#ffb21f} .pack.k-sp{--pc:#4ee6a0}
 .pack .shine{position:absolute;inset:0;z-index:4;clip-path:var(--zz);overflow:hidden;pointer-events:none;background:linear-gradient(115deg,transparent 35%,rgba(255,120,220,.28) 44%,rgba(120,255,240,.32) 50%,rgba(255,255,140,.26) 56%,transparent 65%);background-size:300% 100%;animation:holo 3.6s ease-in-out infinite}
 @keyframes holo{0%,40%{background-position:100% 0}100%{background-position:-50% 0}}
@@ -523,3 +522,62 @@ html::-webkit-scrollbar,body::-webkit-scrollbar,.sheetin::-webkit-scrollbar,.rec
 .prize b{display:block;font:800 15px/1.15 var(--font)}
 .prize small{display:flex;align-items:center;gap:5px;color:var(--dim);font-size:12px;font-weight:600}
 .prize small .coin{width:13px;height:13px}
+
+/* =====================================================================
+   Habillage façon menus FUT 21 : stade la nuit, panneaux plats à coin coupé,
+   titres condensés en capitales, accent turquoise et violet.
+   ===================================================================== */
+:root{--fut:#3ef0d0;--futv:#8b3dff;--pan:#231a4b;--pan2:#2d2263;--cut:polygon(14px 0,100% 0,100% calc(100% - 14px),calc(100% - 14px) 100%,0 100%,0 14px);--cond:"Saira Condensed","Outfit",sans-serif}
+body{background:
+  radial-gradient(60vmax 30vmax at 0% 0%,rgba(255,255,255,.12),transparent 60%),
+  radial-gradient(60vmax 30vmax at 100% 0%,rgba(255,255,255,.1),transparent 60%),
+  radial-gradient(90vmax 40vmax at 50% 120%,rgba(46,160,90,.28),transparent 65%),
+  linear-gradient(180deg,#120c2b,#1a1240 55%,#160f33);background-attachment:fixed}
+h1{font:800 34px/1 var(--cond);text-transform:uppercase;letter-spacing:.02em;color:var(--fut)}
+h2{font:700 20px/1.1 var(--cond);text-transform:uppercase;letter-spacing:.04em}
+.qcat{font-family:var(--cond);letter-spacing:.12em;color:var(--fut)}
+/* en-tête : le blason du club, le pseudo et les pièces */
+#bar{padding:12px 18px 0}
+.club{display:flex;align-items:center;gap:10px;padding:6px 16px 6px 6px;background:var(--pan);clip-path:polygon(0 0,100% 0,calc(100% - 12px) 100%,0 100%);min-width:0}
+.crest{display:grid;place-items:center;width:38px;height:42px;flex:none;background:linear-gradient(160deg,var(--fut),var(--futv));clip-path:polygon(0 0,100% 0,100% 70%,50% 100%,0 70%);font:800 15px var(--cond);color:#120c2b}
+.club b{display:block;font:700 15px/1.1 var(--cond);text-transform:uppercase;letter-spacing:.03em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:42vw}
+.club small{display:flex;align-items:center;gap:5px;font:700 14px var(--font);color:#fff}
+.club small .coin{width:14px;height:14px}
+.iconbtn{border-radius:0;clip-path:var(--cut);background:var(--futv);box-shadow:none;font-family:var(--cond);text-transform:uppercase;letter-spacing:.04em;font-size:15px}
+/* panneaux plats à coin coupé */
+.offer,.sbc,.quest,.arow,.mrow,.list,.profile,.qstats div,.aprize,.gift,.prize,.friend,.sbchead,.req,.hubmain,.hubside,.empty{border-radius:0!important;clip-path:var(--cut)}
+.quest,.arow,.mrow,.list,.qstats div,.friend,.req,.prize,.gift{background:var(--pan);border:0}
+.btn{border-radius:0;clip-path:var(--cut);font-family:var(--cond);text-transform:uppercase;letter-spacing:.05em;font-size:18px}
+.btn.sm{font-size:15px}
+.btn.light{color:#120c2b}
+.seg{border-radius:0;background:var(--pan);clip-path:var(--cut)}
+.seg button{border-radius:0;font-family:var(--cond);text-transform:uppercase;letter-spacing:.05em;font-size:16px}
+.seg button[aria-pressed=true]{background:var(--futv);color:#fff}
+.chips button,.chipbtn{border-radius:0;clip-path:polygon(8px 0,100% 0,calc(100% - 8px) 100%,0 100%);padding:4px 16px}
+.chips button[aria-pressed=true],.chipbtn.on{background:var(--fut);color:#120c2b}
+input[type=search],input[type=text]{border-radius:0;clip-path:var(--cut);background:var(--pan)}
+.sheetin{border-radius:0;clip-path:polygon(24px 0,100% 0,100% 100%,0 100%,0 24px);background:#1d1543}
+/* accueil : panneau « à la une » et carte du jour, comme le Central FUT */
+.hub{display:grid;grid-template-columns:1.6fr 1fr;gap:8px;margin:12px 0 18px}
+.hubmain,.hubside{position:relative;display:flex;flex-direction:column;align-items:flex-start;gap:6px;min-height:200px;padding:14px;border:0;color:#fff;text-align:left;cursor:pointer;overflow:hidden}
+.hubmain{background:linear-gradient(135deg,#2b2160,#1a1440 60%),var(--pan)}
+.hubmain::before{content:"";position:absolute;right:-40px;top:-30px;width:190px;height:190px;border-radius:50%;background:repeating-radial-gradient(circle,rgba(255,255,255,.06) 0 2px,transparent 2px 7px);pointer-events:none}
+.hubmain small{padding:3px 10px;background:rgba(255,255,255,.1);font:700 12px var(--cond);text-transform:uppercase;letter-spacing:.1em;clip-path:polygon(0 0,100% 0,calc(100% - 6px) 100%,0 100%)}
+.hubmain h3,.hubside h3{margin:2px 0 0;font:800 24px/1 var(--cond);text-transform:uppercase;color:var(--fut)}
+.hubside h3{font-size:19px}
+.hubmain p,.hubside p{position:relative;z-index:1;margin:0;max-width:62%;font-size:13px;font-weight:600;color:#ddd8ff}
+.hubside p{max-width:none}
+.hubgo{position:relative;z-index:1;margin-top:auto;padding:5px 12px;background:var(--fut);color:#120c2b;font:800 13px var(--cond);text-transform:uppercase;letter-spacing:.05em;clip-path:polygon(0 0,100% 0,calc(100% - 6px) 100%,0 100%)}
+.hubmain .pack{position:absolute;right:10px;bottom:12px;width:74px;transform:rotate(8deg)}
+.hubside{background:linear-gradient(160deg,#5a2bb8,#2a1666 70%)}
+.hubside .cw{width:100%;margin-top:auto}
+/* défis : stats en deux colonnes, pastille sur l'onglet Défis, albums presque finis */
+.qstats.two{grid-template-columns:1fr 1fr}
+.qdot{display:inline-block;width:8px;height:8px;border-radius:50%;background:var(--pink);vertical-align:2px}
+.quest.qalb{width:100%;text-align:left;cursor:pointer;color:#fff}
+/* tunnel court sans walkout : la couleur de la carte tout de suite */
+.open.fast .ring{border-color:var(--fl);animation-duration:.6s}
+.open.fast{--eq:var(--fl);--lo:.15;--hi:.55}
+.open.fast .floor{opacity:.4}
+.open.fast .rays{--ray:var(--fl);opacity:.14}
+.open.fast .tdisc .coin{filter:none;box-shadow:0 0 0 3px var(--fl),0 0 24px 4px var(--fl)}

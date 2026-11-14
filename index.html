@@ -15,15 +15,14 @@
 <title>Beat Packs</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="style.css?v=1794652477">
+<link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800;900&family=Saira+Condensed:wght@600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="style.css?v=1794653554">
 </head>
 <body>
 <header id="bar">
-  <span class="mark">BEAT<b>PACKS</b></span>
+  <div class="club"><span class="crest">BP</span><div><b id="clubName">Beat Packs</b><small><i class="coin"></i><span id="wallet">0</span></small></div></div>
   <div class="barR">
     <button class="iconbtn" id="btnFriends" aria-label="Amis"><svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true"><path fill="currentColor" d="M9 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8zm0 2c-3.3 0-7 1.7-7 4.5V20h14v-2.5C16 14.7 12.3 13 9 13zm8-2a3.5 3.5 0 1 0-2.1-6.3 5.9 5.9 0 0 1 0 5.6A3.5 3.5 0 0 0 17 11zm1.2 2.1c1.6 1 2.8 2.5 2.8 4.4V20h3v-2.5c0-2.1-2.6-3.8-5.8-4.4z"/></svg><span>Amis</span></button>
-    <span class="credits" aria-label="Pièces"><i class="coin"></i><b id="wallet">0</b></span>
   </div>
 </header>
 
@@ -56,12 +55,14 @@
   </section>
 
   <section id="s-shop" class="screen">
+    <div class="hub" id="hub"></div>
     <h1>Boutique</h1>
     <div class="packs" id="packs"></div>
   </section>
 
   <section id="s-quests" class="screen" hidden>
     <h1>Défis</h1>
+    <div class="seg" id="qSeg" role="group" aria-label="Défis"><button aria-pressed="true" data-q="sbc">SBC</button><button aria-pressed="false" data-q="day">Défis</button></div>
     <div id="quests"></div>
   </section>
 
@@ -110,7 +111,7 @@
 </nav>
 <div class="toast" id="toast" role="status"></div>
 
-<script src="data.js?v=1794652477"></script>
-<script src="script.js?v=1794652477"></script>
+<script src="data.js?v=1794653554"></script>
+<script src="script.js?v=1794653554"></script>
 </body>
 </html>

@@ -101,7 +101,7 @@ const $=id=>document.getElementById(id);
 const fmt=n=>n.toLocaleString("fr-FR");
 function toast(t){const el=$("toast");el.textContent=t;el.classList.add("show");clearTimeout(toast.t);toast.t=setTimeout(()=>el.classList.remove("show"),2400)}
 function haptic(p=8){if(state.vibrate&&navigator.vibrate)navigator.vibrate(p)}
-function wallet(){$("wallet").textContent=fmt(state.coins);if(!$("s-shop").hidden)renderPacks()}
+function wallet(){$("wallet").textContent=fmt(state.coins);$("clubName").textContent=state.pseudo;if(!$("s-shop").hidden)renderPacks()}
 function earn(n,why){state.coins+=n;save();wallet();SFX.coin();toast(`${why?why+" · ":""}+${fmt(n)} pièces`);haptic([10,30,10])}
 
 // ---------- cartes ----------
@@ -191,7 +191,26 @@ function announceAlbums(){
 function openInbox(i){const k=state.inbox[i];if(k==null)return;state.inbox.splice(i,1);save();openPack(PACKS.find(p=>p.key===k))}
 
 // ---------- boutique : 3 packs, seul le nombre de cartes change ----------
+// la carte du jour : une grosse carte du jeu, la même pour toute la journée
+function cardOfDay(){
+  const pool=[...POOL.legendaire,...ICONES];let h=0;for(const ch of today())h=(h*31+ch.charCodeAt(0))>>>0;
+  return pool[h%pool.length];
+}
+function renderHub(){
+  const ready=SBC.filter(canDo).length,c=cardOfDay(),gifts=state.inbox.length;
+  const main=gifts?{k:"À la une",t:"Packs offerts",p:`${gifts} pack${gifts>1?"s":""} t’attend${gifts>1?"ent":""}, gagné${gifts>1?"s":""} en finissant des albums.`,b:"Ouvrir",go:"gift"}
+    :ready?{k:"Central Beat",t:"SBC prêts",p:`${ready} défi${ready>1?"s":""} de cartes faisable${ready>1?"s":""} maintenant avec tes doublons.`,b:"Voir les SBC",go:"s-quests"}
+    :{k:"Central Beat",t:"Primes d’album",p:"Finis un album pour gagner des pièces et un pack offert. Toutes les primes sont dans le Catalogue.",b:"Voir le catalogue",go:"s-club"};
+  $("hub").innerHTML=`<button class="hubmain" data-hub="${main.go}"><small>${main.k}</small><h3>${main.t}</h3><p>${main.p}</p><span class="hubgo">${main.b}</span>${packHTML(PACKS[2])}</button>
+    <button class="hubside" data-k="${c.key}"><h3>Carte du jour</h3><p>${esc(c.artist)}</p>${cw(c,{lock:!has(c.key)})}</button>`;
+}
+$("hub").onclick=e=>{
+  const m=e.target.closest("[data-hub]");
+  if(m){SFX.tap();const g=m.dataset.hub;if(g==="gift")return openInbox(0);if(g==="s-club")club.view="artists";TABS.forEach(b=>b.classList.toggle("on",b.dataset.go===g));pillTo(TABS.find(b=>b.dataset.go===g));show(g);return}
+  const c=e.target.closest("[data-k]");if(c)cardSheet(c.dataset.k);
+};
 function renderPacks(){
+  renderHub();
   const gifts=state.inbox.length?`<h2 style="margin-top:4px">Mes packs offerts</h2><div class="gifts">${state.inbox.map((k,i)=>{const p=PACKS.find(x=>x.key===k);return `<button class="gift" data-inbox="${i}">${packHTML(p)}<b>${p.label}</b><span>Ouvrir</span></button>`}).join("")}</div><h2>Boutique</h2>`:"";
   $("packs").innerHTML=gifts+PACKS.map(p=>`<div class="offer p-${p.key}">
     ${packHTML(p)}
@@ -354,7 +373,12 @@ function tunnel(){
   scene.innerHTML=`<div class="flash"></div><div class="tdisc${h==="rare"?" rare":""}"><i class="coin"></i></div>`;
   later(()=>scene.querySelector(".flash")?.remove(),520);
   open.classList.add("run");SFX.tunnel();haptic(14);
-  if(h==="board"){
+  if(h!=="board"){ // pas de walkout : la couleur de la carte s'affiche tout de suite et la carte arrive vite
+    open.dataset.fl=colorOf(run.best);open.classList.add("fast");
+    later(()=>{open.classList.remove("fast");run.cur=run.best;reveal()},1100);
+    return;
+  }
+  {
     later(()=>{open.classList.add("bars");SFX.slam()},700);
     later(()=>{
       const d=scene.querySelector(".tdisc");
@@ -709,19 +733,28 @@ function badge(){$("questBadge").hidden=!quests().some(ready)}
 function renderQuests(){
   if($("s-quests").hidden)return;
   const all=quests(),row=q=>`<div class="quest${q.got?" got":""}"><div class="qi"><b>${esc(q.t)}</b><div class="bar"><i style="width:${q.v/q.goal*100}%"></i></div><small>${q.v}/${q.goal} · <i class="coin"></i>${fmt(q.r)}</small></div>${q.got?`<span class="note" style="margin:0">Reçu ✓</span>`:`<button class="btn sm" data-claim="${q.id}" ${ready(q)?"":"disabled"}>Récupérer</button>`}</div>`;
-  const done=Object.values(state.sbcDone).reduce((t,n)=>t+n,0),readyN=SBC.filter(canDo).length,albums=state.rewarded.length;
+  const done=Object.values(state.sbcDone).reduce((t,n)=>t+n,0),readyN=SBC.filter(canDo).length;
   const cats=[...new Set(SBC.map(s=>s.cat))];
-  $("quests").innerHTML=`<div class="qstats"><div><b>${done}</b><small>défis de cartes réussis</small></div><div><b>${readyN}</b><small>faisables maintenant</small></div><div><b>${albums}</b><small>albums complétés</small></div></div>
-    ${all.some(ready)?`<button class="btn" id="claimAll" style="margin-top:16px">Tout récupérer · <i class="coin"></i>${fmt(all.filter(ready).reduce((t,q)=>t+q.r,0))}</button>`:""}
-    <h2>Défis de cartes</h2><p class="note">Donne des cartes pour gagner un pack. On les refait autant qu’on veut ; « Remplir auto » prend tes doublons en premier.</p>
-    ${cats.map(cat=>`<h3 class="qcat">${cat}</h3><div class="sbcs">${SBC.filter(s=>s.cat===cat).map(s=>{const rw=REWARD[s.rw],n=state.sbcDone[s.id]||0,r=canDo(s);return `<button class="sbc${r?" ready":""}" data-sbc="${s.id}" style="--c1:${s.c1};--c2:${s.c2}">
-      <div class="sbct"><b>${esc(s.t)}</b><small>${esc(s.d)}</small></div>${packHTML(rw)}
-      <div class="sbcf"><span class="rw">${rw.label}</span>${r?`<span class="ok">Prêt</span>`:""}${n?`<span class="cnt">×${n}</span>`:""}</div></button>`}).join("")}</div>`).join("")}
-    <h2>Défis du jour</h2><p class="note">Ils reviennent chaque jour à minuit.</p>${all.filter(q=>q.sec==="day").map(row).join("")}
-    <h2>Albums</h2><p class="note">Finis un album d’au moins 4 titres pour gagner des pièces et un pack offert. Retrouve les primes dans le Catalogue.</p>`;
+  $("qSeg").querySelector('[data-q="day"]').innerHTML=`Défis${all.some(ready)?' <i class="qdot"></i>':""}`;
+  if(qTab==="sbc"){
+    $("quests").innerHTML=`<div class="qstats two"><div><b>${done}</b><small>SBC réussis</small></div><div><b>${readyN}</b><small>faisables maintenant</small></div></div>
+      <p class="note" style="margin-top:12px">Donne des cartes pour gagner un pack. On les refait autant qu’on veut ; « Remplir auto » prend tes doublons en premier.</p>
+      ${cats.map(cat=>`<h3 class="qcat">${cat}</h3><div class="sbcs">${SBC.filter(s=>s.cat===cat).map(s=>{const rw=REWARD[s.rw],n=state.sbcDone[s.id]||0,r=canDo(s);return `<button class="sbc${r?" ready":""}" data-sbc="${s.id}" style="--c1:${s.c1};--c2:${s.c2}">
+        <div class="sbct"><b>${esc(s.t)}</b><small>${esc(s.d)}</small></div>${packHTML(rw)}
+        <div class="sbcf"><span class="rw">${rw.label}</span>${r?`<span class="ok">Prêt</span>`:""}${n?`<span class="cnt">×${n}</span>`:""}</div></button>`}).join("")}</div>`).join("")}`;
+  }else{
+    const albums=state.rewarded.length,near=ALBUMS.filter(al=>albumPrize(al)&&!state.rewarded.includes(al.id)).map(al=>({al,o:albumOwned(al)})).filter(x=>x.o).sort((a,b)=>(b.o/b.al.tr.length)-(a.o/a.al.tr.length)).slice(0,5);
+    $("quests").innerHTML=`${all.some(ready)?`<button class="btn" id="claimAll">Tout récupérer · <i class="coin"></i>${fmt(all.filter(ready).reduce((t,q)=>t+q.r,0))}</button>`:""}
+      <h2>Défis du jour</h2><p class="note">Ils reviennent chaque jour à minuit.</p>${all.map(row).join("")}
+      <h2>Albums presque finis</h2><p class="note">Finis un album d’au moins 4 titres : pièces + pack offert. ${albums} album${albums>1?"s":""} déjà complété${albums>1?"s":""}.</p>
+      ${near.length?near.map(({al,o})=>{const pr=albumPrize(al);return `<button class="quest qalb" data-alb2="${al.id}">${coverHTML(al.id)}<div class="qi"><b>${esc(al.t)}</b><div class="bar"><i style="width:${o/al.tr.length*100}%"></i></div><small>${o}/${al.tr.length} · ${esc(ART[al.ar].n)} · <i class="coin"></i>${fmt(pr.coins)} + ${PACKS.find(p=>p.key===pr.pack).label}</small></div></button>`}).join(""):`<p class="empty">Ouvre des packs pour commencer des albums.</p>`}`;
+  }
 }
+let qTab="sbc";
+$("qSeg").onclick=e=>{const b=e.target.closest("[data-q]");if(!b)return;qTab=b.dataset.q;$("qSeg").querySelectorAll("button").forEach(x=>x.setAttribute("aria-pressed",x===b));SFX.tab();renderQuests()};
 $("quests").onclick=e=>{
   const s=e.target.closest("[data-sbc]");if(s){sbcSheet(s.dataset.sbc);haptic();return}
+  const a2=e.target.closest("[data-alb2]");if(a2){const al=ALB[a2.dataset.alb2];club.view="album";club.ar=al.ar;club.alb=al.id;TABS.forEach(b=>b.classList.toggle("on",b.dataset.go==="s-club"));pillTo(TABS.find(b=>b.dataset.go==="s-club"));show("s-club");return}
   if(e.target.closest("#claimAll")){const rs=quests().filter(ready);rs.forEach(q=>(q.sec==="day"?daily().claimed:state.claimed).push(q.id));earn(rs.reduce((t,q)=>t+q.r,0),`${rs.length} défis récupérés`);renderQuests();badge();return}
   const b=e.target.closest("[data-claim]");if(!b)return;
   const q=quests().find(x=>x.id===b.dataset.claim);if(!q||!ready(q))return;

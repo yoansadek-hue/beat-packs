@@ -142,9 +142,9 @@ function pickSheet(rw,onTake){
   while(ch.length<3){const c=any(pool);if(!ch.includes(c))ch.push(c)}
   SFX.board();haptic([30,40,30]);let sel=null;
   sheet(`<div class="pickhead"><small>Choix de carte</small><h2>${rw.label}</h2><p>Touche la carte que tu veux garder, puis confirme. Le choix est définitif.</p></div>
-    <div class="picks">${ch.map((c,i)=>`<button class="pickc" style="--i:${i}" data-pk="${c.key}">${cw(c,{fresh:!has(c.key)})}
-      <b>${esc(c.kind==="icone"?c.artist:c.title)}</b><small>${c.kind==="icone"?`Icône · ${c.country}`:`${esc(c.artist)} · ${labelOf(c)}`}</small>
-      <em><i class="coin"></i>${fmt(value(c))}</em>${has(c.key)?`<span class="pown">Déjà ×${state.owned[c.key]}</span>`:`<span class="pnew">Nouvelle</span>`}</button>`).join("")}</div>
+    <div class="picks prows">${ch.map((c,i)=>`<button class="pickc prow" style="--i:${i}" data-pk="${c.key}"><span class="drc">${cw(c,{fresh:!has(c.key)})}</span><span class="dri">
+      <small>${labelOf(c)} · ${c.country}</small><b>${esc(c.kind==="icone"?c.artist:cleanT(c.title)||c.title)}</b><span>${c.kind==="icone"?"Icône":esc(c.artist)}</span>
+      <span class="drs"><em>${c.ovr}</em><i>Note</i></span><span class="prv"><i class="coin"></i>${fmt(value(c))}</span>${has(c.key)?`<span class="pown">Déjà ×${state.owned[c.key]}</span>`:`<span class="pnew">Nouvelle</span>`}</span></button>`).join("")}</div>
     <button class="btn" id="pkGo" disabled>Choisis une carte</button>`,true);
   $("sheetIn").onclick=e=>{
     const p=e.target.closest("[data-pk]");
@@ -444,7 +444,7 @@ const SFX={
 // ---------- extraits audio : 30 s de la carte révélée (le plus gros titre pour une Icône) ----------
 // l'extrait vient de l'album Deezer du titre (liens valables un moment seulement, donc pris à l'ouverture du pack) ;
 // à défaut, l'aperçu Apple Music
-const audio=new Audio();audio.preload="auto";
+// les extraits passent par Web Audio (et non une balise audio) : l'iPhone n'affiche pas de lecteur sur l'écran verrouillé
 const songOf=c=>c.kind==="icone"?ART[c.ar].tracks.reduce((x,y)=>y.streams>x.streams?y:x):c;
 const DZ={};
 function dzTracks(albId){
@@ -475,20 +475,33 @@ function previewUrl(c){
     return x&&x.preview?x.preview:itunesPreview(t);
   });
 }
-const SILENT="data:audio/wav;base64,UklGRiQAAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQAAAAA=";
-function unlockAudio(){if(!state.sound)return;try{audio.muted=true;if(!audio.src)audio.src=SILENT;audio.play().then(()=>{audio.pause();audio.muted=false},()=>{audio.muted=false})}catch(e){}}
-let fadeT=null;
-function fadeTo(v,ms,done){clearInterval(fadeT);const from=audio.volume,t0=performance.now();fadeT=setInterval(()=>{const k=Math.min(1,(performance.now()-t0)/ms);audio.volume=from+(v-from)*k;if(k>=1){clearInterval(fadeT);done&&done()}},40)}
+const BUF={};let SRC=null,GAIN=null,playTok=0;
+// décodage hors ligne : plus fiable (et l'AudioBuffer obtenu se joue dans n'importe quel contexte)
+function decode(b){const O=window.OfflineAudioContext||window.webkitOfflineAudioContext;if(!O)return new Promise((res,rej)=>ac().decodeAudioData(b,res,rej));const o=new O(2,44100,44100);return new Promise((res,rej)=>{const p=o.decodeAudioData(b,res,rej);if(p&&p.then)p.then(res,rej)})}
+function loadBuf(u){return BUF[u]??=fetch(u).then(r=>{if(!r.ok)throw new Error(r.status);return r.arrayBuffer()}).then(decode).catch(e=>{delete BUF[u];throw e})}
+function stopNow(){if(SRC){try{SRC.stop()}catch(e){}try{SRC.disconnect()}catch(e){}SRC=null}}
+// joue un extrait (avec un départ au choix) ; renvoie true s'il a démarré
+function playUrl(u,{offset=0,vol=.9,fade=600}={}){
+  const tok=++playTok;
+  return loadBuf(u).then(buf=>{
+    const C=ac();if(!C||tok!==playTok)return false;stopNow();
+    const g=C.createGain(),t=C.currentTime;g.gain.setValueAtTime(0,t);g.gain.linearRampToValueAtTime(vol,t+fade/1000);g.connect(C.destination);
+    const src=C.createBufferSource();src.buffer=buf;src.connect(g);src.start(0,Math.max(0,Math.min(offset,buf.duration-2)));SRC=src;GAIN=g;return true;
+  },()=>false);
+}
+function unlockAudio(){if(!state.sound)return;const C=ac();if(!C)return;try{const b=C.createBuffer(1,1,22050),x=C.createBufferSource();x.buffer=b;x.connect(C.destination);x.start(0)}catch(e){}}
+addEventListener("pointerdown",()=>{if(state.sound!==false)ac()},{passive:true});
 function playFor(c){
   if(!state.sound)return;
-  const want=songOf(c).key;audio.dataset.want=want;
-  previewUrl(c).then(u=>{
-    if(!u||audio.dataset.want!==want)return;
-    audio.src=u;audio.currentTime=0;audio.volume=0;
-    audio.play().then(()=>fadeTo(.9,600),()=>{});
-  });
+  const tok=++playTok;
+  previewUrl(c).then(u=>{if(u&&tok===playTok)playUrl(u)});
 }
-function stopAudio(){audio.dataset.want="";if(!audio.paused)fadeTo(0,500,()=>audio.pause())}
+function stopAudio(){
+  playTok++;if(!SRC||!GAIN)return;
+  const C=ac(),src=SRC,g=GAIN,t=C.currentTime;SRC=null;GAIN=null;
+  try{g.gain.cancelScheduledValues(t);g.gain.setValueAtTime(g.gain.value,t);g.gain.linearRampToValueAtTime(0,t+.5)}catch(e){}
+  setTimeout(()=>{try{src.stop()}catch(e){}},550);
+}
 
 function openPack(p){
   const cards=drawPack(p),fresh=new Set();
@@ -498,7 +511,7 @@ function openPack(p){
   // les deux meilleures cartes du pack ont leur walkout (double animation, comme sur FIFA)
   const wos=cards.filter(walkout).slice(0,2).reverse(); // 2 walkouts au plus, même en cas d'égalité
   run={cards,fresh,best:cards[0],wos,wi:0,phase:"pack",timers:[],step:0};
-  if(state.sound)[...wos,cards[0]].forEach(c=>previewUrl(c));
+  if(state.sound)[...wos,cards[0]].forEach(c=>previewUrl(c).then(u=>u&&loadBuf(u).catch(()=>{})));
   open.className="open";open.dataset.h="";open.dataset.fl="";$("burst").innerHTML="";
   // ce qui sort du sachet est un indice : 1 carte (pas de walkout), 3 cartes (walkout ou double walkout)
   const outsN=wos.length?3:1;
@@ -1026,7 +1039,7 @@ function renderPlay(){
     const slot=SLOTS[d.step];
     $("play").innerHTML=`${back}${studioHTML(d.slots,{active:slot.id,label:d.name,hue:d.hue,tap:false})}
       <h2>Poste ${d.step+1} sur 5 · ${slot.n}</h2><p class="note">Stat clé : <b style="color:var(--fut)">${STATN[slot.st]}</b>. Touche l’artiste à signer.</p>
-      <div class="doffer">${d.offer.map((k,i)=>{const c=CARD[k],tmp={...d.slots,[slot.id]:k},ch=cardChem(tmp,slot.id);return `<div data-dpick="${k}" style="--i:${i}">${cw(c)}<span class="dstat"><b>${statsOf(c)[slot.st]}</b> ${STATN[slot.st]}${ch?` · <em>+${ch}</em>`:""}</span></div>`}).join("")}</div>`;
+      <div class="doffer drows">${d.offer.map((k,i)=>{const c=CARD[k],tmp={...d.slots,[slot.id]:k},ch=cardChem(tmp,slot.id);return `<button class="drow" data-dpick="${k}" style="--i:${i}"><span class="drc">${cw(c)}</span><span class="dri"><small>${labelOf(c)} · ${c.country}</small><b>${esc(c.kind==="icone"?"Icône":cleanT(c.title)||c.title)}</b><span>${esc(c.artist)}</span><span class="drs"><em>${statsOf(c)[slot.st]}</em><i>${STATN[slot.st]}</i></span>${ch?`<u>+${ch} alchimie</u>`:""}</span></button>`}).join("")}</div>`;
     return;
   }
   const dots=DRAFT_OPP.map((o,i)=>`<span class="${i<d.wins?"w":d.over&&i===d.round?"l":i===d.round&&!d.over?"cur":""}"><b>${o}</b><small>${esc(d.opps[i])}</small></span>`).join("");
@@ -1084,10 +1097,13 @@ function nextBlind(tries=0){
   previewUrl(c).then(u=>{
     if(blind!==me||blind.q!==q)return;
     if(!u)return tries<6?nextBlind(tries+1):(toast("Extraits indisponibles"),endBlind());
-    audio.dataset.want="blind";audio.src=u;audio.volume=.9;const go=()=>{try{audio.currentTime=6+Math.random()*12}catch(e){}audio.play().catch(()=>{})};if(audio.readyState>=1)go();else audio.addEventListener("loadedmetadata",go,{once:true});
-    q.t0=performance.now();renderPlay();SFX.tick();
-    blind.iv=setInterval(()=>{const f=$("btFill");if(f)f.style.width=Math.max(0,100-(performance.now()-q.t0)/1000/BT_T*100)+"%"},100);
-    blind.to=setTimeout(()=>answerBlind(-1),BT_T*1000);
+    playUrl(u,{offset:6+Math.random()*12,fade:150}).then(ok=>{
+      if(blind!==me||blind.q!==q)return;
+      if(!ok)return tries<6?nextBlind(tries+1):(toast("Extraits indisponibles"),endBlind());
+      q.t0=performance.now();renderPlay();SFX.tick();
+      blind.iv=setInterval(()=>{const f=$("btFill");if(f)f.style.width=Math.max(0,100-(performance.now()-q.t0)/1000/BT_T*100)+"%"},100);
+      blind.to=setTimeout(()=>answerBlind(-1),BT_T*1000);
+    });
   },()=>{if(blind===me)nextBlind(tries+1)});
 }
 function answerBlind(i){

@@ -1262,3 +1262,26 @@ html{overflow-x:hidden}
 @media (max-width:699px){.hubmain .pack{display:none}}
 @media (min-width:700px){.nslide{grid-template-columns:1fr 160px;padding-top:30px}}
 @media (min-width:900px){.nslide{grid-template-columns:1fr 175px;padding-top:34px}}
+
+/* ---------- patch 32 : choix en colonne (draft et choix de carte), NEW et noms des cartes spéciales ---------- */
+.drows,.prows{display:flex!important;flex-direction:column;gap:10px;max-width:560px;margin:0 auto}
+.drow,.pickc.prow{display:grid!important;grid-template-columns:min(36%,150px) 1fr;align-items:center;gap:14px;width:100%;padding:14px 14px 14px 12px;border:0;background:#241d3b;color:#f6f3ff;text-align:left;cursor:pointer;clip-path:var(--cut);border-radius:0;animation:rwpop .45s cubic-bezier(.2,1.3,.4,1) both;animation-delay:calc(var(--i) * 80ms)}
+.drow:active{transform:scale(.98)}
+.drc{display:block;padding-top:12px}
+.drc .cw{width:100%}
+.dri{display:flex;flex-direction:column;align-items:flex-start;gap:3px;min-width:0}
+.dri small{font:700 12px var(--cond);text-transform:uppercase;letter-spacing:.1em;color:#c4b8ff}
+.dri b{max-width:100%;font:800 20px/1.05 var(--cond);text-transform:uppercase;overflow:hidden;text-overflow:ellipsis;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical}
+.dri>span:not(.drs):not(.prv):not(.pnew):not(.pown){font-size:14px;font-weight:600;color:var(--dim)}
+.drs{display:flex;align-items:baseline;gap:6px;margin-top:6px}
+.drs em{font:800 40px/1 var(--cond);font-style:normal;color:#ffe14d}
+.drs i{font:800 14px var(--cond);font-style:normal;color:var(--dim);letter-spacing:.08em}
+.dri u{text-decoration:none;padding:2px 8px;background:#34e3b0;color:#1e0f45;font:800 12px var(--cond);text-transform:uppercase}
+.prv{display:flex;align-items:center;gap:5px;font:700 15px var(--cond);color:#ffe14d}
+.prv .coin{width:15px;height:15px}
+.pickc.prow.sel{transform:none;box-shadow:inset 0 0 0 3px #ffe14d;filter:none;background:#2f2560}
+.pickc.prow.off{filter:brightness(.55)}
+/* cartes spéciales : NEW au coin de la carte, titre et artiste plus bas */
+.k-totw .new,.k-promo .new{top:-1.1cqw;right:-1.1cqw;z-index:6}
+.k-totw .cart,.k-promo .cart{margin-bottom:-4cqw}
+.k-totw .nm,.k-promo .nm{margin-top:5cqw}

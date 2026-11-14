@@ -493,7 +493,7 @@ html::-webkit-scrollbar,body::-webkit-scrollbar,.sheetin::-webkit-scrollbar,.rec
 @keyframes sway{from{transform:rotate(-28deg)}to{transform:rotate(-12deg)}}
 @keyframes swayR{from{transform:rotate(28deg)}to{transform:rotate(12deg)}}
 /* le disque du fond : sombre, cerclé de blanc pour un Platine, allumé pour une walkout (avec un second disque pour une double) */
-.tdisc{position:absolute;left:50%;top:44%;z-index:1;width:min(26vw,108px);aspect-ratio:1;margin:calc(min(26vw,108px) / -2) 0 0 calc(min(26vw,108px) / -2);animation:approach 2.1s cubic-bezier(.4,0,.8,.6) both}
+.tdisc{position:absolute;left:calc(50% - 50px);top:calc(44% - 50px);z-index:1;width:100px;height:100px;margin:0;animation:approach 2.1s cubic-bezier(.4,0,.8,.6) both}
 .tdisc .coin{position:absolute;inset:0;width:100%;height:100%;animation:spin 1.3s linear infinite;filter:brightness(.5);transition:filter .2s,box-shadow .2s}
 .tdisc.rare .coin{filter:none;box-shadow:0 0 0 3px rgba(255,248,230,.85),0 0 26px rgba(255,248,230,.45)}
 .tdisc.lit .coin{filter:none;box-shadow:0 0 0 4px var(--fl),0 0 30px 6px var(--fl);animation-duration:.5s}
@@ -802,3 +802,34 @@ input[type=search],input[type=text]{border-radius:0;clip-path:var(--cut);backgro
   .doffer{max-width:760px}
   .duels{max-width:620px;margin:0 auto}
 }
+
+/* ---------- patch 24 : mes packs, écran de récompenses, abandon, SBC multi-conditions ---------- */
+.segn{display:inline-grid;place-items:center;min-width:20px;height:20px;margin-left:4px;padding:0 5px;border-radius:999px;background:var(--pink,#ff3d8b);color:#fff;font:800 12px var(--font);font-style:normal;vertical-align:1px}
+.seg .qdot{display:none}
+.mypacks{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:12px}
+.mypack{display:flex;flex-direction:column;align-items:center;gap:6px;padding:14px 10px 12px;border:0;background:var(--pan);clip-path:var(--cut);color:#fff;cursor:pointer;text-align:center}
+.mypack .pack{width:84px}
+.mypack b{font:800 16px/1.05 var(--cond);text-transform:uppercase}
+.mypack small{font-size:12px;color:var(--dim);min-height:2.4em}
+.mypack span{padding:5px 16px;background:var(--fut);color:#0d0b22;font:800 13px var(--cond);text-transform:uppercase;letter-spacing:.06em;clip-path:polygon(8px 0,100% 0,calc(100% - 8px) 100%,0 100%)}
+.pickpk{display:grid;place-items:center;width:84px;aspect-ratio:.7;background:linear-gradient(160deg,#3a2a7a,#140f30);clip-path:var(--cut)}
+.pickpk .rwb{width:58px;height:58px}
+.rws{width:100%;display:flex;flex-direction:column;align-items:center;gap:12px;text-align:center}
+.rws>small{font:700 12px var(--cond);text-transform:uppercase;letter-spacing:.14em;color:var(--dim)}
+.rws h2{margin:-6px 0 0;font:800 34px/1 var(--cond);text-transform:uppercase;color:var(--fut)}
+.rwk{margin:0;padding:4px 14px;background:var(--futv);font:800 13px var(--cond);text-transform:uppercase;letter-spacing:.14em;clip-path:polygon(8px 0,100% 0,calc(100% - 8px) 100%,0 100%)}
+.rwgrid{width:100%;display:flex;flex-wrap:wrap;justify-content:center;gap:10px}
+.rwi{width:132px;display:flex;flex-direction:column;align-items:center;gap:6px;padding:14px 8px;background:radial-gradient(ellipse at 50% 30%,rgba(62,240,208,.18),transparent 70%),var(--pan);clip-path:var(--cut);animation:rwpop .5s cubic-bezier(.2,1.4,.4,1) both;animation-delay:calc(var(--i) * .18s)}
+.rwi .pack{width:74px}
+.rwi b{font:800 16px/1.05 var(--cond);text-transform:uppercase}
+.rwi small{font-size:12px;color:var(--dim)}
+.rwc .coin{width:62px;height:62px;margin:14px 0 10px}
+.rwc b{font-size:24px;color:#ffd23f}
+@keyframes rwpop{from{transform:scale(.5);opacity:0}to{transform:none;opacity:1}}
+.rws .two{width:100%;display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.rws>.btn{width:100%}
+.playtop{display:flex;align-items:center;justify-content:space-between;gap:10px;min-height:44px;margin-bottom:6px}
+.playtop .back{margin:0}
+.quit{min-height:34px;padding:0 14px;border:1px solid rgba(255,77,109,.6);background:rgba(255,77,109,.12);color:#ff8fa3;font:700 13px var(--cond);text-transform:uppercase;letter-spacing:.06em;cursor:pointer;clip-path:polygon(6px 0,100% 0,calc(100% - 6px) 100%,0 100%)}
+.btn.danger{background:linear-gradient(90deg,#ff4d6d,#c8102e);color:#fff}
+.nreq{align-self:flex-start;margin-top:4px;padding:2px 7px;white-space:nowrap;background:rgba(255,255,255,.12);font:700 11px var(--cond);text-transform:uppercase;letter-spacing:.04em;color:#fff}

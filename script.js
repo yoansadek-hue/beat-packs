@@ -105,7 +105,7 @@ if(state.draft&&!state.draft.slots)state.draft=null;
 if(!state.bonus2){state.coins+=400000;state.bonus2=1} // cadeau unique pour les parties déjà commencées
 for(const k in state.owned)if(!CARD[k])delete state.owned[k]; // un titre retiré du catalogue
 state.inbox??=[];state.rewarded??=[];state.sbcDone??={};
-function save(){try{localStorage.setItem("beatpacks3",JSON.stringify(state))}catch(e){}}
+function save(){try{localStorage.setItem("beatpacks3",JSON.stringify(state))}catch(e){}try{document.getElementById("shopBadge").hidden=!state.inbox.length}catch(e){}}
 function daily(){if(!state.daily||state.daily.date!==today())state.daily={date:today(),packs:0,sold:0,bought:0,hi:0,sbc:0,claimed:[]};return state.daily}
 const has = k => (state.owned[k]||0)>0;
 const give = k => state.owned[k]=(state.owned[k]||0)+1;
@@ -225,7 +225,7 @@ function cardOfDay(){
 }
 function renderHub(){
   const ready=SBC.filter(canDo).length,c=cardOfDay(),gifts=state.inbox.length;
-  const main=gifts?{k:"À la une",t:"Packs offerts",p:`${gifts} pack${gifts>1?"s":""} t’attend${gifts>1?"ent":""}, gagné${gifts>1?"s":""} en finissant des albums.`,b:"Ouvrir",go:"gift"}
+  const main=gifts?{k:"À la une",t:"Mes packs",p:`${gifts} pack${gifts>1?"s":""} t’attend${gifts>1?"ent":""} : récompenses de SBC, de draft et d’albums.`,b:"Voir mes packs",go:"gift"}
     :ready?{k:"Central Beat",t:"SBC prêts",p:`${ready} défi${ready>1?"s":""} de cartes faisable${ready>1?"s":""} maintenant avec tes doublons.`,b:"Voir les SBC",go:"s-quests"}
     :{k:"Central Beat",t:"Primes d’album",p:"Finis un album pour gagner des pièces et un pack offert. Toutes les primes sont dans le Catalogue.",b:"Voir le catalogue",go:"s-club"};
   $("hub").innerHTML=`<button class="hubmain" data-hub="${main.go}"><small>${main.k}</small><h3>${main.t}</h3><p>${main.p}</p><span class="hubgo">${main.b}</span>${packHTML(PACKS[2])}</button>
@@ -245,21 +245,43 @@ $("mtiles").onclick=e=>{
 };
 $("hub").onclick=e=>{
   const m=e.target.closest("[data-hub]");
-  if(m){SFX.tap();const g=m.dataset.hub;if(g==="gift")return openInbox(0);if(g==="s-club")club.view="artists";TABS.forEach(b=>b.classList.toggle("on",b.dataset.go===g));pillTo(TABS.find(b=>b.dataset.go===g));show(g);return}
+  if(m){SFX.tap();let g=m.dataset.hub;if(g==="gift"){shopTab="mine";g="s-shop"}if(g==="s-club")club.view="artists";TABS.forEach(b=>b.classList.toggle("on",b.dataset.go===g));pillTo(TABS.find(b=>b.dataset.go===g));show(g);return}
   const c=e.target.closest("[data-k]");if(c)cardSheet(c.dataset.k);
 };
+let shopTab="buy";
 function renderPacks(){
-  const gifts=state.inbox.length?`<h2 style="margin-top:4px">Mes packs offerts</h2><div class="gifts">${state.inbox.map((k,i)=>{const p=rewardOf(k);return `<button class="gift" data-inbox="${i}">${packHTML(p)}<b>${p.label}</b><span>Ouvrir</span></button>`}).join("")}</div><h2>Boutique</h2>`:"";
-  $("packs").innerHTML=gifts+PACKS.map(p=>`<div class="offer p-${p.key}">
+  const n=state.inbox.length;
+  $("shopSeg").innerHTML=`<button aria-pressed="${shopTab==="buy"}" data-s="buy">Packs</button><button aria-pressed="${shopTab==="mine"}" data-s="mine">Mes packs${n?` <i class="qdot"></i><em class="segn">${n}</em>`:""}</button>`;
+  if(shopTab==="mine"){
+    $("packs").innerHTML=n?`<p class="note" style="margin-top:0">Tes récompenses de SBC, de draft et d’albums. Ouvre-les quand tu veux.</p><div class="mypacks">${state.inbox.map((k,i)=>{const p=rewardOf(k);return `<button class="mypack" data-inbox="${i}">${p.pick?`<div class="pickpk">${rwBadge(p)}</div>`:packHTML(p)}<b>${p.label}</b><small>${p.desc||p.size+" cartes"}</small><span>Ouvrir</span></button>`}).join("")}</div>`
+      :`<p class="empty">Aucun pack en attente. Gagne-en avec les SBC, le Draft et les albums complétés.</p>`;
+  }else{
+    $("packs").innerHTML=PACKS.map(p=>`<div class="offer p-${p.key}">
     ${packHTML(p)}
     <div class="info">
       <h3>${p.label}</h3><p>${p.size} cartes tirées dans toutes les discographies</p>
       <div class="odds">${ORDER.slice().reverse().map(r=>`<span><i style="background:${TCOLOR[r]}"></i>${TIER[r]} ${Math.round(ODDS[r]*100)}%</span>`).join("")}</div>
       <button class="btn light" data-k="${p.key}" ${state.coins<p.price?"disabled":""}><i class="coin"></i>${fmt(p.price)}</button>
     </div>
-  </div>`).join("")+`<p class="note">Les packs spéciaux se gagnent dans les défis de cartes (onglet Défis).</p>`;
+  </div>`).join("")+`<p class="note">Les packs spéciaux se gagnent dans les SBC (onglet Défis) et le Draft. Ils t’attendent dans « Mes packs ».</p>`;
+  }
   document.querySelectorAll(".offer .btn").forEach(b=>b.onclick=()=>buyPack(b.dataset.k));
   document.querySelectorAll("[data-inbox]").forEach(b=>b.onclick=()=>{SFX.tap();openInbox(+b.dataset.inbox)});
+}
+$("shopSeg").onclick=e=>{const b=e.target.closest("[data-s]");if(!b)return;shopTab=b.dataset.s;SFX.tab();renderPacks()};
+// écran de récompenses : les pièces sont créditées, les packs vont dans « Mes packs »
+function rewardScreen({title,sub="",coins=0,packs=[]}){
+  if(coins)state.coins+=coins;
+  const first=state.inbox.length;packs.forEach(k=>state.inbox.push(k));save();wallet();
+  SFX.done();haptic([20,40,20,40,60]);
+  const items=[coins?`<div class="rwi rwc" style="--i:0"><i class="coin"></i><b>+${fmt(coins)}</b><small>pièces</small></div>`:"",...packs.map((k,i)=>{const p=rewardOf(k);return `<div class="rwi" style="--i:${i+1}">${p.pick?`<div class="pickpk">${rwBadge(p)}</div>`:packHTML(p)}<b>${p.label}</b><small>${p.desc||p.size+" cartes"}</small></div>`})].join("");
+  sheet(`<div class="rws"><small>${esc(sub)}</small><h2>${esc(title)}</h2><p class="rwk">Récompenses</p>
+    <div class="rwgrid">${items||`<p class="empty">Pas de récompense cette fois.</p>`}</div>
+    ${packs.length?`<p class="note" style="text-align:center;margin:0">${packs.length>1?"Les packs sont rangés":"Le pack est rangé"} dans Boutique › Mes packs.</p><div class="two"><button class="btn ghost" id="rwLater">Plus tard</button><button class="btn" id="rwOpen">Ouvrir maintenant</button></div>`:`<button class="btn" id="rwLater">Continuer</button>`}</div>`);
+  $("sheetIn").onclick=e=>{
+    if(e.target.closest("#rwOpen")){closeSheet();openInbox(first)}
+    else if(e.target.closest("#rwLater")){closeSheet();renderMenu()}
+  };
 }
 function buyPack(k){const p=PACKS.find(x=>x.key===k);if(state.coins<p.price)return;state.coins-=p.price;SFX.cash();openPack(p)}
 
@@ -698,31 +720,59 @@ function tickListings(){
 
 // ---------- défis de cartes : on donne des cartes, on gagne un pack ----------
 const avg=cs=>cs.reduce((s,c)=>s+c.ovr,0)/cs.length;
+// conditions : min/max de cartes d'un type, note moyenne, tout du même artiste ou album, nombre de pays ou d'artistes différents
+const R={
+  min:(k,f,t)=>({type:"min",k,f,t}),
+  max:(k,f,t)=>({type:"max",k,f,t}),
+  avg:k=>({type:"avg",k,t:`Note moyenne ≥ ${k}`}),
+  same:(key,t)=>({type:"same",key,t}),
+  cty:k=>({type:"distinct",key:"country",k,t:`Min. ${k} pays différents`}),
+  arts:k=>({type:"distinct",key:"ar",k,t:`Min. ${k} artistes différents`})
+};
+const isT=t=>c=>c.kind==="track"&&c.tier===t;
+const atLeast=t=>c=>c.kind!=="track"||ORDER.indexOf(c.tier)>=ORDER.indexOf(t);
+const inC=k=>c=>c.country===k;
+const yr=c=>ALB[c.alb]?.y||0;
 const SBC=[
-  {id:"swap",cat:"Échanges",t:"Échange express",d:"3 cartes au choix",n:3,ok:()=>true,rw:"sp3",c1:"#22e0ff",c2:"#4361ee"},
-  {id:"vinyle",cat:"Échanges",t:"Bac à vinyles",d:"8 cartes Vinyle",n:8,ok:c=>c.kind==="track"&&c.tier==="commune",rw:"p3",c1:"#6a6a78",c2:"#1d1b2a"},
-  {id:"gold",cat:"Échanges",t:"Disques d’or",d:"6 cartes Or",n:6,ok:c=>c.kind==="track"&&c.tier==="rare",rw:"p6",c1:"#ffd23f",c2:"#b86e00"},
-  {id:"fr",cat:"Pays",t:"Rap FR",d:"6 cartes d’artistes français",n:6,ok:c=>c.country==="FR",rw:"fr",c1:"#2f6bff",c2:"#ff4d6d"},
-  {id:"us",cat:"Pays",t:"Rap US",d:"6 cartes d’artistes américains",n:6,ok:c=>c.country==="US",rw:"us",c1:"#ff4d6d",c2:"#3a3b8f"},
-  {id:"uk",cat:"Pays",t:"Rap UK",d:"6 cartes d’artistes anglais",n:6,ok:c=>c.country==="UK",rw:"uk",c1:"#3a7bff",c2:"#c8102e"},
-  {id:"holo",cat:"Spéciales",t:"Prisme",d:"5 cartes Platine",n:5,ok:c=>c.kind==="track"&&c.tier==="epique",rw:"holo",c1:"#ff7ad9",c2:"#4ee6d0"},
-  {id:"avg",cat:"Spéciales",t:"Note 85",d:"5 cartes, moyenne de 85 ou plus",n:5,ok:()=>true,check:cs=>avg(cs)>=85,rule:"Note moyenne ≥ 85",rw:"legend",c1:"#7af0ff",c2:"#2a8fd6"},
-  {id:"same",cat:"Spéciales",t:"Fan absolu",d:"5 cartes du même artiste",n:5,ok:()=>true,check:cs=>new Set(cs.map(c=>c.ar)).size===1,rule:"Toutes du même artiste",rw:"icone",c1:"#ff3d8b",c2:"#7b2ff7"},
-  {id:"album",cat:"Spéciales",t:"Face A",d:"5 cartes du même album",n:5,ok:c=>c.kind!=="icone",check:cs=>new Set(cs.map(c=>c.alb)).size===1,rule:"Toutes du même album",rw:"p12",c1:"#ff8a1f",c2:"#7b1fa2"},
-  {id:"dia",cat:"Choix de cartes",t:"Disques de diamant",d:"5 titres certifiés Diamant",n:5,ok:c=>disc(c.country,c.vs).lvl==="Diamant",rw:"pickDia",c1:"#7af0ff",c2:"#8a5cff"},
-  {id:"prism2",cat:"Choix de cartes",t:"Arc-en-ciel",d:"3 cartes Holo",n:3,ok:c=>c.kind==="holo",rw:"pickHolo",c1:"#ff7ad9",c2:"#7f8cff"},
-  {id:"pantheon",cat:"Choix de cartes",t:"Panthéon",d:"3 cartes Diamant",n:3,ok:c=>c.kind==="track"&&c.tier==="legendaire",rw:"pickIco",c1:"#ffd23f",c2:"#ff3d8b"},
-  {id:"old",cat:"Époques",t:"Old School",d:"5 cartes d’albums sortis avant 2005",n:5,ok:c=>ALB[c.alb].y<2005,rw:"old",c1:"#b6ff3b",c2:"#0b5e4a"},
-  {id:"newgen",cat:"Époques",t:"Nouvelle vague",d:"5 cartes d’albums sortis depuis 2023",n:5,ok:c=>ALB[c.alb].y>=2023,rw:"newgen",c1:"#22e0ff",c2:"#ff3d8b"}
+  {id:"swap",cat:"Échanges",t:"Échange express",d:"3 cartes au choix",b:"3 cartes au choix",n:3,ok:()=>true,rw:"sp3",c1:"#22e0ff",c2:"#4361ee"},
+  {id:"vinyle",cat:"Échanges",t:"Bac à vinyles",d:"8 cartes Vinyle",b:"8 cartes Vinyle",n:8,ok:isT("commune"),rw:"p3",c1:"#6a6a78",c2:"#1d1b2a"},
+  {id:"gold",cat:"Échanges",t:"Disques d’or",d:"6 cartes Or de 2 pays",b:"6 cartes Or",n:6,ok:isT("rare"),reqs:[R.cty(2)],rw:"p6",c1:"#ffd23f",c2:"#b86e00"},
+  {id:"fr",cat:"Pays",t:"Rap FR",d:"6 cartes FR dont 1 Platine",b:"6 cartes d’artistes français",n:6,ok:inC("FR"),reqs:[R.min(1,atLeast("epique"),"Min. 1 Platine ou mieux"),R.arts(3)],rw:"fr",c1:"#2f6bff",c2:"#ff4d6d"},
+  {id:"us",cat:"Pays",t:"Rap US",d:"6 cartes US dont 1 Platine",b:"6 cartes d’artistes américains",n:6,ok:inC("US"),reqs:[R.min(1,atLeast("epique"),"Min. 1 Platine ou mieux"),R.arts(3)],rw:"us",c1:"#ff4d6d",c2:"#3a3b8f"},
+  {id:"uk",cat:"Pays",t:"Rap UK",d:"6 cartes UK dont 1 Or",b:"6 cartes d’artistes anglais",n:6,ok:inC("UK"),reqs:[R.min(1,atLeast("rare"),"Min. 1 Or ou mieux"),R.arts(3)],rw:"uk",c1:"#3a7bff",c2:"#c8102e"},
+  {id:"banlieue",cat:"Pays",t:"Banlieue",d:"7 cartes FR, 2 Platine, 5 artistes",b:"7 cartes d’artistes français",n:7,ok:inC("FR"),reqs:[R.min(2,atLeast("epique"),"Min. 2 Platine ou mieux"),R.arts(5),R.avg(79)],rw:"p12",c1:"#1f4bd8",c2:"#ffd23f"},
+  {id:"holo",cat:"Spéciales",t:"Prisme",d:"5 cartes Platine",b:"5 cartes Platine",n:5,ok:isT("epique"),rw:"holo",c1:"#ff7ad9",c2:"#4ee6d0"},
+  {id:"avg",cat:"Spéciales",t:"Note 85",d:"5 cartes, moyenne 85, 2 pays",b:"5 cartes au choix",n:5,ok:()=>true,reqs:[R.avg(85),R.cty(2)],rw:"legend",c1:"#7af0ff",c2:"#2a8fd6"},
+  {id:"same",cat:"Spéciales",t:"Fan absolu",d:"5 cartes du même artiste",b:"5 cartes au choix",n:5,ok:()=>true,reqs:[R.same("ar","Toutes du même artiste")],rw:"icone",c1:"#ff3d8b",c2:"#7b2ff7"},
+  {id:"album",cat:"Spéciales",t:"Face A",d:"5 cartes du même album",b:"5 titres",n:5,ok:c=>c.kind!=="icone",reqs:[R.same("alb","Toutes du même album")],rw:"p12",c1:"#ff8a1f",c2:"#7b1fa2"},
+  {id:"world",cat:"Multi-conditions",t:"Tour du monde",d:"FR, US et UK, moyenne 78",b:"6 cartes au choix",n:6,ok:()=>true,reqs:[R.min(1,inC("FR"),"Min. 1 carte FR"),R.min(1,inC("US"),"Min. 1 carte US"),R.min(1,inC("UK"),"Min. 1 carte UK"),R.avg(78)],rw:"p6",c1:"#22e0ff",c2:"#ff8a1f"},
+  {id:"era",cat:"Multi-conditions",t:"Classique & moderne",d:"2 d’avant 2005, 2 depuis 2020, moyenne 80",b:"6 cartes au choix",n:6,ok:()=>true,reqs:[R.min(2,c=>yr(c)<2005,"Min. 2 cartes d’avant 2005"),R.min(2,c=>yr(c)>=2020,"Min. 2 cartes depuis 2020"),R.avg(80)],rw:"p12",c1:"#b6ff3b",c2:"#8a5cff"},
+  {id:"atl",cat:"Multi-conditions",t:"Transatlantique",d:"3 US, 2 UK, max 1 Vinyle",b:"6 cartes au choix",n:6,ok:()=>true,reqs:[R.min(3,inC("US"),"Min. 3 cartes US"),R.min(2,inC("UK"),"Min. 2 cartes UK"),R.max(1,isT("commune"),"Max. 1 Vinyle")],rw:"pickHolo",c1:"#3a7bff",c2:"#ff4d6d"},
+  {id:"novinyl",cat:"Multi-conditions",t:"Zéro vinyle",d:"Or ou mieux, moyenne 82, 3 pays",b:"5 cartes Or ou mieux",n:5,ok:atLeast("rare"),reqs:[R.avg(82),R.cty(3)],rw:"legend",c1:"#ffd23f",c2:"#2a8fd6"},
+  {id:"cent",cat:"Multi-conditions",t:"Club des 100 M",d:"6 titres à 100 M, moyenne 85, max 3 US",b:"6 titres à 100 M de streams ou plus",n:6,ok:c=>c.kind!=="icone"&&c.streams>=100,reqs:[R.avg(85),R.max(3,inC("US"),"Max. 3 cartes US"),R.arts(4)],rw:"pickDia",c1:"#3ef0d0",c2:"#1f4bd8"},
+  {id:"elite",cat:"Multi-conditions",t:"Élite",d:"8 cartes, moyenne 86, 1 Holo",b:"8 cartes au choix",n:8,ok:()=>true,reqs:[R.min(1,c=>c.kind==="holo","Min. 1 Holo"),R.avg(86),R.cty(2),R.arts(6)],rw:"pickIco",c1:"#ff3d8b",c2:"#ffd23f"},
+  {id:"dia",cat:"Choix de cartes",t:"Disques de diamant",d:"5 titres certifiés Diamant",b:"5 titres certifiés Diamant",n:5,ok:c=>disc(c.country,c.vs).lvl==="Diamant",rw:"pickDia",c1:"#7af0ff",c2:"#8a5cff"},
+  {id:"prism2",cat:"Choix de cartes",t:"Arc-en-ciel",d:"3 cartes Holo",b:"3 cartes Holo",n:3,ok:c=>c.kind==="holo",rw:"pickHolo",c1:"#ff7ad9",c2:"#7f8cff"},
+  {id:"pantheon",cat:"Choix de cartes",t:"Panthéon",d:"3 cartes Diamant",b:"3 cartes Diamant",n:3,ok:isT("legendaire"),rw:"pickIco",c1:"#ffd23f",c2:"#ff3d8b"},
+  {id:"old",cat:"Époques",t:"Old School",d:"5 cartes d’avant 2005, moyenne 76",b:"5 cartes d’albums sortis avant 2005",n:5,ok:c=>yr(c)<2005,reqs:[R.avg(76)],rw:"old",c1:"#b6ff3b",c2:"#0b5e4a"},
+  {id:"newgen",cat:"Époques",t:"Nouvelle vague",d:"5 cartes depuis 2023, 3 artistes",b:"5 cartes d’albums sortis depuis 2023",n:5,ok:c=>yr(c)>=2023,reqs:[R.arts(3)],rw:"newgen",c1:"#22e0ff",c2:"#ff3d8b"}
 ];
+function reqState(r,cs){
+  if(r.type==="min"){const n=cs.filter(r.f).length;return {v:`${Math.min(n,r.k)}/${r.k}`,p:n/r.k,ok:n>=r.k}}
+  if(r.type==="max"){const n=cs.filter(r.f).length;return {v:`${n}/${r.k}`,p:n<=r.k?1:0,ok:n<=r.k}}
+  if(r.type==="avg"){const a=cs.length?avg(cs):0;return {v:cs.length?a.toFixed(1):"",p:a/r.k,ok:cs.length>0&&a>=r.k}}
+  if(r.type==="same"){const ok=cs.length>0&&new Set(cs.map(c=>c[r.key])).size===1;return {v:"",p:ok?1:0,ok}}
+  const n=new Set(cs.map(c=>c[r.key])).size;return {v:`${Math.min(n,r.k)}/${r.k}`,p:n/r.k,ok:n>=r.k};
+}
+const sbcValid=(s,cs)=>cs.length===s.n&&(s.reqs||[]).every(r=>reqState(r,cs).ok);
 let sbcSel=[],sbcOnlyDup=false;
 function sbcSheet(id){sbcSel=[];sbcOnlyDup=false;drawSbc(id)}
 // les cartes éligibles : les doublons d'abord, puis les moins chères (on garde ses meilleures cartes)
 function eligible(s){return Object.keys(state.owned).map(k=>CARD[k]).filter(s.ok).sort((a,b)=>((state.owned[b.key]>1)-(state.owned[a.key]>1))||value(a)-value(b))}
-const canDo=s=>autoFill(s).length>=s.n;
+const canDo=s=>sbcValid(s,autoFill(s).map(k=>CARD[k]));
 function drawSbc(id){
-  const s=SBC.find(x=>x.id===id),rw=REWARD[s.rw],cs=sbcSel.map(k=>CARD[k]),full=cs.length===s.n,ok=full&&(!s.check||s.check(cs));
-  const reqs=[[`${s.n} cartes`,`${cs.length}/${s.n}`,cs.length/s.n,full],s.check?[s.rule,s.id==="avg"&&cs.length?`${avg(cs).toFixed(1)}`:"",cs.length&&s.check(cs)?1:0,cs.length>0&&s.check(cs)]:[s.d,"",full?1:0,full]];
+  const s=SBC.find(x=>x.id===id),rw=REWARD[s.rw],cs=sbcSel.map(k=>CARD[k]),full=cs.length===s.n,ok=sbcValid(s,cs);
+  const reqs=[[s.b,`${cs.length}/${s.n}`,cs.length/s.n,full],...(s.reqs||[]).map(r=>{const st=reqState(r,cs);return [r.t,st.v,st.p,st.ok&&cs.length>0]})];
   const el=eligible(s).filter(c=>!sbcOnlyDup||state.owned[c.key]>1),cnt={};sbcSel.forEach(k=>cnt[k]=(cnt[k]||0)+1);
   const lost=cs.reduce((t,c)=>t+value(c),0);
   sheet(`<div class="sbchead" style="--c1:${s.c1};--c2:${s.c2}"><div><small>${esc(s.cat)}</small><h2>${esc(s.t)}</h2><p>${esc(s.d)}</p><span class="rw">Récompense · ${rw.label}</span><small style="display:block;margin-top:6px;letter-spacing:0;text-transform:none;font:600 12px var(--font)">${rw.desc||rw.size+" cartes"}</small></div>${rwBadge(rw)}</div>
@@ -740,18 +790,39 @@ function drawSbc(id){
     if(e.target.closest("#sbAuto")){sbcSel=autoFill(s);if(sbcSel.length<s.n)toast("Pas assez de cartes éligibles");drawSbc(id);return}
     if(e.target.closest("#sbGo")&&ok){
       sbcSel.forEach(take);daily().sbc++;state.sbcDone[s.id]=(state.sbcDone[s.id]||0)+1;SFX.done();save();closeSheet();$("sheetIn").onclick=null;sbcSel=[];
-      renderQuests();badge();toast(`Défi réussi : ${rw.label} !`);openReward(rw);
+      renderQuests();badge();rewardScreen({title:"SBC réussi",sub:s.t,packs:[s.rw]});
     }
   };
 }
-// remplit le défi avec les doublons, puis les cartes les moins chères qui le valident
+// remplit le défi avec les doublons et les cartes les moins chères qui valident toutes les conditions
+const costOf=cs=>cs.reduce((t,c)=>t+value(c)*(state.owned[c.key]>1?.3:1),0);
+function solve(s,copies){
+  const reqs=s.reqs||[],pick=[],av=copies.slice(),A=reqs.find(r=>r.type==="avg");
+  const fits=(c,arr=pick)=>reqs.every(r=>r.type!=="max"||arr.filter(r.f).length+(r.f(c)?1:0)<=r.k);
+  const take1=pred=>{const i=av.findIndex(c=>pred(c)&&fits(c));if(i<0)return false;pick.push(av.splice(i,1)[0]);return true};
+  for(const r of reqs)if(r.type==="min")while(pick.length<s.n&&pick.filter(r.f).length<r.k&&take1(r.f));
+  for(const r of reqs)if(r.type==="distinct")while(pick.length<s.n&&new Set(pick.map(c=>c[r.key])).size<r.k&&take1(c=>!pick.some(p=>p[r.key]===c[r.key])));
+  while(pick.length<s.n&&((A&&take1(c=>c.ovr>=A.k))||take1(()=>true)));
+  const struct=arr=>reqs.every(r=>r.type==="avg"||r.type==="same"||reqState(r,arr).ok);
+  for(let g=0;A&&pick.length===s.n&&g<40&&avg(pick)<A.k;g++){
+    const need=A.k*s.n-pick.reduce((t,c)=>t+c.ovr,0),order=pick.map((_,i)=>i).sort((x,y)=>pick[x].ovr-pick[y].ovr);let swapped=false;
+    for(const i of order){
+      const old=pick.splice(i,1)[0],okc=c=>c.ovr>old.ovr&&fits(c)&&struct([...pick,c]);
+      let j=av.findIndex(c=>c.ovr>=old.ovr+need&&okc(c));
+      if(j<0){let best=-1;av.forEach((c,k)=>{if(okc(c)&&(best<0||c.ovr>av[best].ovr))best=k});j=best}
+      if(j>=0){pick.splice(i,0,av.splice(j,1)[0]);av.push(old);swapped=true;break}
+      pick.splice(i,0,old);
+    }
+    if(!swapped)break;
+  }
+  return pick;
+}
 function autoFill(s){
   const copies=[];eligible(s).forEach(c=>{for(let i=0;i<state.owned[c.key];i++)copies.push(c)});
-  const dupFirst=(a,b)=>((state.owned[b.key]>1)-(state.owned[a.key]>1))||value(a)-value(b);
-  let pick=[];
-  if(s.id==="same"||s.id==="album"){const key=s.id==="same"?"ar":"alb",by={};copies.forEach(c=>(by[c[key]]??=[]).push(c));const g=Object.values(by).filter(x=>x.length>=s.n).map(x=>x.sort(dupFirst).slice(0,s.n)).sort((a,b)=>a.reduce((t,c)=>t+value(c),0)-b.reduce((t,c)=>t+value(c),0))[0];pick=g||[]}
-  else if(s.id==="avg")pick=copies.filter(c=>c.ovr>=85).sort(dupFirst).slice(0,s.n);
-  else pick=copies.slice(0,s.n);
+  const same=(s.reqs||[]).find(r=>r.type==="same");
+  let pick;
+  if(same){const by={};copies.forEach(c=>(by[c[same.key]]??=[]).push(c));pick=Object.values(by).filter(x=>x.length>=s.n).map(x=>solve(s,x)).filter(p=>sbcValid(s,p)).sort((x,y)=>costOf(x)-costOf(y))[0]||[]}
+  else pick=solve(s,copies);
   return pick.map(c=>c.key);
 }
 
@@ -761,8 +832,9 @@ const SLOTS=[{id:"head",n:"Tête d’affiche",st:4,x:50,y:1},{id:"plume",n:"Plum
 const LINKS=[["head","plume"],["head","flow"],["plume","beat"],["flow","voix"],["beat","voix"]];
 const LABELS=["Nuit Blanche Records","Cartel 93","Golden Ear","Royal Wax","Bitume Music","Neon Tape","Studio Nord","Lune Noire","Velours Records","Asphalte Club","Satellite Sound","Rue Pigalle"];
 const DRAFT_COST=15000,DRAFT_OPP=[76,82,87,92];
-const DRAFT_PRIZE=[{coins:5000,pack:"3"},{coins:15000,pack:"5"},{coins:30000,pack:"10"},{coins:50000,pack:"10",extra:"pickDia"},{coins:100000,pack:"10",extra:"pickIco"}];
-const MATCH_LV=[{n:"Facile",t:76,r:4000},{n:"Moyen",t:83,r:10000},{n:"Difficile",t:88,r:25000},{n:"Légende",t:93,r:60000}];
+const DRAFT_PRIZE=[{coins:1000},{coins:3000},{coins:5000,pack:"3"},{coins:8000,pack:"5"},{coins:12000,pack:"10",extra:"sp3"}];
+const prizeTxt=p=>[`${fmt(p.coins)} pièces`,p.pack&&PACKS.find(x=>x.key===p.pack).label,p.extra&&REWARD[p.extra].label].filter(Boolean).join(" · ");
+const MATCH_LV=[{n:"Facile",t:76,r:1500},{n:"Moyen",t:83,r:3500},{n:"Difficile",t:88,r:7000},{n:"Légende",t:93,r:12000}];
 let playView="draft",battle=null;
 // le lien entre deux postes voisins : 3 même artiste, 1 même pays, 0 sinon
 const linkVal=(a,b)=>!a||!b?0:a.ar===b.ar?3:a.country===b.country?1:0;
@@ -792,14 +864,15 @@ function startDraft(){
 function renderPlay(){
   if($("s-play").hidden)return;
   if(battle)return renderBattle();
-  const back=`<button class="back" id="playBack">‹ Menu</button>`;
+  let back=`<button class="back" id="playBack">‹ Menu</button>`;
   if(playView==="match")return renderMatch(back);
   const d=state.draft;
+  if(d&&!d.over)back=`<div class="playtop"><button class="back" id="playBack">‹ Menu</button><button class="quit" id="dQuit">Abandonner le draft</button></div>`;
   if(!d){
     $("play").innerHTML=`${back}<h1>Draft</h1><div class="draftin"><small>Mode de jeu</small><h3>Monte ta maison de disque</h3>
       <p>5 postes à pourvoir : Tête d’affiche, Plume, Flow, Beatmaker et Refrain. Pour chaque poste, choisis 1 artiste parmi 5. Chaque poste a sa <b>stat clé</b> : en combat, ta carte se bat sur cette stat. Deux postes voisins avec le même artiste (+3) ou le même pays (+1) gagnent de l’<b>alchimie</b>.</p>
       <p>Puis affronte 4 maisons de disque de plus en plus fortes. Les cartes du draft ne sont pas gardées, les récompenses oui.</p>
-      <div class="dprize">${DRAFT_PRIZE.map((p,i)=>`<div><b>${i} victoire${i>1?"s":""}</b><span>${fmt(p.coins)} · ${PACKS.find(x=>x.key===p.pack).label}${p.extra?" · "+REWARD[p.extra].label:""}</span></div>`).join("")}</div>
+      <div class="dprize">${DRAFT_PRIZE.map((p,i)=>`<div><b>${i} victoire${i>1?"s":""}</b><span>${prizeTxt(p)}</span></div>`).join("")}</div>
       <button class="btn" id="dStart" ${state.coins<DRAFT_COST?"disabled":""}>Lancer un draft · <i class="coin"></i>${fmt(DRAFT_COST)}</button></div>`;
     return;
   }
@@ -812,7 +885,7 @@ function renderPlay(){
   }
   const dots=DRAFT_OPP.map((o,i)=>`<span class="${i<d.wins?"w":d.over&&i===d.round?"l":i===d.round&&!d.over?"cur":""}"><b>${o}</b><small>${esc(d.opps[i])}</small></span>`).join("");
   $("play").innerHTML=`${back}${studioHTML(d.slots,{label:d.name,hue:d.hue})}<div class="dpath">${dots}</div>
-    ${d.over?`<div class="draftin"><h3>${d.wins} victoire${d.wins>1?"s":""}</h3><p>Récompense : ${fmt(DRAFT_PRIZE[d.wins].coins)} pièces · ${PACKS.find(x=>x.key===DRAFT_PRIZE[d.wins].pack).label}${DRAFT_PRIZE[d.wins].extra?" · "+REWARD[DRAFT_PRIZE[d.wins].extra].label:""}</p><button class="btn" id="dClaim">Récupérer</button></div>`
+    ${d.over?`<div class="draftin"><h3>${d.wins} victoire${d.wins>1?"s":""}</h3><p>Récompense : ${prizeTxt(DRAFT_PRIZE[d.wins])}</p><button class="btn" id="dClaim">Récupérer</button></div>`
       :`<button class="btn" id="dPlay">Combat ${d.round+1} sur 4 · ${esc(d.opps[d.round])} (${DRAFT_OPP[d.round]})</button>`}`;
 }
 // le label du joueur pour un Match : ses meilleures cartes, chacune au poste où sa stat clé est la plus forte
@@ -835,15 +908,15 @@ function startBattle(mySl,target,oppName,myName,onDone){
   const pool=TRACKS.filter(c=>Math.abs(c.ovr-target)<=3),opp={};
   for(const x of SLOTS){let c;do{c=any(pool.length?pool:TRACKS)}while(Object.values(opp).includes(c.key));opp[x.id]=c.key}
   const duels=SLOTS.map(x=>{const a=CARD[mySl[x.id]],b=CARD[opp[x.id]];const va=Math.round(statsOf(a)[x.st]+cardChem(mySl,x.id)+Math.random()*8),vb=Math.round(statsOf(b)[x.st]+cardChem(opp,x.id)+Math.random()*8+(target>=90?2:0));return {x,a,b,va,vb,win:va>=vb}});
-  battle={duels,myName,oppName,target,mine:rosterRating(mySl),shown:0,done:false,onDone};
+  const me=battle={duels,myName,oppName,target,mine:rosterRating(mySl),shown:0,done:false,onDone};
   show("s-play");
-  const tick=()=>{if(!battle)return;battle.shown++;const du=battle.duels[battle.shown-1];du.win?SFX.reveal():SFX.slam();haptic(du.win?[10,20,10]:20);renderBattle();
-    if(battle.shown<5)setTimeout(tick,1100);else setTimeout(()=>{battle.done=true;const w=battle.duels.filter(x=>x.win).length;w>=3?SFX.done():SFX.slam();renderBattle()},900)};
+  const tick=()=>{if(battle!==me)return;battle.shown++;const du=battle.duels[battle.shown-1];du.win?SFX.reveal():SFX.slam();haptic(du.win?[10,20,10]:20);renderBattle();
+    if(battle.shown<5)setTimeout(tick,1100);else setTimeout(()=>{if(battle!==me)return;battle.done=true;const w=battle.duels.filter(x=>x.win).length;w>=3?SFX.done():SFX.slam();renderBattle()},900)};
   renderBattle();setTimeout(tick,900);
 }
 function renderBattle(){
   const b=battle,w=b.duels.slice(0,b.shown).filter(x=>x.win).length,l=b.shown-w,won=b.duels.filter(x=>x.win).length>=3;
-  $("play").innerHTML=`<div class="board"><div><small>${esc(b.myName)}</small><b>${b.mine}</b></div><div class="score">${w}<em>–</em>${l}</div><div><small>${esc(b.oppName)}</small><b>${b.target}</b></div></div>
+  $("play").innerHTML=`${b.done?"":`<div class="playtop"><span class="note" style="margin:0">Combat en direct</span><button class="quit" id="bQuit">Abandonner</button></div>`}<div class="board"><div><small>${esc(b.myName)}</small><b>${b.mine}</b></div><div class="score">${w}<em>–</em>${l}</div><div><small>${esc(b.oppName)}</small><b>${b.target}</b></div></div>
     <div class="duels">${b.duels.map((x,i)=>i<b.shown?`<div class="duel${i===b.shown-1&&!b.done?" now":""}"><div class="dc${x.win?" w":""}">${cw(x.a)}</div><div class="dmid"><small>${x.x.n}</small><span>${STATN[x.x.st]}</span><b class="${x.win?"w":""}">${x.va}</b><b class="${x.win?"":"w"}">${x.vb}</b></div><div class="dc${x.win?"":" w"}">${cw(x.b)}</div></div>`:`<div class="duel wait"><span>${x.x.n} · ${STATN[x.x.st]}</span></div>`).join("")}</div>
     ${b.done?`<div class="dres ${won?"won":"lost"}">${won?"Victoire":"Défaite"} ${b.duels.filter(x=>x.win).length}–${b.duels.filter(x=>!x.win).length}</div><button class="btn" id="bDone">Continuer</button>`:`<p class="note" style="text-align:center">Combat en cours…</p>`}`;
 }
@@ -874,7 +947,7 @@ function renderQuests(){
       <p class="note" style="margin-top:12px">Donne des cartes pour gagner un pack. On les refait autant qu’on veut ; « Remplir auto » prend tes doublons en premier.</p>
       ${cats.map(cat=>`<h3 class="qcat">${cat}</h3><div class="stiles">${SBC.filter(s=>s.cat===cat).map(s=>{const rw=REWARD[s.rw],n=state.sbcDone[s.id]||0,r=canDo(s),el=eligible(s).reduce((t,c)=>t+state.owned[c.key],0);return `<button class="stile${r?" ready":""}" data-sbc="${s.id}" style="--c1:${s.c1};--c2:${s.c2}">
         <div class="sth">${rwBadge(rw)}<div><span>${rw.label}</span><small>${rw.desc||rw.size+" cartes"}</small></div></div>
-        <div class="stb"><b>${esc(s.t)}</b><small>${esc(s.d)}</small><span class="srq"><i style="width:${Math.min(1,el/s.n)*100}%"></i></span>
+        <div class="stb"><b>${esc(s.t)}</b><small>${esc(s.d)}</small>${(s.reqs||[]).length>1?`<span class="nreq">${s.reqs.length+1} conditions</span>`:""}<span class="srq"><i style="width:${Math.min(1,el/s.n)*100}%"></i></span>
         <div class="stf"><em>${Math.min(el,s.n)}/${s.n} cartes</em>${r?`<span class="ok">Prêt</span>`:""}${n?`<span class="cnt">×${n}</span>`:""}</div></div></button>`}).join("")}</div>`).join("")}`;
   }else{
     const albums=state.rewarded.length,near=ALBUMS.filter(al=>albumPrize(al)&&!state.rewarded.includes(al.id)).map(al=>({al,o:albumOwned(al)})).filter(x=>x.o).sort((a,b)=>(b.o/b.al.tr.length)-(a.o/a.al.tr.length)).slice(0,5);
@@ -903,16 +976,28 @@ $("quests").onclick=e=>{
 };
 
 $("play").onclick=e=>{
-  if(battle){if(e.target.closest("#bDone")){const b=battle;battle=null;const won=b.duels.filter(x=>x.win).length>=3;b.onDone(won);SFX.tap()}return} // pendant le combat, rien ne se passe
+  if(battle){ // pendant le combat, on ne peut que l'abandonner (compte comme une défaite)
+    if(e.target.closest("#bDone")){const b=battle;battle=null;const won=b.duels.filter(x=>x.win).length>=3;b.onDone(won);SFX.tap()}
+    else if(e.target.closest("#bQuit"))confirmSheet("Abandonner le combat ?","Le combat compte comme une défaite.","Abandonner",()=>{if(!battle)return;const b=battle;battle=null;b.onDone(false,true)});
+    return}
+  if(e.target.closest("#dQuit")){const d=state.draft;return confirmSheet("Abandonner le draft ?",`Tu récupères la récompense de ${d.wins} victoire${d.wins>1?"s":""} : ${prizeTxt(DRAFT_PRIZE[d.wins])}.`,"Abandonner",()=>{if(state.draft){state.draft.over=true;claimDraft()}})}
   if(e.target.closest("#playBack")){SFX.tap();return show("s-menu")}
   if(e.target.closest("#dStart"))return startDraft();
   const dp=e.target.closest("[data-dpick]");if(dp){const d=state.draft;d.slots[SLOTS[d.step].id]=dp.dataset.dpick;d.step++;d.offer=d.step<5?draftOffer(SLOTS[d.step]):[];SFX.tick();haptic(8);save();renderPlay();return}
   if(e.target.closest("#dPlay")){const d=state.draft;return startBattle(d.slots,DRAFT_OPP[d.round],d.opps[d.round],d.name,won=>{if(won){d.wins++;d.round++;if(d.round>=4)d.over=true}else d.over=true;save();renderPlay()})}
-  if(e.target.closest("#dClaim")){const p=DRAFT_PRIZE[state.draft.wins];state.inbox.push(p.pack);if(p.extra)state.inbox.push(p.extra);state.draft=null;earn(p.coins,"Draft terminé");renderPlay();toast("Récompenses du draft : packs dans la Boutique");return}
+  if(e.target.closest("#dClaim"))return claimDraft();
   const lv=e.target.closest("[data-mlv]");if(lv){const L=MATCH_LV[+lv.dataset.mlv],d=daily();d.matches??=0;
-    return startBattle(bestRoster(),L.t,LABELS[(+lv.dataset.mlv*3+new Date().getDate())%LABELS.length],state.pseudo+" Records",won=>{if(won&&d.matches<10){d.matches++;earn(L.r,"Match gagné")}else if(won)toast("Victoire ! (10 victoires récompensées aujourd’hui)");else toast("Défaite");save();playView="match";renderPlay()})}
+    return startBattle(bestRoster(),L.t,LABELS[(+lv.dataset.mlv*3+new Date().getDate())%LABELS.length],state.pseudo+" Records",(won,quit)=>{playView="match";if(won&&d.matches<10){d.matches++;renderPlay();rewardScreen({title:"Match gagné",sub:`${L.n} · ${state.pseudo} Records`,coins:L.r})}else{if(won)toast("Victoire ! (10 victoires récompensées aujourd’hui)");else toast(quit?"Combat abandonné":"Défaite");save();renderPlay()}})}
   const c=e.target.closest(".cw[data-k]");if(c)cardSheet(c.dataset.k);
 };
+function claimDraft(){
+  const d=state.draft;if(!d)return;const p=DRAFT_PRIZE[d.wins];state.draft=null;renderPlay();renderMenu();
+  rewardScreen({title:"Draft terminé",sub:`${d.name} · ${d.wins} victoire${d.wins>1?"s":""}`,coins:p.coins,packs:[p.pack,p.extra].filter(Boolean)});
+}
+function confirmSheet(title,txt,yes,go){
+  sheet(`<h2>${esc(title)}</h2><p class="note" style="margin:0">${esc(txt)}</p><div class="acts"><div class="two"><button class="btn ghost" id="cfNo">Annuler</button><button class="btn danger" id="cfYes">${esc(yes)}</button></div></div>`);
+  $("sheetIn").onclick=e=>{if(e.target.closest("#cfNo"))closeSheet();else if(e.target.closest("#cfYes")){closeSheet();SFX.tap();go()}};
+}
 $("setBack").onclick=()=>{SFX.tap();show("s-menu")};
 
 // ---------- amis : offrir et recevoir des cartes par code ----------
@@ -1035,7 +1120,7 @@ bar.addEventListener("click",e=>{const t=e.target.closest(".tab");if(t&&e.detail
 addEventListener("resize",()=>pillTo(bar.querySelector(".tab.on")));
 
 // ---------- démarrage ----------
-wallet();renderPacks();renderMenu();badge();tickListings();
+wallet();renderPacks();renderMenu();badge();save();tickListings();
 setInterval(tickListings,3000);
 setInterval(()=>{if(!$("s-market").hidden)mktTimer()},1000);
 setInterval(()=>{if(state.daily&&state.daily.date!==today()){badge();renderQuests()}},60e3);

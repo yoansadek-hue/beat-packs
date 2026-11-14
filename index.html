@@ -16,7 +16,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800;900&family=Saira+Condensed:wght@600;700;800&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="style.css?v=1794655573">
+<link rel="stylesheet" href="style.css?v=1794656774">
 </head>
 <body>
 <header id="bar">
@@ -65,6 +65,7 @@
 
   <section id="s-shop" class="screen" hidden>
     <h1>Boutique</h1>
+    <div class="seg" id="shopSeg" role="group" aria-label="Boutique"><button aria-pressed="true" data-s="buy">Packs</button><button aria-pressed="false" data-s="mine">Mes packs</button></div>
     <div class="packs" id="packs"></div>
   </section>
 
@@ -111,7 +112,7 @@
 <!-- barre d'onglets en bas -->
 <nav class="tabbar" id="tabbar">
   <span class="tabpill" id="tabPill" aria-hidden="true"><i></i></span>
-  <button class="tab" data-go="s-shop"><svg viewBox="0 0 24 24" width="24" height="24" aria-hidden="true"><path fill="currentColor" d="M7 7V6a5 5 0 0 1 10 0v1h3l-1.2 13.2A2 2 0 0 1 16.8 22H7.2a2 2 0 0 1-2-1.8L4 7h3zm2 0h6V6a3 3 0 0 0-6 0v1zm-1 4a1 1 0 1 0 2 0 1 1 0 0 0-2 0zm6 0a1 1 0 1 0 2 0 1 1 0 0 0-2 0z"/></svg><span>Boutique</span></button>
+  <button class="tab" data-go="s-shop"><svg viewBox="0 0 24 24" width="24" height="24" aria-hidden="true"><path fill="currentColor" d="M7 7V6a5 5 0 0 1 10 0v1h3l-1.2 13.2A2 2 0 0 1 16.8 22H7.2a2 2 0 0 1-2-1.8L4 7h3zm2 0h6V6a3 3 0 0 0-6 0v1zm-1 4a1 1 0 1 0 2 0 1 1 0 0 0-2 0zm6 0a1 1 0 1 0 2 0 1 1 0 0 0-2 0z"/></svg><span>Boutique</span><span class="nbadge" id="shopBadge" hidden></span></button>
   <button class="tab" data-go="s-market"><svg viewBox="0 0 24 24" width="24" height="24" aria-hidden="true"><path fill="currentColor" d="M21.41 11.58l-9-9A2 2 0 0 0 11 2H4a2 2 0 0 0-2 2v7c0 .55.22 1.05.59 1.42l9 9c.36.36.86.58 1.41.58s1.05-.22 1.41-.59l7-7c.37-.36.59-.86.59-1.41s-.23-1.06-.59-1.42zM5.5 7A1.5 1.5 0 1 1 7 5.5 1.5 1.5 0 0 1 5.5 7z"/></svg><span>Marché</span></button>
   <button class="tab on" data-go="s-menu"><svg viewBox="0 0 24 24" width="24" height="24" aria-hidden="true"><path fill="currentColor" d="M3 13h8V3H3v10zm0 8h8v-6H3v6zm10 0h8V11h-8v10zm0-18v6h8V3h-8z"/></svg><span>Menu</span></button>
   <button class="tab" data-go="s-quests"><svg viewBox="0 0 24 24" width="24" height="24" aria-hidden="true"><path fill="currentColor" d="M7 3h10v2h3v3a5 5 0 0 1-4.3 4.95A5 5 0 0 1 13 15.9V18h3v3H8v-3h3v-2.1a5 5 0 0 1-2.7-2.95A5 5 0 0 1 4 8V5h3V3zm0 4H6v1a3 3 0 0 0 1.4 2.53A5 5 0 0 1 7 9V7zm10 0v2c0 .53-.08 1.04-.24 1.53A3 3 0 0 0 18 8V7h-1z"/></svg><span>Défis</span><span class="nbadge" id="questBadge" hidden></span></button>
@@ -119,7 +120,7 @@
 </nav>
 <div class="toast" id="toast" role="status"></div>
 
-<script src="data.js?v=1794655573"></script>
-<script src="script.js?v=1794655573"></script>
+<script src="data.js?v=1794656774"></script>
+<script src="script.js?v=1794656774"></script>
 </body>
 </html>

@@ -1408,7 +1408,7 @@ function profileSheet(){
     show(p.dataset.pl);
   };
 }
-$("btnProfile").onclick=()=>{haptic();SFX.tab();profileSheet()};
+$("btnProfile").onclick=()=>{haptic();SFX.tab();profileSheet();if(!state.google)fb().catch(()=>{})};
 // connexion Google (Firebase, le même projet que Quizly) et sauvegarde en ligne
 const FB={apiKey:"AIzaSyDJzyZdd-X9RG2DDnsLpZR8ifCf85N6lRE",authDomain:"quizly-ca5c1.firebaseapp.com",projectId:"quizly-ca5c1",appId:"1:553958488595:web:438e99694e0af8c2525de6"};
 const FBV="https://www.gstatic.com/firebasejs/10.12.2/";
@@ -1421,9 +1421,12 @@ async function fb(){
   auth.onAuthStateChanged(au,u=>{state.google=u?{uid:u.uid,name:u.displayName,email:u.email,photo:u.photoURL}:null;save();renderAvatar();if(u)cloudPull()});
   return fbm;
 }
-async function googleSignIn(){
-  try{const m=await fb();await m.auth.signInWithPopup(m.au,new m.auth.GoogleAuthProvider());closeSheet();toast("Connecté avec Google")}
-  catch(e){console.error(e);toast(e&&e.code==="auth/unauthorized-domain"?"Connexion Google pas encore autorisée sur ce site":e&&e.code==="auth/popup-closed-by-user"?"Connexion annulée":"Connexion impossible pour l’instant")}
+// la fenêtre Google doit s'ouvrir tout de suite au toucher (sinon Safari la bloque) : Firebase est préchargé à l'ouverture du profil
+function googleSignIn(){
+  const err=e=>{console.error(e);const c=e&&e.code;toast(c==="auth/popup-blocked"?"Autorise les fenêtres pop-up pour te connecter":c==="auth/popup-closed-by-user"||c==="auth/cancelled-popup-request"?"Connexion annulée":c==="auth/unauthorized-domain"?"Connexion Google pas encore autorisée sur ce site":"Connexion impossible pour l’instant")};
+  const go=m=>m.auth.signInWithPopup(m.au,new m.auth.GoogleAuthProvider()).then(()=>{closeSheet();toast("Connecté avec Google")},err);
+  if(fbm)return go(fbm);
+  toast("Connexion en préparation…");fb().then(go,err);
 }
 async function googleSignOut(){try{const m=await fb();await m.auth.signOut(m.au)}catch(e){}state.google=null;save();renderAvatar();closeSheet();toast("Déconnecté")}
 const cloudRefs=m=>[m.fs.doc(m.db,"beatpacks",state.google.uid),m.fs.doc(m.db,"users",state.google.uid)];

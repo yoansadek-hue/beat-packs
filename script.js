@@ -366,7 +366,7 @@ function renderPacks(){
       <div class="info">
         <h3>${p.label}</h3><p>${p.desc||p.size+" cartes tirées dans toutes les discographies"}</p>
         <div class="odds">${(o=>ORDER.slice().reverse().filter(r=>o[r]>0).map(r=>`<span><i style="background:${TCOLOR[r]}"></i>${TIER[r]} ${(o[r]*100).toLocaleString("fr-FR",{maximumFractionDigits:1})}%</span>`).join(""))(oddsOf(p))}</div>
-        <button class="btn light" data-k="${p.key}" ${state.coins<p.price?"disabled":""}><i class="coin"></i>${fmt(p.price)}</button>
+        <button class="btn light" data-k="${p.key}" ${state.coins<p.price&&!state.unlimited?"disabled":""}>${state.unlimited?"Gratuit · illimité":`<i class="coin"></i>${fmt(p.price)}`}</button>
       </div>
     </div>`};
     $("packs").innerHTML=`<div class="freepk${freeOk?"":" used"}">${packHTML(FREE)}<div><b>Pack gratuit du jour</b><small>${freeOk?"3 cartes offertes, reviens demain pour le suivant.":"Déjà ouvert aujourd’hui : reviens demain."}</small></div><button class="btn" data-k="free" ${freeOk?"":"disabled"}>${freeOk?"Ouvrir":"Demain"}</button></div>
@@ -392,7 +392,9 @@ function rewardScreen({title,sub="",coins=0,packs=[]}){
     if(e.target.closest("#rwLater")){closeSheet();renderMenu()}
   };
 }
-function buyPack(k){const p=SHOPPACKS.find(x=>x.key===k);if(!p)return;if(k==="inf"){}else if(k==="free"){if(daily().free)return;daily().free=true}else{if(state.coins<p.price)return;state.coins-=p.price;SFX.cash()}openPack(p)}
+// accès illimité (débloqué par code) : les packs de la boutique ne coûtent plus rien
+const CODE_H="bb18f7c3a340426d3b119d7ad8c98e942e26672d2c1ab9a0901c26ee46c0c623";
+function buyPack(k){const p=SHOPPACKS.find(x=>x.key===k);if(!p)return;if(k==="inf"||(state.unlimited&&k!=="free")){}else if(k==="free"){if(daily().free)return;daily().free=true}else{if(state.coins<p.price)return;state.coins-=p.price;SFX.cash()}openPack(p)}
 
 // ---------- ouverture façon FIFA 21 : le pack, le tunnel, la walkout si grosse carte, la carte, puis les autres ----------
 let run=null;
@@ -1341,6 +1343,12 @@ $("optPush").onchange=async e=>{
   if(!("Notification" in window)){e.target.checked=false;return toast("Notifications non disponibles sur cet appareil (sur iPhone : ajoute le jeu à l’écran d’accueil)")}
   const p=await Notification.requestPermission();state.push=p==="granted";e.target.checked=state.push;save();
   toast(state.push?"Notifications activées":"Notifications refusées");
+};
+$("codeGo").onclick=async()=>{
+  const v=$("optCode").value.trim().toUpperCase();if(!v)return;
+  try{const d=await crypto.subtle.digest("SHA-256",new TextEncoder().encode(v));const hx=[...new Uint8Array(d)].map(b=>b.toString(16).padStart(2,"0")).join("");
+    if(hx===CODE_H){state.unlimited=true;save();renderPacks();$("optCode").value="";SFX.done();toast("Accès illimité aux packs activé")}else{SFX.slam();toast("Code incorrect")}}
+  catch(e){toast("Code impossible à vérifier ici")}
 };
 $("optSound").checked=state.sound!==false;
 $("optSound").onchange=e=>{state.sound=e.target.checked;save();if(!state.sound)stopAudio()};

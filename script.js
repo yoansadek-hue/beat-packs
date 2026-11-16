@@ -234,8 +234,8 @@ function oddsOf(p){
 }
 function pickTier(odds){let x=Math.random(),acc=0;for(const r of ORDER){acc+=odds[r];if(x<acc)return r}return "commune"}
 // tirage par note : dans une rareté, chaque point de note en plus rend la carte ~30 % plus rare
-function byNote(p){
-  const lo=Math.min(...p.map(c=>c.ovr)),w=p.map(c=>Math.exp(-.5*(c.ovr-lo))),tot=w.reduce((s,x)=>s+x,0);
+function byNote(p,k=.5){
+  const lo=Math.min(...p.map(c=>c.ovr)),w=p.map(c=>Math.exp(-k*(c.ovr-lo))),tot=w.reduce((s,x)=>s+x,0);
   let x=Math.random()*tot;for(let i=0;i<p.length;i++){x-=w[i];if(x<=0)return p[i]}return p[p.length-1];
 }
 function drawTrack(t,f,not){
@@ -249,9 +249,11 @@ function drawPack(p){
   const used=new Set(),songKey=c=>c.song||c.key;
   const take1=gen=>{for(let k=0;k<40;k++){const c=gen();if(!used.has(songKey(c))){used.add(songKey(c));return c}}const c=gen();used.add(songKey(c));return c};
   const notUsed=()=>new Set([...used].map(k=>"t"+k.slice(1)));
-  const L0=p.live==="totw"?TOTW_NOW:p.live==="promo"?PROMO_NOW:LIVE_POOL,live=f?L0.filter(f):L0,m=p.boost||1,odds=oddsOf(p);
+  // carte d'événement : on tire d'abord l'événement, puis la carte avec une pente douce (les meilleures restent plus rares, mais atteignables)
+  const evs=(p.live==="totw"?[TOTW_NOW]:p.live==="promo"?[PROMO_NOW]:[TOTW_NOW,PROMO_NOW]).map(L=>f?L.filter(f):L).filter(L=>L.length),m=p.boost||1,odds=oddsOf(p);
+  const live={length:evs.length};
   const out=Array.from({length:p.size},()=>take1(()=>{
-    if(live.length&&Math.random()<(p.liveP||.012*m))return byNote(live); // TOTW et équipe du mois
+    if(live.length&&Math.random()<(p.liveP||.012*m))return byNote(any(evs),.1); // TOTW et équipe du mois
     if(!p.before&&Math.random()<.0015*m)return drawIcone(p.country);
     return Math.random()<(p.holoP||.015*m)?drawHolo(f):drawTrack(pickTier(odds),f,notUsed());
   }));
@@ -259,7 +261,7 @@ function drawPack(p){
   if(p.guarantee&&!out.some(c=>c.kind!=="track"||ORDER.indexOf(c.tier)>=ORDER.indexOf(p.guarantee)))swap(0,()=>drawTrack(p.guarantee,f,notUsed()));
   if(p.icon&&!out.some(c=>c.kind==="icone"))swap(out.length-1,()=>drawIcone());
   if(p.gN){const meets=c=>c.kind!=="track"||ORDER.indexOf(c.tier)>=ORDER.indexOf(p.guarantee);let have=out.filter(meets).length;for(let i=out.length-1;i>=0&&have<p.gN;i--)if(!meets(out[i])){swap(i,()=>drawTrack(p.guarantee,f,notUsed()));have++}}
-  if(p.live){const L=p.live==="totw"?TOTW_NOW:PROMO_NOW;if(L.length&&!out.some(c=>c.kind===p.live))swap(out.length-1,()=>byNote(L))}
+  
   for(let i=0,n=0;n<(p.holo||0)&&i<out.length;i++)if(out[i].kind==="track"){swap(i,()=>drawHolo(f));n++}
   return out.sort((a,b)=>packRank(b)-packRank(a)); // la carte spéciale, puis la meilleure, en premier
 }

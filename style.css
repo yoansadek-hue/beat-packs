@@ -1296,3 +1296,22 @@ html{overflow-x:hidden}
 .freepk.inf{background:#c4b8ff}
 .pack.k-inf{--pc:#c4b8ff}
 .freepk .btn{color:#ffe14d!important}.freepk .btn:disabled{color:#c4b8ff!important}
+
+/* ---------- patch 34 : tactiques, postes au choix, échanges, raccourcis du catalogue ---------- */
+.tacs{margin-bottom:4px}
+.tacd{margin:0 0 6px}
+.sslot.ed{cursor:pointer}
+.sslot.ed .cw{pointer-events:none}
+.sslot.sel .cw,.sslot.sel .sempty{outline:3px solid #ffe14d;outline-offset:3px;animation:pulse 1s ease-in-out infinite}
+.sslot small em{font-style:normal;color:#34e3b0}
+.sslot.act .sempty{border-color:#ffe14d;color:#ffe14d}
+.mlv button:disabled{opacity:.4}
+#mAuto{width:100%;margin:6px 0 12px}
+.shortc{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin:0 0 10px}
+.shortc button{display:flex;flex-direction:column;align-items:flex-start;gap:2px;padding:10px;border:0;background:#241d3b;color:#f6f3ff;text-align:left;cursor:pointer;clip-path:var(--cut)}
+.shortc b{font:800 14px/1.05 var(--cond);text-transform:uppercase}
+.shortc small{font-size:11px;color:var(--dim)}
+.shortc button:nth-child(1){background:#ff3b5c;color:#1e0f45} .shortc button:nth-child(2){background:#62c7ff;color:#1e0f45}
+.shortc button:nth-child(3){background:#34e3b0;color:#1e0f45} .shortc button:nth-child(4){background:#c4b8ff;color:#1e0f45}
+.shortc button small{color:rgba(30,15,69,.75)}
+@media (max-width:430px){.shortc{grid-template-columns:1fr 1fr}}

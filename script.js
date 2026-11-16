@@ -160,6 +160,7 @@ const START = () => ({coins:500000,bonus2:1,owned:{},seen:{},vibrate:true,sound:
 let state=START();
 try{const s=JSON.parse(localStorage.getItem("beatpacks3"));if(s&&typeof s.coins==="number")state={...state,bonus2:0,...s}}catch(e){}
 if(state.draft&&!state.draft.slots)state.draft=null;
+if(state.draft){state.draft.offers??={};state.draft.tactic??="penta";delete state.draft.offer;delete state.draft.step}
 if(!state.bonus2){state.coins+=400000;state.bonus2=1} // cadeau unique pour les parties déjà commencées
 for(const k in state.owned)if(!CARD[k])delete state.owned[k]; // un titre retiré du catalogue
 state.inbox??=[];state.rewarded??=[];state.sbcDone??={};
@@ -335,7 +336,7 @@ function sortiesSheet(){
 function renderMenu(){
   renderHub();
   const ready=SBC.filter(canDo).length,d=state.draft;
-  $("mtiles").innerHTML=`<button class="mtile mt-draft" data-play="draft"><small>Jouer</small><b>Draft</b><span>${d?(d.over?"Récompense à récupérer":d.step<5?`Choix ${d.step+1} sur 5 en cours`:`Combat ${d.round+1} sur 4`):"Monte ta maison de disque, puis 4 combats"}</span><i class="mic">♫</i></button>
+  $("mtiles").innerHTML=`<button class="mtile mt-draft" data-play="draft"><small>Jouer</small><b>Draft</b><span>${d?(d.over?"Récompense à récupérer":Object.keys(d.slots).length<5?`${Object.keys(d.slots).length}/5 postes signés`:`Combat ${d.round+1} sur 4`):"Monte ta maison de disque, puis 4 combats"}</span><i class="mic">♫</i></button>
     <button class="mtile mt-match" data-play="match"><small>Jouer</small><b>Match</b><span>Ton meilleur label contre l’ordinateur</span><i class="mic">⚔</i></button>
     <button class="mtile mt-sbc" data-go2="s-quests"><small>Objectifs</small><b>SBC</b><span>${ready} défi${ready>1?"s":""} prêt${ready>1?"s":""}</span><i class="mic">◆</i></button>
     <button class="mtile mt-blind" data-play="blind"><small>Jouer</small><b>Blind test</b><span>Devine le son en 10 secondes</span><i class="mic">♪</i></button>`;
@@ -730,10 +731,27 @@ function renderClub(){
     const AS={own:["Mes cartes",(a,b)=>(n[b.id]||0)-(n[a.id]||0)||a.n.localeCompare(b.n)],pop:["Popularité",(a,b)=>CARD[b.icone].ovr-CARD[a.icone].ovr],nom:["Nom",(a,b)=>a.n.localeCompare(b.n)],FR:["France",null],US:["USA",null],UK:["UK",null]};
     const list=ARTISTS.filter(a=>a.tracks.length&&(!q||slug(a.n).includes(q))&&(!["FR","US","UK"].includes(club.asort)||a.c===club.asort)).sort(AS[club.asort][1]||AS.own[1]);
     html=`<div class="titlerow"><h1>Catalogue</h1><span class="count-big"><b>${uniq()}</b> / ${fmt(TRACKS.length)}</span></div>${seg}
-      <input type="search" id="search" class="search" placeholder="Rechercher un artiste" value="${esc(club.q)}" autocomplete="off">
+      <input type="search" id="search" class="search" placeholder="Rechercher un artiste, un titre ou un album" value="${esc(club.q)}" autocomplete="off">
+      <div class="shortc">
+        <button data-scv="icones"><b>Icônes</b><small>${ICONES.filter(c=>has(c.key)).length}/${ICONES.length}</small></button>
+        <button data-scv="near"><b>Albums à finir</b><small>les plus avancés</small></button>
+        <button data-scv="news"><b>Sorties</b><small>${NEWS.length} récentes</small></button>
+        <button data-scv="best"><b>Mes meilleures</b><small>par note</small></button>
+      </div>
+      ${q.length>=2?(()=>{const tr=TRACKS.filter(c=>slug(c.title).includes(q)).sort((a,b)=>has(b.key)-has(a.key)||b.ovr-a.ovr).slice(0,18),al=ALBUMS.filter(a=>slug(a.t).includes(q)).slice(0,8);return `${al.length?`<h2 style="font-size:16px;margin:10px 0 8px">Albums</h2><div class="alist">${al.map(a=>`<button class="arow" data-alb="${a.id}">${coverHTML(a.id)}<div class="at"><b>${esc(a.t)}</b><small>${esc(ART[a.ar].n)} · ${a.y} · ${albumOwned(a)}/${a.tr.length} titres</small></div></button>`).join("")}</div>`:""}${tr.length?`<h2 style="font-size:16px;margin:14px 0 8px">Titres</h2><div class="grid">${tr.map(c=>has(c.key)?cw(c,{tap:true,qty:state.owned[c.key]}):cw(c,{tap:true,lock:true})).join("")}</div>`:""}${tr.length||al.length?`<h2 style="font-size:16px;margin:14px 0 8px">Artistes</h2>`:""}`})():""}
       <button class="spbtn" data-sp="1"><span><b>Cartes spéciales</b><small>${PROMO?esc(PROMO.name)+" · ":""}TOTW · ${[...ALL_PROMO.flatMap(x=>x.cs),...ALL_TOTW.flatMap(x=>x.cs)].filter(c=>has(c.key)).length}/${ALL_PROMO.reduce((t,x)=>t+x.cs.length,0)+ALL_TOTW.reduce((t,x)=>t+x.cs.length,0)} obtenues</small></span><i>›</i></button>
       <div class="chips" id="asortBar">${Object.entries(AS).map(([k,[l]])=>`<button aria-pressed="${club.asort===k}" data-asort="${k}">${l}</button>`).join("")}</div>
       ${list.length?`<div class="agrid">${list.map(a=>{const o=a.tracks.filter(t=>has(t.key)||has(holo(t)?.key)).length;return `<button class="atile${o?"":" none"}" data-ar="${a.id}">${coverHTML(a.cover)}<b>${esc(a.n)}</b><small>${o}/${a.tracks.length} · Icône ${CARD[a.icone].ovr}</small></button>`}).join("")}</div>`:`<p class="empty">Aucun artiste ne correspond.</p>`}`;
+  }else if(club.view==="icones"){
+    html=`<button class="back" data-back="artists">‹ Catalogue</button><h1>Icônes</h1><p class="note">${ICONES.filter(c=>has(c.key)).length}/${ICONES.length} obtenues · une par artiste, de 85 à 99.</p>
+      <div class="grid">${[...ICONES].sort((a,b)=>b.ovr-a.ovr).map(c=>has(c.key)?cw(c,{tap:true,qty:state.owned[c.key]}):lock(c)).join("")}</div>`;
+  }else if(club.view==="near"){
+    const near=ALBUMS.filter(al=>!albumDone(al)).map(al=>({al,o:albumOwned(al)})).filter(x=>x.o).sort((a,b)=>b.o/b.al.tr.length-a.o/a.al.tr.length||b.o-a.o).slice(0,40);
+    html=`<button class="back" data-back="artists">‹ Catalogue</button><h1>Albums à finir</h1><p class="note">Tes albums les plus avancés. Finis-en un pour sa prime et sa carte album.</p>
+      ${near.length?`<div class="alist">${near.map(({al,o})=>{const pr=albumPrize(al);return `<button class="arow" data-alb="${al.id}">${coverHTML(al.id)}<div class="at"><b>${esc(al.t)}</b><small>${esc(ART[al.ar].n)} · ${o}/${al.tr.length} titres${pr?` · prime ${fmt(pr.coins)}`:""}</small><div class="bar"><i style="width:${o/al.tr.length*100}%"></i></div></div></button>`}).join("")}</div>`:`<p class="empty">Ouvre des packs pour commencer des albums.</p>`}`;
+  }else if(club.view==="news"){
+    html=`<button class="back" data-back="artists">‹ Catalogue</button><h1>Sorties</h1><p class="note">Les albums et EP sortis ces 4 dernières semaines.</p>
+      <div class="alist">${NEWS.map(al=>`<button class="arow" data-alb="${al.id}">${coverHTML(al.id)}<div class="at"><b>${esc(al.t)}</b><small>${esc(ART[al.ar].n)} · ${al.d?fmtDate(al.d):al.y} · ${albumOwned(al)}/${al.tr.length} titres</small></div></button>`).join("")}</div>`;
   }else if(club.view==="special"){
     const lk=c=>has(c.key)?cw(c,{qty:state.owned[c.key],tap:true}):lock(c);
     html=`<button class="back" data-back="artists">‹ Catalogue</button><h1>Cartes spéciales</h1>
@@ -780,8 +798,9 @@ $("club").onclick=e=>{
   const as=t.closest("#asortBar [data-asort]");if(as){club.asort=as.dataset.asort;renderClub();haptic(6);return}
   const b=t.closest("[data-back]");if(b){club.view=b.dataset.back;renderClub();scrollTo(0,0);return}
   if(t.closest("[data-sp]")){club.view="special";renderClub();scrollTo(0,0);haptic();return}
+  const sc=t.closest("[data-scv]");if(sc){const v=sc.dataset.scv;if(v==="best"){club.view="binder";club.sort="note";club.q=""}else club.view=v;renderClub();scrollTo(0,0);haptic();return}
   const ar=t.closest("[data-ar]");if(ar){club.view="artist";club.ar=ar.dataset.ar;renderClub();scrollTo(0,0);haptic();return}
-  const al=t.closest("[data-alb]");if(al){club.view="album";club.alb=al.dataset.alb;renderClub();markSeen();scrollTo(0,0);haptic();return}
+  const al=t.closest("[data-alb]");if(al){club.view="album";club.alb=al.dataset.alb;if(ALB[club.alb])club.ar=ALB[club.alb].ar;renderClub();markSeen();scrollTo(0,0);haptic();return}
   if(t.closest("[data-icone]")){club.view="album";club.alb="icone";renderClub();markSeen();scrollTo(0,0);return}
   const c=t.closest(".cw[data-k]");if(c){cardSheet(c.dataset.k);haptic()}
 };
@@ -976,7 +995,14 @@ function autoFill(s){
 // ---------- Draft : on monte sa maison de disque (5 postes reliés), puis 4 combats ----------
 // chaque poste a sa stat clé : en combat, la carte du poste se bat sur cette stat
 const SLOTS=[{id:"head",n:"Tête d’affiche",st:4,x:50,y:1},{id:"plume",n:"Plume",st:1,x:15,y:29},{id:"flow",n:"Flow",st:0,x:85,y:29},{id:"beat",n:"Beatmaker",st:2,x:29,y:62},{id:"voix",n:"Refrain",st:3,x:71,y:62}];
-const LINKS=[["head","plume"],["head","flow"],["plume","beat"],["flow","voix"],["beat","voix"]];
+const TACTICS=[
+  {id:"penta",n:"Pentagone",d:"5 liens en cercle : chaque poste a 2 voisins.",pos:{head:[50,1],plume:[15,29],flow:[85,29],beat:[29,62],voix:[71,62]},links:[["head","plume"],["head","flow"],["plume","beat"],["flow","voix"],["beat","voix"]]},
+  {id:"star",n:"Étoile",d:"La tête d’affiche est reliée aux 4 autres : mise tout sur elle.",pos:{head:[50,31],plume:[15,1],flow:[85,1],beat:[15,62],voix:[85,62]},links:[["head","plume"],["head","flow"],["head","beat"],["head","voix"]]},
+  {id:"pyra",n:"Pyramide",d:"6 liens : la plume et le flow sont au cœur du label.",pos:{head:[50,1],plume:[27,31],flow:[73,31],beat:[15,62],voix:[85,62]},links:[["head","plume"],["head","flow"],["plume","flow"],["plume","beat"],["flow","voix"],["beat","voix"]]},
+  {id:"chain",n:"Chaîne",d:"4 liens en file : idéal pour enchaîner le même artiste.",pos:{plume:[15,1],head:[50,1],flow:[85,1],voix:[71,58],beat:[29,58]},links:[["plume","head"],["head","flow"],["flow","voix"],["voix","beat"]]}
+];
+const tacOf=id=>TACTICS.find(t=>t.id===id)||TACTICS[0];
+const LINKS=TACTICS[0].links;
 const LABELS=["Nuit Blanche Records","Cartel 93","Golden Ear","Royal Wax","Bitume Music","Neon Tape","Studio Nord","Lune Noire","Velours Records","Asphalte Club","Satellite Sound","Rue Pigalle"];
 const DRAFT_COST=15000,DRAFT_OPP=[76,82,87,92];
 const DRAFT_PRIZE=[{coins:1000},{coins:3000},{coins:5000,pack:"3"},{coins:8000,pack:"5"},{coins:12000,pack:"10",extra:"sp3"}];
@@ -985,18 +1011,25 @@ const MATCH_LV=[{n:"Facile",t:76,r:1500},{n:"Moyen",t:83,r:3500},{n:"Difficile",
 let playView="draft",battle=null;
 // le lien entre deux postes voisins : 3 même artiste, 1 même pays, 0 sinon
 const linkVal=(a,b)=>!a||!b?0:a.ar===b.ar?3:a.country===b.country?1:0;
-const chemOf=sl=>Math.min(10,LINKS.reduce((t,[x,y])=>t+linkVal(CARD[sl[x]],CARD[sl[y]]),0));
-const cardChem=(sl,id)=>LINKS.filter(l=>l.includes(id)).reduce((t,[x,y])=>t+linkVal(CARD[sl[x]],CARD[sl[y]]),0);
-function rosterRating(sl){const ks=SLOTS.map(x=>sl[x.id]).filter(Boolean);return ks.length?Math.round(ks.reduce((t,k)=>t+CARD[k].ovr,0)/ks.length+chemOf(sl)/2):0}
-function studioHTML(sl,{active,label,hue=280,tap=true}={}){
-  const P=Object.fromEntries(SLOTS.map(x=>[x.id,x]));
-  const lines=LINKS.map(([a,b])=>{const v=sl[a]&&sl[b]?linkVal(CARD[sl[a]],CARD[sl[b]]):-1;return `<line x1="${P[a].x}" y1="${P[a].y+12}" x2="${P[b].x}" y2="${P[b].y+12}" class="lk lk${v}"/>`}).join("");
-  return `<div class="studio" style="--h:${hue}"><div class="slab"><span class="slogo">${esc(initials(label))}</span><div><small>Maison de disque</small><b>${esc(label)}</b></div><span class="srat">${rosterRating(sl)||"–"}<small>note</small></span><span class="srat">${chemOf(sl)}<small>alchimie</small></span></div>
+const chemOf=(sl,tc)=>Math.min(10,tacOf(tc).links.reduce((t,[x,y])=>t+linkVal(CARD[sl[x]],CARD[sl[y]]),0));
+const cardChem=(sl,id,tc)=>tacOf(tc).links.filter(l=>l.includes(id)).reduce((t,[x,y])=>t+linkVal(CARD[sl[x]],CARD[sl[y]]),0);
+function rosterRating(sl,tc){const ks=SLOTS.map(x=>sl[x.id]).filter(Boolean);return ks.length?Math.round(ks.reduce((t,k)=>t+CARD[k].ovr,0)/ks.length+chemOf(sl,tc)/2):0}
+// le studio : les 5 postes placés selon la tactique ; en mode édition on touche un poste pour signer, remplacer ou échanger
+function studioHTML(sl,{label,hue=280,tactic,edit=false,sel=null}={}){
+  const T=tacOf(tactic),P=T.pos;
+  const lines=T.links.map(([a,b])=>{const v=sl[a]&&sl[b]?linkVal(CARD[sl[a]],CARD[sl[b]]):-1;return `<line x1="${P[a][0]}" y1="${P[a][1]+12}" x2="${P[b][0]}" y2="${P[b][1]+12}" class="lk lk${v}"/>`}).join("");
+  return `<div class="studio" style="--h:${hue}"><div class="slab"><span class="slogo">${esc(initials(label))}</span><div><small>Maison de disque · ${T.n}</small><b>${esc(label)}</b></div><span class="srat">${rosterRating(sl,tactic)||"–"}<small>note</small></span><span class="srat">${chemOf(sl,tactic)}<small>alchimie</small></span></div>
     <div class="sfloor"><svg viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true">${lines}</svg>
-    ${SLOTS.map(x=>`<div class="sslot${active===x.id?" act":""}"${active===x.id?` data-slotpick="1"`:""} style="left:${x.x}%;top:${x.y}%">${sl[x.id]?cw(CARD[sl[x.id]],{tap}):`<div class="sempty">${active===x.id?"?":"+"}</div>`}<small>${x.n}<b>${STATN[x.st]}${sl[x.id]?" "+statsOf(CARD[sl[x.id]])[x.st]:""}</b></small></div>`).join("")}</div></div>`;
+    ${SLOTS.map(x=>`<div class="sslot${edit?" ed":""}${sel===x.id?" sel":""}${edit&&!sl[x.id]?" act":""}"${edit?` data-slot="${x.id}"`:""} style="left:${P[x.id][0]}%;top:${P[x.id][1]}%">${sl[x.id]?cw(CARD[sl[x.id]],{tap:!edit}):`<div class="sempty">+</div>`}<small>${x.n}<b>${STATN[x.st]}${sl[x.id]?" "+statsOf(CARD[sl[x.id]])[x.st]:""}${sl[x.id]&&cardChem(sl,x.id,tactic)?` <em>+${cardChem(sl,x.id,tactic)}</em>`:""}</b></small></div>`).join("")}</div></div>`;
 }
+const tacBar=cur=>`<div class="chips tacs">${TACTICS.map(t=>`<button aria-pressed="${t.id===tacOf(cur).id}" data-tac="${t.id}">${t.n}</button>`).join("")}</div><p class="note tacd">${tacOf(cur).d}</p>`;
+let teamSel=null;
+// le voile plein écran pour choisir une carte
+const tov=document.createElement("div");tov.className="dpickov";tov.id="teamov";tov.hidden=true;document.body.appendChild(tov);
+const closeTov=()=>{tov.hidden=true;tov.innerHTML=""};
+const drowHTML=(c,slot,sl,tc,i)=>{const tmp={...sl,[slot.id]:c.key},ch=cardChem(tmp,slot.id,tc);return `<button class="drow" data-tpick="${c.key}" style="--i:${i}"><span class="drc">${cw(c)}</span><span class="dri"><small>${labelOf(c)} · ${c.country}</small><b>${esc(c.kind==="icone"?"Icône":cleanT(c.title)||c.title)}</b><span>${esc(c.artist)}</span><span class="drs"><em>${statsOf(c)[slot.st]}</em><i>${STATN[slot.st]}</i></span>${ch?`<u>+${ch} alchimie</u>`:""}</span></button>`};
 function draftOffer(slot){
-  const d=state.draft,used=new Set(Object.values(d.slots)),out=[];
+  const d=state.draft,used=new Set(Object.values(d.slots).concat(...Object.values(d.offers||{}))),out=[];
   const odds=slot.id==="head"?{commune:0,rare:.15,epique:.5,legendaire:.35}:{commune:.1,rare:.4,epique:.38,legendaire:.12};
   while(out.length<5){const c=Math.random()<(slot.id==="head"?.08:.03)?any(ICONES):drawTrack(pickTier(odds));if(!out.includes(c)&&!used.has(c.key))out.push(c)}
   return out.map(c=>c.key);
@@ -1005,8 +1038,8 @@ function startDraft(){
   if(state.coins<DRAFT_COST)return toast("Pas assez de pièces");
   state.coins-=DRAFT_COST;
   const opps=[...LABELS].sort(()=>Math.random()-.5);
-  state.draft={name:opps.pop(),hue:Math.floor(Math.random()*360),slots:{},step:0,offer:[],round:0,wins:0,over:false,opps:opps.slice(0,4)};
-  state.draft.offer=draftOffer(SLOTS[0]);save();wallet();SFX.cash();renderPlay();
+  state.draft={name:opps.pop(),hue:Math.floor(Math.random()*360),slots:{},offers:{},tactic:"penta",round:0,wins:0,over:false,opps:opps.slice(0,4)};
+  teamSel=null;save();wallet();SFX.cash();renderPlay();
 }
 function renderPlay(){
   if($("s-play").hidden)return;
@@ -1024,19 +1057,20 @@ function renderPlay(){
       <button class="btn" id="dStart" ${state.coins<DRAFT_COST?"disabled":""}>Lancer un draft · <i class="coin"></i>${fmt(DRAFT_COST)}</button></div>`;
     return;
   }
-  if(d.step<5){
-    const slot=SLOTS[d.step];
-    $("play").innerHTML=`${back}${studioHTML(d.slots,{active:slot.id,label:d.name,hue:d.hue,tap:false})}
-      <h2>Poste ${d.step+1} sur 5 · ${slot.n}</h2><p class="note">Stat clé : <b style="color:var(--fut)">${STATN[slot.st]}</b>. Touche le poste qui clignote pour voir les 5 artistes.</p>
-      <button class="btn" data-slotpick="1">Choisir le ${slot.n.toLowerCase()}</button>
-      <div class="dpickov" id="dpickov" hidden><div class="dpickin"><button class="back" id="dpClose">‹ Ma maison de disque</button><h2>Poste ${d.step+1} sur 5 · ${slot.n}</h2><p class="note">Stat clé : <b style="color:var(--fut)">${STATN[slot.st]}</b>. Touche l’artiste à signer.</p>
-      <div class="doffer drows">${d.offer.map((k,i)=>{const c=CARD[k],tmp={...d.slots,[slot.id]:k},ch=cardChem(tmp,slot.id);return `<button class="drow" data-dpick="${k}" style="--i:${i}"><span class="drc">${cw(c)}</span><span class="dri"><small>${labelOf(c)} · ${c.country}</small><b>${esc(c.kind==="icone"?"Icône":cleanT(c.title)||c.title)}</b><span>${esc(c.artist)}</span><span class="drs"><em>${statsOf(c)[slot.st]}</em><i>${STATN[slot.st]}</i></span>${ch?`<u>+${ch} alchimie</u>`:""}</span></button>`}).join("")}</div></div></div>`;
-    return;
-  }
+  const filled=SLOTS.filter(x=>d.slots[x.id]).length;
   const dots=DRAFT_OPP.map((o,i)=>`<span class="${i<d.wins?"w":d.over&&i===d.round?"l":i===d.round&&!d.over?"cur":""}"><b>${o}</b><small>${esc(d.opps[i])}</small></span>`).join("");
-  $("play").innerHTML=`${back}${studioHTML(d.slots,{label:d.name,hue:d.hue})}<div class="dpath">${dots}</div>
-    ${d.over?`<div class="draftin"><h3>${d.wins} victoire${d.wins>1?"s":""}</h3><p>Récompense : ${prizeTxt(DRAFT_PRIZE[d.wins])}</p><button class="btn" id="dClaim">Récupérer</button></div>`
-      :`<button class="btn" id="dPlay">Combat ${d.round+1} sur 4 · ${esc(d.opps[d.round])} (${DRAFT_OPP[d.round]})</button>`}`;
+  $("play").innerHTML=`${back}${d.over?"":tacBar(d.tactic)}${studioHTML(d.slots,{label:d.name,hue:d.hue,tactic:d.tactic,edit:!d.over,sel:teamSel})}
+    ${d.over?`<div class="dpath">${dots}</div><div class="draftin"><h3>${d.wins} victoire${d.wins>1?"s":""}</h3><p>Récompense : ${prizeTxt(DRAFT_PRIZE[d.wins])}</p><button class="btn" id="dClaim">Récupérer</button></div>`
+      :filled<5?`<h2>${filled}/5 postes signés</h2><p class="note">Touche <b>n’importe quel poste vide</b> pour choisir son artiste (1 parmi 5), dans l’ordre que tu veux. Touche une carte puis un autre poste pour les <b>échanger</b>. Change de tactique pour changer les liens.</p>`
+      :`<div class="dpath">${dots}</div><p class="note">Touche une carte puis un autre poste pour les échanger, ou change de tactique avant le combat.</p><button class="btn" id="dPlay">Combat ${d.round+1} sur 4 · ${esc(d.opps[d.round])} (${DRAFT_OPP[d.round]})</button>`}`;
+}
+function openDraftPick(sid){
+  const d=state.draft,slot=SLOTS.find(x=>x.id===sid);
+  d.offers??={};if(!d.offers[sid])d.offers[sid]=draftOffer(slot);save();
+  const used=new Set(Object.values(d.slots));
+  tov.innerHTML=`<div class="dpickin"><button class="back" data-tclose="1">‹ Ma maison de disque</button><h2>${slot.n}</h2><p class="note">Stat clé : <b style="color:var(--fut)">${STATN[slot.st]}</b>. Touche l’artiste à signer.</p>
+    <div class="doffer drows">${d.offers[sid].filter(k=>!used.has(k)).map((k,i)=>drowHTML(CARD[k],slot,d.slots,d.tactic,i)).join("")}</div></div>`;
+  tov.dataset.mode="draft";tov.dataset.slot=sid;tov.hidden=false;tov.scrollTop=0;SFX.board();haptic(10);
 }
 // ---------- blind test : 10 extraits, 4 titres au choix, plus on répond vite plus on marque ----------
 const BT_N=10,BT_T=10,BT_COINS=300,BT_DAILY=5;
@@ -1118,18 +1152,52 @@ function bestRoster(){
   }
   return sl;
 }
-function renderMatch(back){
-  const sl=bestRoster(),n=Object.keys(sl).length,d=daily();d.matches??=0;
-  $("play").innerHTML=`${back}<h1>Match</h1>${n<5?`<p class="empty">Il te faut au moins 5 cartes pour jouer un match.</p>`:`${studioHTML(sl,{label:state.pseudo+" Records",hue:190})}
-    <p class="note">Ton label est composé automatiquement avec tes meilleures cartes. Victoires récompensées aujourd’hui : ${Math.min(d.matches,10)}/10.</p>
-    <div class="mlv">${MATCH_LV.map((l,i)=>`<button data-mlv="${i}"><b>${l.n}</b><span>Adversaire ${l.t}</span><em>${d.matches<10?`+${fmt(l.r)}`:"—"}</em></button>`).join("")}</div>`}`;
+function myTeam(){
+  const t=state.team??={tactic:"penta",slots:bestRoster()};
+  for(const x of SLOTS)if(t.slots[x.id]&&!has(t.slots[x.id]))delete t.slots[x.id];
+  return t;
 }
+function renderMatch(back){
+  const t=myTeam(),sl=t.slots,n=Object.keys(sl).length,d=daily();d.matches??=0;
+  if(Object.keys(state.owned).length<5){$("play").innerHTML=`${back}<h1>Match</h1><p class="empty">Il te faut au moins 5 cartes pour jouer un match.</p>`;return}
+  $("play").innerHTML=`${back}<h1>Match</h1>${tacBar(t.tactic)}${studioHTML(sl,{label:state.pseudo+" Records",hue:190,tactic:t.tactic,edit:true,sel:teamSel})}
+    <p class="note">Touche un poste pour choisir sa carte dans ta collection. Touche une carte puis un autre poste pour les échanger. Victoires récompensées aujourd’hui : ${Math.min(d.matches,10)}/10.</p>
+    <button class="btn ghost" id="mAuto">Composer automatiquement</button>
+    ${n<5?`<p class="note" style="color:#ff8fa3">Remplis les 5 postes pour jouer.</p>`:""}
+    <div class="mlv">${MATCH_LV.map((l,i)=>`<button data-mlv="${i}" ${n<5?"disabled":""}><b>${l.n}</b><span>Adversaire ${l.t}</span><em>${d.matches<10?`+${fmt(l.r)}`:"—"}</em></button>`).join("")}</div>`;
+}
+function openMatchPick(sid){
+  const t=myTeam(),slot=SLOTS.find(x=>x.id===sid);
+  const list=Object.keys(state.owned).map(k=>CARD[k]).sort((a,b)=>statsOf(b)[slot.st]-statsOf(a)[slot.st]||b.ovr-a.ovr).slice(0,50);
+  tov.innerHTML=`<div class="dpickin"><button class="back" data-tclose="1">‹ Mon label</button><h2>${slot.n}</h2><p class="note">Stat clé : <b style="color:var(--fut)">${STATN[slot.st]}</b>. Tes 50 meilleures cartes pour ce poste. Une carte déjà placée change de place avec celle-ci.</p>
+    ${t.slots[sid]?`<button class="btn ghost" data-tswap="1">Échanger de place avec un autre poste</button>`:""}
+    <div class="doffer drows">${list.map((c,i)=>drowHTML(c,slot,t.slots,t.tactic,Math.min(i,8))).join("")}</div></div>`;
+  tov.dataset.mode="match";tov.dataset.slot=sid;tov.hidden=false;tov.scrollTop=0;SFX.board();haptic(10);
+}
+// toucher un poste : signer, remplacer, ou échanger avec le poste choisi avant
+function tapSlot(sid){
+  const team=playView==="match"?myTeam():state.draft,sl=team.slots;
+  if(teamSel&&teamSel!==sid){const a=sl[teamSel],b=sl[sid];if(b)sl[teamSel]=b;else delete sl[teamSel];if(a)sl[sid]=a;else delete sl[sid];teamSel=null;SFX.flip();haptic([10,20,10]);save();return renderPlay()}
+  if(teamSel===sid){teamSel=null;return renderPlay()}
+  if(playView==="match")return openMatchPick(sid);
+  if(sl[sid]){teamSel=sid;SFX.tick();toast("Touche un autre poste pour échanger");return renderPlay()}
+  openDraftPick(sid);
+}
+tov.onclick=e=>{
+  if(e.target.closest("[data-tclose]")){closeTov();SFX.tap();return}
+  if(e.target.closest("[data-tswap]")){teamSel=tov.dataset.slot;closeTov();toast("Touche un autre poste pour échanger");return renderPlay()}
+  const p=e.target.closest("[data-tpick]");if(!p)return;
+  const k=p.dataset.tpick,sid=tov.dataset.slot;
+  if(tov.dataset.mode==="draft"){state.draft.slots[sid]=k}
+  else{const sl=myTeam().slots,other=SLOTS.find(x=>x.id!==sid&&sl[x.id]===k);if(other){if(sl[sid])sl[other.id]=sl[sid];else delete sl[other.id]}sl[sid]=k}
+  closeTov();SFX.tick();haptic(8);save();renderPlay();
+};
 // un combat : les 5 postes s'affrontent un par un sur leur stat clé (impossible à passer)
-function startBattle(mySl,target,oppName,myName,onDone){
+function startBattle(mySl,target,oppName,myName,onDone,tc){
   const pool=TRACKS.filter(c=>Math.abs(c.ovr-target)<=3),opp={};
   for(const x of SLOTS){let c;do{c=any(pool.length?pool:TRACKS)}while(Object.values(opp).includes(c.key));opp[x.id]=c.key}
-  const duels=SLOTS.map(x=>{const a=CARD[mySl[x.id]],b=CARD[opp[x.id]];const va=Math.round(statsOf(a)[x.st]+cardChem(mySl,x.id)+Math.random()*8),vb=Math.round(statsOf(b)[x.st]+cardChem(opp,x.id)+Math.random()*8+(target>=90?2:0));return {x,a,b,va,vb,win:va>=vb}});
-  const me=battle={duels,myName,oppName,target,mine:rosterRating(mySl),shown:0,done:false,onDone};
+  const duels=SLOTS.map(x=>{const a=CARD[mySl[x.id]],b=CARD[opp[x.id]];const va=Math.round(statsOf(a)[x.st]+cardChem(mySl,x.id,tc)+Math.random()*8),vb=Math.round(statsOf(b)[x.st]+cardChem(opp,x.id)+Math.random()*8+(target>=90?2:0));return {x,a,b,va,vb,win:va>=vb}});
+  const me=battle={duels,myName,oppName,target,mine:rosterRating(mySl,tc),shown:0,done:false,onDone};
   show("s-play");
   const tick=()=>{if(battle!==me)return;battle.shown++;const du=battle.duels[battle.shown-1];du.win?SFX.reveal():SFX.slam();haptic(du.win?[10,20,10]:20);renderBattle();
     if(battle.shown<5)setTimeout(tick,1100);else setTimeout(()=>{if(battle!==me)return;battle.done=true;const w=battle.duels.filter(x=>x.win).length;w>=3?SFX.done():SFX.slam();renderBattle()},900)};
@@ -1222,13 +1290,14 @@ $("play").onclick=e=>{
   if(e.target.closest("#btStart")||e.target.closest("#btAgain")){SFX.tap();return startBlind()}
   if(e.target.closest("#btMenu")){quitBlind();return show("s-menu")}
   if(e.target.closest("#dStart"))return startDraft();
-  if(e.target.closest("[data-slotpick]")){const o=$("dpickov");if(o){o.hidden=false;o.scrollTop=0;SFX.board();haptic(10)}return}
-  if(e.target.closest("#dpClose")){$("dpickov").hidden=true;SFX.tap();return}
-  const dp=e.target.closest("[data-dpick]");if(dp){const d=state.draft;d.slots[SLOTS[d.step].id]=dp.dataset.dpick;d.step++;d.offer=d.step<5?draftOffer(SLOTS[d.step]):[];SFX.tick();haptic(8);save();renderPlay();return}
-  if(e.target.closest("#dPlay")){const d=state.draft;return startBattle(d.slots,DRAFT_OPP[d.round],d.opps[d.round],d.name,won=>{if(won){d.wins++;d.round++;if(d.round>=4)d.over=true}else d.over=true;save();renderPlay()})}
+  const ts=e.target.closest("[data-slot]");if(ts)return tapSlot(ts.dataset.slot);
+  const tc=e.target.closest("[data-tac]");if(tc){const team=playView==="match"?myTeam():state.draft;if(team){team.tactic=tc.dataset.tac;save();SFX.tab();renderPlay()}return}
+  if(e.target.closest("#mAuto")){myTeam().slots=bestRoster();teamSel=null;save();SFX.tick();return renderPlay()}
+  if(e.target.closest("#dPlay")){const d=state.draft;teamSel=null;return startBattle(d.slots,DRAFT_OPP[d.round],d.opps[d.round],d.name,won=>{if(won){d.wins++;d.round++;if(d.round>=4)d.over=true}else d.over=true;save();renderPlay()},d.tactic)}
   if(e.target.closest("#dClaim"))return claimDraft();
   const lv=e.target.closest("[data-mlv]");if(lv){const L=MATCH_LV[+lv.dataset.mlv],d=daily();d.matches??=0;
-    return startBattle(bestRoster(),L.t,LABELS[(+lv.dataset.mlv*3+new Date().getDate())%LABELS.length],state.pseudo+" Records",(won,quit)=>{playView="match";if(won&&d.matches<10){d.matches++;renderPlay();rewardScreen({title:"Match gagné",sub:`${L.n} · ${state.pseudo} Records`,coins:L.r})}else{if(won)toast("Victoire ! (10 victoires récompensées aujourd’hui)");else toast(quit?"Combat abandonné":"Défaite");save();renderPlay()}})}
+    const T=myTeam();if(SLOTS.some(x=>!T.slots[x.id]))return toast("Remplis les 5 postes");teamSel=null;
+    return startBattle(T.slots,L.t,LABELS[(+lv.dataset.mlv*3+new Date().getDate())%LABELS.length],state.pseudo+" Records",(won,quit)=>{playView="match";if(won&&d.matches<10){d.matches++;renderPlay();rewardScreen({title:"Match gagné",sub:`${L.n} · ${state.pseudo} Records`,coins:L.r})}else{if(won)toast("Victoire ! (10 victoires récompensées aujourd’hui)");else toast(quit?"Combat abandonné":"Défaite");save();renderPlay()}},T.tactic)}
   const c=e.target.closest(".cw[data-k]");if(c)cardSheet(c.dataset.k);
 };
 function claimDraft(){
@@ -1286,6 +1355,7 @@ const SCREENS=["s-market","s-friends","s-shop","s-quests","s-settings","s-club",
 const TABOF={"s-play":"s-menu","s-settings":"s-menu"}; // l'onglet allumé pour chaque écran
 function show(id){
   if(id!=="s-play"&&blind)quitBlind();
+  if(typeof closeTov==="function"&&!tov.hidden)closeTov();teamSel=null;
   SCREENS.forEach(s=>$(s).hidden=s!==id);
   
   const t=TABS.find(b=>b.dataset.go===(TABOF[id]||id));

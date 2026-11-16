@@ -130,8 +130,8 @@ const SHOP=[
     {key:"holo6",label:"Pack Prisme",size:6,price:75000,boost:1.8,holoP:.12,desc:"6 cartes, chances de Holo ×8"},
     {key:"prime12",label:"Pack Prime",size:12,price:125000,floor:"rare",guarantee:"epique",gN:3,boost:2.2,desc:"12 cartes Or ou mieux, dont 3 Platine ou mieux"}]},
   {t:"Événements",d:"Plus de chances d’avoir une carte de l’événement, sans garantie",ps:[
-    ...(TOTW_NOW.length?[{key:"totw4",label:"Pack TOTW",size:4,price:150000,live:"totw",liveP:.07,boost:2,desc:`4 cartes, chances de TOTW ×6 (semaine ${weekNo(LV.totw[0].w)})`}]:[]),
-    ...(PROMO_NOW.length?[{key:"promo5",label:"Pack "+PROMO.name,size:5,price:200000,live:"promo",liveP:.07,boost:2.2,desc:`5 cartes, chances de ${PROMO.name} ×6, jusqu’au ${PROMO.until.slice(8,10)}/${PROMO.until.slice(5,7)}`}]:[])]}
+    ...(TOTW_NOW.length?[{key:"totw4",label:"Pack TOTW",size:12,price:150000,live:"totw",liveP:.07,boost:2,desc:`12 cartes, chances de TOTW ×6 (semaine ${weekNo(LV.totw[0].w)})`}]:[]),
+    ...(PROMO_NOW.length?[{key:"promo5",label:"Pack "+PROMO.name,size:12,price:200000,live:"promo",liveP:.07,boost:2.2,desc:`12 cartes, chances de ${PROMO.name} ×6, jusqu’au ${PROMO.until.slice(8,10)}/${PROMO.until.slice(5,7)}`}]:[])]}
 ].filter(x=>x.ps.length);
 const SHOPPACKS=[FREE,INF,...SHOP.flatMap(x=>x.ps)];
 const OBG={free:"#f6f3ff",gold6:"#ffe14d",plat3:"#e9eef3",holo6:"#c4b8ff",prime12:"#ff3b5c",dia1:"#62c7ff",ico1:"#ff9f45",fr6:"#62c7ff",us6:"#ff3b5c",uk6:"#c4b8ff",old6:"#34e3b0",new6:"#ffe14d",totw4:"#111111",promo5:"#34e3b0"};

@@ -1319,3 +1319,10 @@ html{overflow-x:hidden}
 .coderow{display:flex;gap:8px;align-items:center}
 .coderow input{width:130px}
 .coderow .btn{width:auto;min-height:36px;padding:0 14px}
+
+/* catalogue : pourcentage de la collection */
+.colpct{display:grid;grid-template-columns:1fr auto;align-items:center;gap:2px 10px;margin:-4px 0 14px}
+.colbar{height:10px;background:#241d3b;overflow:hidden;clip-path:polygon(4px 0,100% 0,calc(100% - 4px) 100%,0 100%)}
+.colbar i{display:block;height:100%;background:#ffe14d}
+.colpct b{font:800 22px/1 var(--cond);color:#ffe14d}
+.colpct small{grid-column:1/-1;font-size:12px;color:var(--dim)}

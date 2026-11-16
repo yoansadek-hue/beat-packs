@@ -732,7 +732,9 @@ function renderClub(){
     const {n}=myArtists(),q=slug(club.q);
     const AS={own:["Mes cartes",(a,b)=>(n[b.id]||0)-(n[a.id]||0)||a.n.localeCompare(b.n)],pop:["Popularité",(a,b)=>CARD[b.icone].ovr-CARD[a.icone].ovr],nom:["Nom",(a,b)=>a.n.localeCompare(b.n)],FR:["France",null],US:["USA",null],UK:["UK",null]};
     const list=ARTISTS.filter(a=>a.tracks.length&&(!q||slug(a.n).includes(q))&&(!["FR","US","UK"].includes(club.asort)||a.c===club.asort)).sort(AS[club.asort][1]||AS.own[1]);
-    html=`<div class="titlerow"><h1>Catalogue</h1><span class="count-big"><b>${uniq()}</b> / ${fmt(TRACKS.length)}</span></div>${seg}
+    const own=uniq(),pc=own/TRACKS.length*100;
+    html=`<div class="titlerow"><h1>Catalogue</h1><span class="count-big"><b>${fmt(own)}</b> / ${fmt(TRACKS.length)}</span></div>
+      <div class="colpct"><div class="colbar"><i style="width:${Math.max(pc,own?.4:0)}%"></i></div><b>${pc.toLocaleString("fr-FR",{minimumFractionDigits:pc<10?2:1,maximumFractionDigits:pc<10?2:1})} %</b><small>de la collection totale</small></div>${seg}
       <input type="search" id="search" class="search" placeholder="Rechercher un artiste, un titre ou un album" value="${esc(club.q)}" autocomplete="off">
       <div class="shortc">
         <button data-scv="icones"><b>Icônes</b><small>${ICONES.filter(c=>has(c.key)).length}/${ICONES.length}</small></button>

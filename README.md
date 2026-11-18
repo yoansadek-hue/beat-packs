@@ -23,7 +23,7 @@ Ouvre `index.html` dans ton navigateur (ou utilise l'extension Live Server dans 
   - **Sorties** : les albums et EP sortis ces 4 dernières semaines par les artistes du jeu.
 - **Catalogue** : raccourcis Icônes, Albums à finir, Sorties, Mes meilleures ; la recherche trouve aussi les titres et les albums.
 - **Catalogue › Cartes spéciales** : toutes les TOTW (semaine par semaine) et les équipes du mois, obtenues ou non ; elles apparaissent aussi dans la page de leur album.
-- **Blind test** (Menu) : 10 extraits pris au milieu du son, 4 titres proches au choix (même artiste, même époque) sans voir l'artiste, 10 s par manche ; plus on répond vite, plus on marque. 300 pièces par bonne réponse, 5 parties récompensées par jour. Filtre Tout, Rap FR, US, UK.
+- **Blind test** (Menu) : 10 extraits pris au milieu du son, 4 sons au choix avec leur artiste (4 artistes différents de la même époque, ou tous les sons d'un seul artiste en mode « 1 artiste »), 10 s par manche ; plus on répond vite, plus on marque. 300 pièces par bonne réponse, 5 parties récompensées par jour. Filtre Tout, Rap FR, US, UK.
 - **Notifications** (cloche en haut) : nouvelle TOTW, équipe du mois, sorties, cartes vendues, albums complétés. Option « Notifications sur l'appareil » dans les paramètres.
 - **Profil** (rond en haut à droite) : stats, Amis, Paramètres, notifications et **connexion Google** (Firebase, même projet que Quizly) avec sauvegarde de la partie en ligne.
 - **Carte album** : compléter un album d'au moins 4 titres donne sa carte album (note selon ses meilleurs titres), en plus de la prime.

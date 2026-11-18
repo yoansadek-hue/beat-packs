@@ -1080,17 +1080,21 @@ function openDraftPick(sid){
 }
 // ---------- blind test : 10 extraits, 4 titres au choix, plus on répond vite plus on marque ----------
 const BT_N=10,BT_T=10,BT_COINS=300,BT_DAILY=5;
-let blind=null,btScope="all";
-const btPool=()=>TRACKS.filter(c=>c.streams>=15&&(btScope==="all"||c.country===btScope));
+let blind=null,btScope="all",btArtist=null;
+// mode « 1 artiste » : tous les choix viennent du même artiste (une version par titre)
+const btArtistPool=id=>{const seen=new Set();return (ART[id]?.tracks||[]).filter(c=>c.streams>=.5).sort((a,b)=>b.streams-a.streams).filter(c=>{const k=cleanT(c.title).toLowerCase();if(seen.has(k))return false;seen.add(k);return true})};
+const BT_ARTISTS=ARTISTS.filter(a=>btArtistPool(a.id).length>=12).sort((a,b)=>a.n.localeCompare(b.n));
+const btPool=()=>btScope==="artist"?btArtistPool(btArtist||BT_ARTISTS[0]?.id):TRACKS.filter(c=>c.streams>=15&&(btScope==="all"||c.country===btScope));
 function btClear(){if(!blind)return;clearTimeout(blind.to);clearInterval(blind.iv);clearTimeout(blind.nx)}
 function quitBlind(){btClear();blind=null;stopAudio()}
 function renderBlind(back){
   const d=daily();d.blind??=0;
   if(!blind){
     $("play").innerHTML=`${back}<h1>Blind test</h1><div class="draftin"><small>Mode de jeu</small><h3>Devine le son</h3>
-      <p>${BT_N} extraits pris au milieu du son. Trouve le bon titre parmi 4 en moins de ${BT_T} secondes, sans voir l’artiste : les choix se ressemblent (même artiste, même époque). Plus tu réponds vite, plus tu marques.</p>
+      <p>${BT_N} extraits pris au milieu du son. Trouve le bon son parmi 4 en moins de ${BT_T} secondes : 4 artistes différents de la même époque, ou tous les sons d’un seul artiste en mode « 1 artiste ». Plus tu réponds vite, plus tu marques.</p>
       <p>${BT_COINS} pièces par bonne réponse · ${Math.max(0,BT_DAILY-d.blind)} partie${BT_DAILY-d.blind>1?"s":""} récompensée${BT_DAILY-d.blind>1?"s":""} aujourd’hui${state.btBest?` · record : ${fmt(state.btBest)} pts`:""}</p>
-      <div class="chips" id="btScope">${[["all","Tout"],["FR","Rap FR"],["US","Rap US"],["UK","Rap UK"]].map(([k,l])=>`<button aria-pressed="${btScope===k}" data-btsc="${k}">${l}</button>`).join("")}</div>
+      <div class="chips" id="btScope">${[["all","Tout"],["FR","Rap FR"],["US","Rap US"],["UK","Rap UK"],["artist","1 artiste"]].map(([k,l])=>`<button aria-pressed="${btScope===k}" data-btsc="${k}">${l}</button>`).join("")}</div>
+      ${btScope==="artist"?`<label class="btart"><span>Artiste</span><select id="btArt">${BT_ARTISTS.map(a=>`<option value="${a.id}" ${a.id===(btArtist||BT_ARTISTS[0].id)?"selected":""}>${esc(a.n)}</option>`).join("")}</select></label>`:""}
       ${state.sound===false?`<p class="note" style="color:#ff8fa3">Active « Extraits audio » dans les paramètres pour jouer.</p>`:""}
       <button class="btn" id="btStart" ${state.sound===false?"disabled":""}>Lancer le blind test</button></div>`;
     return;
@@ -1106,10 +1110,10 @@ function renderBlind(back){
     <div class="btdisc${ans?" open":""}">${ans?coverHTML(q.c.alb):`<i class="coin"></i>`}</div>
     <div class="btbar"><i id="btFill" style="width:${q&&q.t0?100-el/BT_T*100:100}%"></i></div>
     ${!q||!q.t0?`<p class="note" style="text-align:center">Chargement de l’extrait…</p>`:ans?`<p class="btres ${q.ans===q.right?"ok":"ko"}">${q.ans===q.right?`Bien joué ! +${q.pts}`:q.ans<0?"Temps écoulé":"Raté"}<small>${esc(q.c.title)} · ${esc(q.c.artist)}</small></p>`:`<p class="note" style="text-align:center">Quel est ce son ?</p>`}
-    <div class="btopts">${q&&q.t0?q.opts.map((c,i)=>`<button data-bt="${i}" class="${ans?(i===q.right?"right":i===q.ans?"wrong":"off"):""}" ${ans?"disabled":""}><b>${esc(cleanT(c.title)||c.title)}</b>${ans?`<small>${esc(c.artist)}</small>`:""}</button>`).join(""):""}</div>`;
+    <div class="btopts">${q&&q.t0?q.opts.map((c,i)=>`<button data-bt="${i}" class="${ans?(i===q.right?"right":i===q.ans?"wrong":"off"):""}" ${ans?"disabled":""}><b>${esc(cleanT(c.title)||c.title)}</b><small>${esc(c.artist)}</small></button>`).join(""):""}</div>`;
 }
 function startBlind(){
-  if(btPool().length<20)return toast("Pas assez de sons pour ce choix");
+  if(btPool().length<(btScope==="artist"?12:20))return toast("Pas assez de sons pour ce choix");
   unlockAudio();blind={round:0,score:0,good:0,used:new Set(),hist:[],q:null,over:false};nextBlind();
 }
 function nextBlind(tries=0){
@@ -1117,10 +1121,14 @@ function nextBlind(tries=0){
   if(blind.round>=BT_N)return endBlind();
   const pool=btPool();let c;do{c=any(pool)}while(blind.used.has(c.song)&&tries<50&&++tries);
   blind.used.add(c.song);
-  // des choix proches : d'abord le même artiste, puis la même époque et le même pays
-  const near=x=>x.song!==c.song&&cleanT(x.title)!==cleanT(c.title);
-  const sameAr=pool.filter(x=>near(x)&&x.ar===c.ar),sameEra=pool.filter(x=>near(x)&&x.country===c.country&&Math.abs(yr(x)-yr(c))<=4),opts=[c];
-  for(let k=0;opts.length<4&&k<80;k++){const src=k<20&&sameAr.length?sameAr:sameEra.length>6?sameEra:pool,x=any(src);if(near(x)&&!opts.some(o=>cleanT(o.title)===cleanT(x.title)))opts.push(x)}
+  // mode 1 artiste : 4 sons du même artiste ; sinon 4 artistes différents, même pays et même époque si possible
+  const near=x=>x.song!==c.song&&cleanT(x.title)!==cleanT(c.title),opts=[c];
+  if(btScope==="artist"){for(let k=0;opts.length<4&&k<200;k++){const x=any(pool);if(near(x)&&!opts.some(o=>cleanT(o.title)===cleanT(x.title)))opts.push(x)}}
+  else{
+    const free=x=>near(x)&&!opts.some(o=>o.ar===x.ar);
+    const sameEra=pool.filter(x=>x.ar!==c.ar&&x.country===c.country&&Math.abs(yr(x)-yr(c))<=5);
+    for(let k=0;opts.length<4&&k<120;k++){const x=any(sameEra.length>10&&k<60?sameEra:pool);if(free(x))opts.push(x)}
+  }
   while(opts.length<4){const x=any(pool);if(near(x)&&!opts.includes(x))opts.push(x)}
   opts.sort(()=>Math.random()-.5);
   const q=blind.q={c,opts,right:opts.indexOf(c),t0:0,ans:null,pts:0},me=blind;
@@ -1284,6 +1292,7 @@ $("quests").onclick=e=>{
   earn(q.r,"Défi réussi");renderQuests();badge();
 };
 
+$("play").addEventListener("change",e=>{if(e.target.id==="btArt")btArtist=e.target.value});
 $("play").onclick=e=>{
   if(battle){ // pendant le combat, on ne peut que l'abandonner (compte comme une défaite)
     if(e.target.closest("#bDone")){const b=battle;battle=null;const won=b.duels.filter(x=>x.win).length>=3;b.onDone(won);SFX.tap()}
@@ -1292,7 +1301,7 @@ $("play").onclick=e=>{
   if(e.target.closest("#dQuit")){const d=state.draft;return confirmSheet("Abandonner le draft ?",`Tu récupères la récompense de ${d.wins} victoire${d.wins>1?"s":""} : ${prizeTxt(DRAFT_PRIZE[d.wins])}.`,"Abandonner",()=>{if(state.draft){state.draft.over=true;claimDraft()}})}
   if(e.target.closest("#playBack")){SFX.tap();if(blind)quitBlind();return show("s-menu")}
   const bo=e.target.closest("[data-bt]");if(bo)return answerBlind(+bo.dataset.bt);
-  const bsc=e.target.closest("[data-btsc]");if(bsc){btScope=bsc.dataset.btsc;SFX.tap();return renderPlay()}
+  const bsc=e.target.closest("[data-btsc]");if(bsc){btScope=bsc.dataset.btsc;if(btScope==="artist"&&!btArtist)btArtist=BT_ARTISTS[0]?.id;SFX.tap();return renderPlay()}
   if(e.target.closest("#btStart")||e.target.closest("#btAgain")){SFX.tap();return startBlind()}
   if(e.target.closest("#btMenu")){quitBlind();return show("s-menu")}
   if(e.target.closest("#dStart"))return startDraft();

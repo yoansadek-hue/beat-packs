@@ -1542,13 +1542,28 @@ function dragEnd(e,cancel){
   drag=null;
   bar.classList.remove("press","drag");TABS.forEach(b=>b.classList.remove("over"));
   bar.style.scale="";
-  if(t){if(!t.classList.contains("on")){if(!d0.moved)haptic();SFX.tab()}TABS.forEach(b=>b.classList.toggle("on",b===t));pillTo(t,P.x);show(t.dataset.go)}
+  if(t){const was=t.classList.contains("on");if(!was){if(!d0.moved)haptic();SFX.tab()}TABS.forEach(b=>b.classList.toggle("on",b===t));pillTo(t,P.x);if(was&&!d0.moved)tabBack(t.dataset.go);else show(t.dataset.go)}
   else pillTo(bar.querySelector(".tab.on"),P.x);
 }
 bar.addEventListener("pointerup",e=>dragEnd(e,false));
 bar.addEventListener("pointercancel",e=>dragEnd(e,true));
 // clavier : Entrée / Espace sur un onglet
-bar.addEventListener("click",e=>{const t=e.target.closest(".tab");if(t&&e.detail===0){TABS.forEach(b=>b.classList.toggle("on",b===t));pillTo(t);show(t.dataset.go)}});
+bar.addEventListener("click",e=>{const t=e.target.closest(".tab");if(t&&e.detail===0){const was=t.classList.contains("on");TABS.forEach(b=>b.classList.toggle("on",b===t));pillTo(t);if(was)tabBack(t.dataset.go);else show(t.dataset.go)}});
+// retoucher l'onglet déjà ouvert = bouton retour : on remonte d'un niveau, puis en haut de la page
+function tabBack(go){
+  haptic(6);SFX.tap();
+  if(!$("sheet").hidden&&!sheetLock){closeSheet();return}
+  if(!tov.hidden){closeTov();return}
+  const cur=SCREENS.find(id=>!$(id).hidden);
+  if(cur!==go)return show(go); // Menu depuis le Draft, le Match, le Blind test ou les Paramètres
+  if(go==="s-club"){const up={album:club.alb==="icone"?"artist":"artist",artist:"artists",special:"artists",icones:"artists",near:"artists",news:"artists"}[club.view];
+    if(up){club.view=up;renderClub();return scrollTo({top:0,behavior:"smooth"})}
+    if(club.q){club.q="";renderClub()}}
+  if(go==="s-shop"&&shopTab!=="buy"){shopTab="buy";renderPacks()}
+  if(go==="s-quests"&&qTab!=="sbc"){$("qSeg").querySelector('[data-q="sbc"]').click()}
+  if(go==="s-market"&&mkt!=="buy"){$("mktSeg").querySelector('[data-m="buy"]').click()}
+  scrollTo({top:0,behavior:"smooth"});
+}
 addEventListener("resize",()=>pillTo(bar.querySelector(".tab.on")));
 
 // ---------- démarrage ----------

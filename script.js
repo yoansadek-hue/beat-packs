@@ -1081,20 +1081,20 @@ function openDraftPick(sid){
 // ---------- blind test : 10 extraits, 4 titres au choix, plus on répond vite plus on marque ----------
 const BT_N=10,BT_T=10,BT_COINS=300,BT_DAILY=5;
 let blind=null,btScope="all",btArtist=null;
-// mode « 1 artiste » : tous les choix viennent du même artiste (une version par titre)
+// les sons d'un artiste, une version par titre (pour les 4 choix du blind test)
 const btArtistPool=id=>{const seen=new Set();return (ART[id]?.tracks||[]).filter(c=>c.streams>=.5).sort((a,b)=>b.streams-a.streams).filter(c=>{const k=cleanT(c.title).toLowerCase();if(seen.has(k))return false;seen.add(k);return true})};
-const BT_ARTISTS=ARTISTS.filter(a=>btArtistPool(a.id).length>=12).sort((a,b)=>a.n.localeCompare(b.n));
-const btPool=()=>btScope==="artist"?btArtistPool(btArtist||BT_ARTISTS[0]?.id):TRACKS.filter(c=>c.streams>=15&&(btScope==="all"||c.country===btScope));
+const BT_OK=new Set(ARTISTS.filter(a=>btArtistPool(a.id).length>=6).map(a=>a.id));
+const btPool=()=>TRACKS.filter(c=>c.streams>=15&&(btScope==="all"||c.country===btScope)&&BT_OK.has(c.ar));
 function btClear(){if(!blind)return;clearTimeout(blind.to);clearInterval(blind.iv);clearTimeout(blind.nx)}
 function quitBlind(){btClear();blind=null;stopAudio()}
 function renderBlind(back){
   const d=daily();d.blind??=0;
   if(!blind){
     $("play").innerHTML=`${back}<h1>Blind test</h1><div class="draftin"><small>Mode de jeu</small><h3>Devine le son</h3>
-      <p>${BT_N} extraits pris au milieu du son. Trouve le bon son parmi 4 en moins de ${BT_T} secondes : 4 artistes différents de la même époque, ou tous les sons d’un seul artiste en mode « 1 artiste ». Plus tu réponds vite, plus tu marques.</p>
+      <p>${BT_N} extraits pris au milieu du son. Trouve le bon son parmi 4 en moins de ${BT_T} secondes : les 4 choix sont tous des sons du même artiste. Plus tu réponds vite, plus tu marques.</p>
       <p>${BT_COINS} pièces par bonne réponse · ${Math.max(0,BT_DAILY-d.blind)} partie${BT_DAILY-d.blind>1?"s":""} récompensée${BT_DAILY-d.blind>1?"s":""} aujourd’hui${state.btBest?` · record : ${fmt(state.btBest)} pts`:""}</p>
-      <div class="chips" id="btScope">${[["all","Tout"],["FR","Rap FR"],["US","Rap US"],["UK","Rap UK"],["artist","1 artiste"]].map(([k,l])=>`<button aria-pressed="${btScope===k}" data-btsc="${k}">${l}</button>`).join("")}</div>
-      ${btScope==="artist"?`<label class="btart"><span>Artiste</span><select id="btArt">${BT_ARTISTS.map(a=>`<option value="${a.id}" ${a.id===(btArtist||BT_ARTISTS[0].id)?"selected":""}>${esc(a.n)}</option>`).join("")}</select></label>`:""}
+      <div class="chips" id="btScope">${[["all","Tout"],["FR","Rap FR"],["US","Rap US"],["UK","Rap UK"]].map(([k,l])=>`<button aria-pressed="${btScope===k}" data-btsc="${k}">${l}</button>`).join("")}</div>
+
       ${state.sound===false?`<p class="note" style="color:#ff8fa3">Active « Extraits audio » dans les paramètres pour jouer.</p>`:""}
       <button class="btn" id="btStart" ${state.sound===false?"disabled":""}>Lancer le blind test</button></div>`;
     return;
@@ -1113,7 +1113,7 @@ function renderBlind(back){
     <div class="btopts">${q&&q.t0?q.opts.map((c,i)=>`<button data-bt="${i}" class="${ans?(i===q.right?"right":i===q.ans?"wrong":"off"):""}" ${ans?"disabled":""}><b>${esc(cleanT(c.title)||c.title)}</b><small>${esc(c.artist)}</small></button>`).join(""):""}</div>`;
 }
 function startBlind(){
-  if(btPool().length<(btScope==="artist"?12:20))return toast("Pas assez de sons pour ce choix");
+  if(btPool().length<20)return toast("Pas assez de sons pour ce choix");
   unlockAudio();blind={round:0,score:0,good:0,used:new Set(),hist:[],q:null,over:false};nextBlind();
 }
 function nextBlind(tries=0){
@@ -1121,15 +1121,10 @@ function nextBlind(tries=0){
   if(blind.round>=BT_N)return endBlind();
   const pool=btPool();let c;do{c=any(pool)}while(blind.used.has(c.song)&&tries<50&&++tries);
   blind.used.add(c.song);
-  // mode 1 artiste : 4 sons du même artiste ; sinon 4 artistes différents, même pays et même époque si possible
-  const near=x=>x.song!==c.song&&cleanT(x.title)!==cleanT(c.title),opts=[c];
-  if(btScope==="artist"){for(let k=0;opts.length<4&&k<200;k++){const x=any(pool);if(near(x)&&!opts.some(o=>cleanT(o.title)===cleanT(x.title)))opts.push(x)}}
-  else{
-    const free=x=>near(x)&&!opts.some(o=>o.ar===x.ar);
-    const sameEra=pool.filter(x=>x.ar!==c.ar&&x.country===c.country&&Math.abs(yr(x)-yr(c))<=5);
-    for(let k=0;opts.length<4&&k<120;k++){const x=any(sameEra.length>10&&k<60?sameEra:pool);if(free(x))opts.push(x)}
-  }
-  while(opts.length<4){const x=any(pool);if(near(x)&&!opts.includes(x))opts.push(x)}
+  // les 4 choix sont des sons du même artiste que la bonne réponse (par exemple God's Plan : 4 sons de Drake)
+  const same=t=>cleanT(t.title).toLowerCase(),mine=btArtistPool(c.ar).filter(x=>same(x)!==same(c)),opts=[c];
+  for(let k=0;opts.length<4&&k<200;k++){const x=any(mine.slice(0,Math.max(12,Math.min(40,mine.length))));if(!opts.some(o=>same(o)===same(x)))opts.push(x)}
+  while(opts.length<4){const x=any(pool);if(!opts.some(o=>same(o)===same(x)))opts.push(x)}
   opts.sort(()=>Math.random()-.5);
   const q=blind.q={c,opts,right:opts.indexOf(c),t0:0,ans:null,pts:0},me=blind;
   renderPlay();
@@ -1292,7 +1287,6 @@ $("quests").onclick=e=>{
   earn(q.r,"Défi réussi");renderQuests();badge();
 };
 
-$("play").addEventListener("change",e=>{if(e.target.id==="btArt")btArtist=e.target.value});
 $("play").onclick=e=>{
   if(battle){ // pendant le combat, on ne peut que l'abandonner (compte comme une défaite)
     if(e.target.closest("#bDone")){const b=battle;battle=null;const won=b.duels.filter(x=>x.win).length>=3;b.onDone(won);SFX.tap()}
@@ -1301,7 +1295,7 @@ $("play").onclick=e=>{
   if(e.target.closest("#dQuit")){const d=state.draft;return confirmSheet("Abandonner le draft ?",`Tu récupères la récompense de ${d.wins} victoire${d.wins>1?"s":""} : ${prizeTxt(DRAFT_PRIZE[d.wins])}.`,"Abandonner",()=>{if(state.draft){state.draft.over=true;claimDraft()}})}
   if(e.target.closest("#playBack")){SFX.tap();if(blind)quitBlind();return show("s-menu")}
   const bo=e.target.closest("[data-bt]");if(bo)return answerBlind(+bo.dataset.bt);
-  const bsc=e.target.closest("[data-btsc]");if(bsc){btScope=bsc.dataset.btsc;if(btScope==="artist"&&!btArtist)btArtist=BT_ARTISTS[0]?.id;SFX.tap();return renderPlay()}
+  const bsc=e.target.closest("[data-btsc]");if(bsc){btScope=bsc.dataset.btsc;SFX.tap();return renderPlay()}
   if(e.target.closest("#btStart")||e.target.closest("#btAgain")){SFX.tap();return startBlind()}
   if(e.target.closest("#btMenu")){quitBlind();return show("s-menu")}
   if(e.target.closest("#dStart"))return startDraft();
@@ -1451,23 +1445,38 @@ function googleSignIn(){
 }
 async function googleSignOut(){try{const m=await fb();await m.auth.signOut(m.au)}catch(e){}state.google=null;save();renderAvatar();closeSheet();toast("Déconnecté")}
 const cloudRefs=m=>[m.fs.doc(m.db,"beatpacks",state.google.uid),m.fs.doc(m.db,"users",state.google.uid)];
+// sauvegarde en ligne : la même partie sur tous les appareils connectés au même compte Google
+const progress=st=>Object.values(st.owned||{}).reduce((t,n)=>t+n,0)+(st.rewarded||[]).length*20+Object.values(st.sbcDone||{}).reduce((t,n)=>t+n,0)*5;
+let cloudBusy=false;
+async function cloudRead(m){for(const r of cloudRefs(m)){try{const snap=await m.fs.getDoc(r);const d=snap.exists()?snap.data():null;const v=d&&(d.save?d:d.beatpacks);if(v&&v.save)return v}catch(e){}}return null}
+function adopt(remote,uid){
+  const rs=JSON.parse(remote.save);rs.google=state.google;rs.syncUid=uid;rs.cloudAt=remote.at;rs.at=remote.at;
+  localStorage.setItem("beatpacks3",JSON.stringify(rs));toast("Partie synchronisée avec ton compte");setTimeout(()=>location.reload(),700);
+}
 async function cloudPull(){
+  if(cloudBusy)return;cloudBusy=true;
   try{
-    const m=await fb();if(!state.google)return;let remote=null;
-    for(const r of cloudRefs(m)){try{const snap=await m.fs.getDoc(r);const d=snap.exists()?snap.data():null;const v=d&&(d.save?d:d.beatpacks);if(v&&v.save){remote=v;break}}catch(e){}}
-    if(remote&&remote.at>(state.at||0)+5000){localStorage.setItem("beatpacks3",remote.save);toast("Partie récupérée depuis ton compte");setTimeout(()=>location.reload(),900);return}
-    cloudPush(true);
-  }catch(e){console.error(e)}
+    const m=await fb();if(!state.google)return;const uid=state.google.uid,remote=await cloudRead(m);
+    if(remote){
+      if(state.syncUid!==uid){ // premier passage de cet appareil sur ce compte : on garde la partie la plus avancée
+        if(progress(JSON.parse(remote.save))>=progress(state))return adopt(remote,uid);
+      }else if(remote.at>(state.cloudAt||0)+1000)return adopt(remote,uid); // un autre appareil a joué depuis
+    }
+    state.syncUid=uid;cloudPush(true);
+  }catch(e){console.error(e)}finally{cloudBusy=false}
 }
 let cloudT=null;
 function cloudPush(now){
-  if(!state.google)return;clearTimeout(cloudT);
+  if(!state.google||state.syncUid!==state.google.uid)return;clearTimeout(cloudT);
   cloudT=setTimeout(async()=>{
-    try{const m=await fb();const data={save:JSON.stringify(state),at:state.at||Date.now()},[r1,r2]=cloudRefs(m);
+    try{const m=await fb();const at=Date.now();state.cloudAt=at;const data={save:JSON.stringify(state),at},[r1,r2]=cloudRefs(m);
       try{await m.fs.setDoc(r1,data);state.cloudErr=false}catch(e){try{await m.fs.setDoc(r2,{beatpacks:data},{merge:true});state.cloudErr=false}catch(e2){state.cloudErr=true;console.warn("sauvegarde en ligne refusée",e2)}}
+      try{localStorage.setItem("beatpacks3",JSON.stringify(state))}catch(e){}
     }catch(e){state.cloudErr=true}
-  },now?50:15000);
+  },now?50:4000);
 }
+// en revenant sur le jeu, on récupère ce qui a été joué sur un autre appareil
+document.addEventListener("visibilitychange",()=>{if(document.visibilityState==="visible"&&state.google)cloudPull();else if(state.google)cloudPush(true)});
 
 // ---------- barre d'onglets du bas : la bulle de verre s'étire en glissant d'un onglet à l'autre,
 // grossit comme une loupe sous le doigt et suit le doigt quand on la fait glisser ----------

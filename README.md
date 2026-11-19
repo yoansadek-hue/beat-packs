@@ -23,9 +23,9 @@ Ouvre `index.html` dans ton navigateur (ou utilise l'extension Live Server dans 
   - **Sorties** : les albums et EP sortis ces 4 dernières semaines par les artistes du jeu.
 - **Catalogue** : raccourcis Icônes, Albums à finir, Sorties, Mes meilleures ; la recherche trouve aussi les titres et les albums.
 - **Catalogue › Cartes spéciales** : toutes les TOTW (semaine par semaine) et les équipes du mois, obtenues ou non ; elles apparaissent aussi dans la page de leur album.
-- **Blind test** (Menu) : 10 extraits pris au milieu du son, 4 sons au choix avec leur artiste (4 artistes différents de la même époque, ou tous les sons d'un seul artiste en mode « 1 artiste »), 10 s par manche ; plus on répond vite, plus on marque. 300 pièces par bonne réponse, 5 parties récompensées par jour. Filtre Tout, Rap FR, US, UK.
+- **Blind test** (Menu) : 10 extraits pris au milieu du son, 4 sons au choix, tous du même artiste que la bonne réponse, 10 s par manche ; plus on répond vite, plus on marque. 300 pièces par bonne réponse, 5 parties récompensées par jour. Filtre Tout, Rap FR, US, UK.
 - **Notifications** (cloche en haut) : nouvelle TOTW, équipe du mois, sorties, cartes vendues, albums complétés. Option « Notifications sur l'appareil » dans les paramètres.
-- **Profil** (rond en haut à droite) : stats, Amis, Paramètres, notifications et **connexion Google** (Firebase, même projet que Quizly) avec sauvegarde de la partie en ligne.
+- **Profil** (rond en haut à droite) : stats, Amis, Paramètres, notifications et **connexion Google** (Firebase, même projet que Quizly) : la partie est sauvegardée en ligne et synchronisée entre tous les appareils connectés au même compte (à la connexion, la partie la plus avancée est gardée).
 - **Carte album** : compléter un album d'au moins 4 titres donne sa carte album (note selon ses meilleurs titres), en plus de la prime.
 - **Mise à jour chaque vendredi** (GitHub Actions, `tools/weekly.js`) : streams Spotify de tous les titres, nouvelles sorties, dates de sortie, TOTW. Le fichier `live.js` garde la TOTW et l'historique des semaines.
 - **Tactiques** (Draft et Match) : Pentagone, Étoile, Pyramide, Chaîne ; chacune place les postes autrement et trace ses propres liens d'alchimie. On peut échanger deux cartes en touchant l'une puis l'autre poste.
